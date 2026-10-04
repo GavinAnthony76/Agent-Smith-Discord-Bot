@@ -11,6 +11,7 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - Preserve the actual-owner allowlist and initial clean-server checks. Stop if Discord Community is not enabled; do not enable it automatically.
 - Adopt only Discord's designated existing #rules channel, preserving messages while applying planned placement and read-only permissions. Preserve the private #moderator-only Community Updates channel unchanged.
 - Preserve the four standard Discord starter channels/categories with staff-only visibility rather than deleting their contents; track and audit them separately from the blueprint.
+- The user approved the full moderation toolkit plus anti-spam, restricted to configured owners only. Framework access reviewers do not gain moderation authority. Anti-spam starts alerts-only; automatic deletion, timeout, or bans require separate approval.
 
 ## Run & Operate
 
@@ -39,6 +40,7 @@ Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUIL
 - Member/framework/interest role grants refuse elevated server permissions and unsafe role hierarchy. **Why:** manual permission drift must not turn a self-service role into an escalation path.
 - Permission overwrites must specify Role/Member types explicitly. **Why:** a fresh Discord login may not cache configured humans, and discord.js cannot safely infer their principal types from IDs alone.
 - Continuous production hosting is a later setup step, not a sleeping web preview or autoscaling request server. Read the deployment skill before configuring it.
+- The user approved preparing Reserved VM background-worker hosting, not publishing or cutover. `apps/agent-smith/HOSTING.md` records the publishing eligibility blocker and safe cutover plan. Preserve existing database data as well as schema; an empty production database is unsafe.
 
 ## Pointers
 

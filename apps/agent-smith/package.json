@@ -6,6 +6,7 @@
     "db:migrate": "node --env-file-if-exists=.env src/migrate.js",
     "discord:bootstrap": "node --env-file-if-exists=.env src/provision.js bootstrap",
     "discord:audit": "node --env-file-if-exists=.env src/provision.js audit",
+    "onboarding:refresh": "node --env-file-if-exists=.env src/refresh-onboarding.js",
     "discord:register": "node --env-file-if-exists=.env src/register.js",
     "feeds:run": "node --env-file-if-exists=.env src/feeds.js",
     "test": "node --test",

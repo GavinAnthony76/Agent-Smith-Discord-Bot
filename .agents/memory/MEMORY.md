@@ -1,1 +1,2 @@
 - [Discord channel permissions](discord-permission-validation.md) — Manage Roles belongs on the bot guild role, not channel-creation overwrites.
+- [Onboarding usability](discord-onboarding-usability.md) — read-only entry channels need clickable onboarding; permission audits alone do not prove members can continue.

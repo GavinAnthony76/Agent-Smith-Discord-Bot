@@ -77,10 +77,14 @@ The separate **Agent Smith Bot** console workflow runs `pnpm --filter @workspace
 
 For continuous production operation, configure a VM/Reserved VM background-worker deployment rather than a sleeping preview or request-driven autoscaling web deployment. Production hosting is not configured by this import. Any future web dashboard must be a separate process with its own authentication; never expose the bot token to it or a browser.
 
+See [HOSTING.md](HOSTING.md) for the approved preparation settings, the current publishing eligibility blocker, database-preservation requirements, and single-instance cutover checklist. Hosting is not yet configured or published.
+
 ## 3. Member and reviewer workflow
 
-- Member reads #rules and uses `/accept`, which grants the shared-hub Member role.
-- `/join framework:Faith|Gaming|Tech` selects exactly one initial framework. Once chosen, a member cannot use it again, even after role removal.
+- New members initially see only #welcome, #rules, and #onboarding. These stay read-only.
+- Member reads #rules and clicks **Accept rules** in #onboarding (or uses `/accept`), which grants the shared-hub Member role. Plain text `accept` is not a command.
+- The **Choose your community** menu in #onboarding (or `/join framework:Faith|Gaming|Tech`) selects exactly one initial framework after rules acceptance. Once chosen, a member cannot use it again, even after role removal.
+- Buttons/menu replies are private and use the same database locks, role safety checks, and audit path as slash commands. They only work on the tracked bot-owned onboarding message. Discord rules screening, when enabled, must be completed first.
 - `/interest` toggles an interest within a framework the member already holds.
 - `/request` submits an additional framework request. Duplicate pending requests reuse the same ID. No access is granted at submission.
 - Allowlisted humans use `/pending` and `/review id:… approve:true|false` in #access-review or #smith-controls. Self-approval is refused. A second human must review an owner's own request too.
@@ -90,6 +94,8 @@ Discord hides reviewer commands from ordinary users by default. To let an allowl
 
 SQL transactions and per-member advisory locks serialize competing requests. Discord API calls and PostgreSQL commits cannot form one atomic transaction: if Discord succeeds and the database commit fails, the audit can flag unrecorded access. Stop onboarding, inspect the Discord audit trail and SQL audit/requests/grants tables, then remove the unexpected role or deliberately reconcile the record. Never retry blindly or grant broad Administrator as a workaround. External manual role changes are reported by audit, not automatically reversed. Run audit after staff permission changes and regularly during operation.
 
+To update the existing tracked onboarding message with these controls, run `pnpm --filter @workspace/agent-smith run onboarding:refresh` after the bot code is updated. This edits only that bot-owned message and writes an audit record; it does not rerun bootstrap, alter permissions, replace resource IDs, or delete messages.
+
 ## 4. News, YouTube, and gaming foundations
 
 Edit `feeds.json` with trusted public HTTPS RSS/Atom URLs and enable only the entries you want. The YouTube placeholder uses the channel ID feed format; replace `REPLACE_CHANNEL_ID`. Destinations are restricted to the three framework news channels. Feed configuration is operator-only; do not accept arbitrary member URLs.
@@ -97,6 +103,36 @@ Edit `feeds.json` with trusted public HTTPS RSS/Atom URLs and enable only the en
 Run `pnpm --filter @workspace/agent-smith run feeds:run` separately on a scheduled job (for example every 15 minutes). It polls once and exits, with persistent deduplication and at most five recent items per source per run. First activation may post the latest five entries. Failed feeds return a failing exit status; database audit records successful polls. The feed-status channel is reserved for future operational alerts. A crash after sending but before committing can duplicate an item on the next run; delivery is not exactly-once.
 
 In #arcade, Gaming members use `/trivia`, `/answer`, and `/profile`. One question per minute, one answer per session, two-minute expiry, and 10 XP per correct answer. At 100 XP the profile displays the cosmetic Arcade Regular tier. This is a small sample foundation, not a complete game economy; add a curated question bank and balance before promoting it. XP cannot award access roles, reviewer status, or permissions.
+
+## 5. Owner-only moderation and alerts-only anti-spam
+
+Use `/mod` in #smith-controls or #access-review. Only `OWNER_IDS` may use it at runtime, even if Discord command visibility is widened. `APPROVER_IDS` do not gain moderation authority. Discord defaults the command to Administrator visibility; a configured owner without Administrator needs a per-command permission override in the server's Integrations settings, not a broad Administrator grant.
+
+| Command | Behavior |
+| --- | --- |
+| `/mod warn user reason` | Durable warning case, with a best-effort private notification; reports failed DM delivery |
+| `/mod history user` | Recent cases, including withdrawn warnings, spam alerts, action intents and results |
+| `/mod unwarn case reason` | Marks an existing warning withdrawn; preserves all original history |
+| `/mod timeout user minutes reason` | Timeout from 1 minute to 28 days |
+| `/mod untimeout user reason` | Removes a timeout |
+| `/mod kick user reason` | Removes member only after the requesting owner confirms |
+| `/mod ban user reason` | Bans only after confirmation; does not delete existing messages |
+| `/mod unban user_id reason` | Lifts ban only after confirmation; does not reinvite or restore roles |
+| `/mod purge channel amount reason` | Previews up to 100 recent messages, then confirms deletion of that snapshot only |
+| `/mod status` | Missing bot permissions, anti-spam settings, and unresolved action cases |
+| `/mod antispam enabled reason` | Persistently enables/disables alerts; never enables automatic punishment |
+
+Kick, ban, unban, and cleanup confirmations are private, bound to the initiating owner/server/channel, expire after two minutes, and are single-use. Cancel makes no change. Restarting the bot invalidates outstanding confirmations. Target hierarchy and permissions are checked again before the action. Configured owners, the actual server owner, bot accounts, and the invoking owner are protected. A non-owner configured owner must hold the necessary Discord permission and be above the target's role; the bot also needs the relevant permission and hierarchy. Administrators cannot be timed out.
+
+Grant Agent Smith only these extra server permissions to enable the corresponding actions: **Moderate Members**, **Kick Members**, **Ban Members**, and **Manage Messages**. No Administrator permission is needed or requested. Manage Messages must also be effective in the chosen cleanup channel. Use `/mod status` to check; unavailable actions explicitly refuse rather than claiming success. The bot cannot grant itself missing Discord permissions.
+
+Cleanup skips pinned messages and messages approaching 14 days old. It never deletes newly arrived messages outside the approved snapshot. Rules, onboarding, welcome, read-only channels, staff/audit channels, Community Updates, and preserved starter channels are protected from cleanup.
+
+Moderation cases use the existing `audit` table; no new schema or database replacement is required. A case records intent before an external Discord action, then a result. If the result cannot be written after Discord succeeds, the bot explicitly warns not to retry. `/mod status` lists unresolved intents for manual recovery. Discord and PostgreSQL are not one atomic transaction. Warnings and their withdrawals are append-only audit events.
+
+Anti-spam monitors message-rate and mention metadata in channels the bot can see: 6 messages in 10 seconds, 12 in 30 seconds, or 5 user mentions / @everyone. It stores no message content, needs no Message Content privileged intent, ignores bots/webhooks/configured owners, and has a 60-second per-member alert cooldown. Alerts are recorded in PostgreSQL and sent without pings to private #feed-status. When monitoring is disabled, no new observations are processed. Enable/disable state survives restarts; rolling counts reset on restart. It never deletes messages, times out, bans, or changes access automatically.
+
+The shared Accept rules control remains for new members. Repeated acceptance keeps the original timestamp and cannot reset the one-framework choice. `/pending` labels entries **Request #1**, etc., and offers Approve/Deny buttons; `/review` uses that request number, not the member's Discord ID. Submitting a request alone never grants access.
 
 ## Validation and recovery
 

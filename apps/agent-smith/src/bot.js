@@ -2,7 +2,13 @@ import { connect } from './discord.js';
 import { pool, locked, resource, audit } from './db.js';
 import { frameworks, interests } from './blueprint.js';
 import { maySelfJoin, canReview, assertFramework, assertAssignableRole } from './policy.js';
+import { isOnboardingInteraction, onboardingAction } from './onboarding.js';
+import { isReviewInteraction, reviewAction, parseRequestId, pendingMessage } from './review.js';
+import { createModeration, isModerationInteraction } from './moderation.js';
+import { createAntiSpam } from './antispam.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
+const spam = await createAntiSpam({ guild, cfg, pool, resource });
+const moderation = createModeration({ guild, cfg, pool, resource, spam });
 const roleIds = Object.fromEntries(await Promise.all([...frameworks,'Member'].map(async f=>[f,await resource('role',f)])));
 const human = id => canReview(id,cfg);
 async function log(actor, action, detail) {
@@ -11,10 +17,20 @@ async function log(actor, action, detail) {
   catch { console.error('Discord audit mirror unavailable; see database audit table.'); }
 }
 client.on('interactionCreate', async i => {
-  if (!i.isChatInputCommand() || i.guildId !== cfg.guildId || i.user.bot) return;
+  if (isModerationInteraction(i)) { await moderation.handle(i); return; }
+  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
   await i.deferReply({flags:64});
   try {
-    const name=i.commandName, uid=i.user.id, target=i.options.getString('framework');
+    const onboarding=onboardingAction(i), review=reviewAction(i);
+    const action=onboarding ?? review;
+    if (onboarding && (i.channelId !== await resource('channel','onboarding')
+      || i.message.id !== await resource('message','onboarding')
+      || i.message.author.id !== client.user.id)) {
+      throw new Error('Use the official onboarding message in #onboarding.');
+    }
+    if (review && i.message.author.id !== client.user.id) throw new Error('Use the bot’s review buttons from /pending.');
+    const name=action?.name ?? i.commandName, uid=i.user.id,
+      target=action ? action.framework : i.options.getString('framework');
     if (['join','request','revoke'].includes(name)) assertFramework(target);
     if (['pending','review','revoke'].includes(name)) {
       if (!human(uid)) throw new Error('Only allowlisted human reviewers may use this command.');
@@ -22,13 +38,13 @@ client.on('interactionCreate', async i => {
     }
     if (name==='pending') {
       const r=await pool.query("SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' ORDER BY id LIMIT 20",[guild.id]);
-      await i.editReply(r.rows.map(x=>`${x.id}: ${x.user_id} → ${x.framework}`).join('\n') || 'No pending requests.'); return;
+      await i.editReply(pendingMessage(r.rows)); return;
     }
     let subject=uid, request;
     if (name==='review') {
-      const id=i.options.getString('id'); if (!/^\d+$/.test(id)) throw new Error('Invalid request ID.');
+      const id=parseRequestId(review ? review.requestId : i.options.getString('id'));
       request=(await pool.query('SELECT * FROM requests WHERE guild_id=$1 AND id=$2',[guild.id,id])).rows[0];
-      if (!request) throw new Error('Request not found.');
+      if (!request) throw new Error('Request not found. Run /pending and use the number after “Request #”, not the member’s Discord ID.');
       subject=request.user_id;
       if (subject===uid) throw new Error('Another allowlisted human must review your request.');
     }
@@ -36,13 +52,16 @@ client.on('interactionCreate', async i => {
     const result = await locked(`${guild.id}:${subject}`,async db=>{
       const member=await guild.members.fetch({user:subject,force:true});
       if (member.user.bot) throw new Error('Human members only.');
+      if (member.pending) throw new Error('Complete Discord’s server rules screening before continuing.');
       await db.query('INSERT INTO members(guild_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[guild.id,subject]);
       const m=(await db.query('SELECT * FROM members WHERE guild_id=$1 AND user_id=$2 FOR UPDATE',[guild.id,subject])).rows[0];
       const held=frameworks.filter(f=>member.roles.cache.has(roleIds[f]));
        const add=async f=> { const role=assertAssignableRole(await guild.roles.fetch(roleIds[f])); await member.roles.add(role,'Agent Smith explicit access workflow'); };
       let reply;
       if (name==='accept') {
-        await add('Member'); await db.query('UPDATE members SET accepted_at=now() WHERE guild_id=$1 AND user_id=$2',[guild.id,subject]); reply='Rules accepted. Use /join to choose Faith, Gaming, or Tech.';
+        await add('Member'); await db.query('UPDATE members SET accepted_at=COALESCE(accepted_at,now()) WHERE guild_id=$1 AND user_id=$2',[guild.id,subject]);
+        reply=m.primary_framework ? `You already accepted the rules and chose ${m.primary_framework}. Use /request for another community; it requires human approval.`
+          : 'Rules accepted! The shared hub is now open. Choose Faith, Gaming, or Tech from the menu in #onboarding, or use /join.';
       } else if (name==='join') {
         maySelfJoin({accepted:!!m.accepted_at,existing:[...held,...(m.primary_framework?[m.primary_framework]:[])],requested:target});
         await add(target);
@@ -55,7 +74,7 @@ client.on('interactionCreate', async i => {
       } else if (name==='review') {
         request=(await db.query('SELECT * FROM requests WHERE id=$1 FOR UPDATE',[request.id])).rows[0];
         if (request.status!=='pending') throw new Error('Request already reviewed.');
-        const approved=i.options.getBoolean('approve');
+        const approved=review ? review.approve : i.options.getBoolean('approve');
         if (approved) {
            assertFramework(request.framework);
           if (!m.accepted_at || !m.primary_framework) throw new Error('Member must complete onboarding first.');
@@ -104,5 +123,8 @@ client.on('interactionCreate', async i => {
 });
 // No automatic roles on join: onboarding commands are the only self-service route.
 client.on('guildMemberAdd', member=> { if(member.guild.id===guild.id) console.log(`Member joined ${member.id}; onboarding required.`); });
+client.on('messageCreate', message => {
+  spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
+});
 for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{client.destroy();await pool.end();process.exit(0);});
 console.log('Agent Smith ready. No AI access-control path exists.');

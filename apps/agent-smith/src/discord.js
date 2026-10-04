@@ -3,7 +3,7 @@ import { config, assertWriteTarget } from './config.js';
 export async function connect({ allowWrites = false } = {}) {
   const cfg = config();
   if (allowWrites) assertWriteTarget(cfg);
-  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers], allowedMentions: { parse: [] } });
+  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages], allowedMentions: { parse: [] } });
   try {
     await client.login(cfg.token);
     if (!client.isReady()) await new Promise(resolve => client.once('clientReady', resolve));

@@ -1,4 +1,0 @@
-[
-  { "id": "sf-news", "enabled": false, "url": "https://REPLACE-WITH-PUBLISHER-FEED", "channel": "gaming-news" },
-  { "id": "youtube-favorite", "enabled": false, "url": "https://www.youtube.com/feeds/videos.xml?channel_id=REPLACE_CHANNEL_ID", "channel": "gaming-news" }
-]
