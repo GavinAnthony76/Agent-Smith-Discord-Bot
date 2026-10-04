@@ -1,4 +1,4 @@
-import { ChannelType, PermissionsBitField } from 'discord.js';
+import { ChannelType, PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
 import { connect, overwrites, botPermissions } from './discord.js';
 import { pool, resource, locked } from './db.js';
 import { categories, roleNames, rules, frameworks } from './blueprint.js';
@@ -70,7 +70,13 @@ try {
       if (role.permissions.bitfield !== 0n || !role.editable) failures.push(`Role permission/hierarchy drift: ${name}`);
     }
     function compare(channel, expected) {
-      const norm = arr => arr.map(x => `${x.id}:${new PermissionsBitField(x.allow).bitfield}:${new PermissionsBitField(x.deny).bitfield}`).sort().join('|');
+      const norm = arr => arr.map(x => {
+        let allow = new PermissionsBitField(x.allow).bitfield;
+        // Preserve owner-installed Manage Permissions on the bot itself in
+        // existing starter channels; it is already required on the guild role.
+        if (x.id === client.user.id) allow &= ~P.ManageRoles;
+        return `${x.id}:${x.type}:${allow}:${new PermissionsBitField(x.deny).bitfield}`;
+      }).sort().join('|');
       if (norm([...channel.permissionOverwrites.cache.values()]) !== norm(expected)) failures.push(`Permission drift: ${channel.name}`);
     }
     for (const cat of categories) {

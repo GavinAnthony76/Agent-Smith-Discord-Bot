@@ -42,3 +42,11 @@ test('actual guild owner needs no overwrite while other designated staff retain 
   assert.equal(entries.some(x=>x.id==='owner'),false);
   assert.equal(entries.some(x=>x.id==='reviewer'&&x.type===OverwriteType.Member),true);
 });
+test('nonadministrator bootstrap never sets Manage Roles in a channel overwrite',()=>{
+  assert.ok(botPermissions.includes(P.ManageRoles));
+  for (const gate of [null, 'staff', 'Member', 'Faith', 'Gaming', 'Tech']) {
+    for (const entry of overwrites({id:'guild',ownerId:'owner'},cfg,'bot',gate,roles)) {
+      assert.equal(new PermissionsBitField(entry.allow || []).has(P.ManageRoles),false);
+    }
+  }
+});

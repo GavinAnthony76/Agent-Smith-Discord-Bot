@@ -20,8 +20,11 @@ export async function connect({ allowWrites = false } = {}) {
 export const read = [P.ViewChannel, P.ReadMessageHistory, P.UseApplicationCommands];
 export const write = [...read, P.SendMessages, P.SendMessagesInThreads, P.CreatePublicThreads, P.AddReactions, P.Connect, P.Speak];
 export const botPermissions = [...write, P.ManageChannels, P.ManageRoles, P.ManageThreads];
+// Discord permits setting MANAGE_ROLES in channel creation overwrites only to
+// administrators. The bot retains it on its guild role, not in new overwrites.
+export const botChannelPermissions = botPermissions.filter(permission => permission !== P.ManageRoles);
 export function overwrites(guild, cfg, botId, gate, roles, readonly = false) {
-  const entries = [{ id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] }, { id: botId, type: OverwriteType.Member, allow: botPermissions }];
+  const entries = [{ id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] }, { id: botId, type: OverwriteType.Member, allow: botChannelPermissions }];
   // The actual guild owner always bypasses overwrites; never attempt to edit it.
   for (const id of new Set([...cfg.owners, ...cfg.approvers])) {
     if (id !== guild.ownerId) entries.push({ id, type: OverwriteType.Member, allow: write });

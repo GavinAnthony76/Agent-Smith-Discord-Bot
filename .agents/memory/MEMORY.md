@@ -1,1 +1,1 @@
-- [Discord permission validation](discord-permission-validation.md) — effective permission flags are preflight only; Discord can still deny overwrite writes.
+- [Discord channel permissions](discord-permission-validation.md) — Manage Roles belongs on the bot guild role, not channel-creation overwrites.

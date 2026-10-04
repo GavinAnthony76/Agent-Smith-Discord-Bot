@@ -1,10 +1,12 @@
 ---
-name: Discord permission validation
-description: Why advertised bot permissions must not be treated as proof that provisioning can succeed.
+name: Discord channel permission restrictions
+description: Discord's administrator-only restriction on Manage Roles in channel-creation overwrites.
 ---
 
-Treat Discord's effective permission calculations as preflight only. Require successful API writes and a subsequent audit before reporting that provisioning is complete.
+Do not include Manage Roles in the bot's channel-creation overwrite. Keep that required permission on the bot's guild role, without granting Administrator.
 
-**Why:** Hallowed Core's bot had the expected server and channel permission flags, no timeout, and no server-wide moderator 2FA requirement, but Discord still denied both bulk and granular channel-overwrite updates with Missing Permissions. The advertised flags did not identify the actual restriction.
+**Why:** Discord's Create Guild Channel API permits setting Manage Roles in channel overwrites only for guild administrators. A nonadministrator bot can have all advertised effective permissions and still receive Missing Permissions when its own overwrite includes this bit. Owner-installed explicit Manage Permissions on an existing channel can permit edits there, but does not fix new channel creation.
 
-**How to apply:** Fail closed on API permission errors, preserve the resource ledger and existing channel contents, and report the specific rejected operation. Do not silently grant Administrator or repeatedly retry equivalent requests; server-owner intervention may be needed even after read-only permission checks pass.
+**How to apply:** Separate required guild permissions from channel-overwrite permissions. Preserve owner-configured Manage Permissions grants on the trusted bot when auditing existing channels, but never excuse unexpected grants to other principals. Confirm actual writes and the live audit before declaring setup complete.
+
+Reference: https://docs.discord.com/developers/resources/guild#create-guild-channel
