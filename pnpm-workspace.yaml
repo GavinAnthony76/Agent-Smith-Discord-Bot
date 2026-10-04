@@ -36,6 +36,7 @@ minimumReleaseAgeExclude:
 
 packages:
   - artifacts/*
+  - apps/*
   - lib/*
   - lib/integrations/*
   - scripts
@@ -75,6 +76,8 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  "discord.js>undici": "6.28.1"
+  "@discordjs/rest>undici": "6.28.1"
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"

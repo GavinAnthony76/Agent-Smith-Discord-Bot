@@ -1,45 +1,43 @@
-# [Project name]
+# Agent Smith — Hallowed Core
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provides rules acceptance, one initial Faith/Gaming/Tech community, human-reviewed additional access, interest roles, feeds, and sample gaming trivia.
+
+## Safety and scope
+
+- Do not modify the user's old Discord server. Install and operate the new bot only in Hallowed Core.
+- Before live writes, `DISCORD_GUILD_ID` and `BOOTSTRAP_CONFIRM_GUILD_ID` must identify Hallowed Core, and `PROTECTED_GUILD_IDS` must list the old server ID(s).
+- Never put bot tokens in chat, source code, client code, or a public endpoint. Use Replit Secrets.
+- The preparation phase is offline: no Discord connection, database migration, bootstrap application, or member invitations.
+- Do not start the bot or run live setup commands until the user is ready for the connection phase.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/agent-smith run test` — unit tests, no credentials or network connection
+- `pnpm --filter @workspace/agent-smith run preflight` — offline blueprint/permission checks
+- `pnpm --filter @workspace/agent-smith run discord:register` — offline slash-command preview
+- **Agent Smith Bot** workflow: `pnpm --filter @workspace/agent-smith run start` — long-lived gateway process, no web port, kept stopped during preparation
+- Database migration, bootstrap, registration with `--apply`, live audit, and feed polling are documented in `apps/agent-smith/README.md`; they are not offline checks.
+- Root workspace `pnpm run typecheck` and `pnpm run build` remain for the template's TypeScript packages; they do not validate this JavaScript bot.
 
-## Stack
+## Stack and source
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspace, Node.js 24; bot requires Node 22.12+
+- `apps/agent-smith`: imported JavaScript ESM bot, discord.js 14, pg, rss-parser
+- Bot PostgreSQL schema remains parameterized SQL in its own migration source; no ORM conversion
+- `artifacts/api-server`, `artifacts/mockup-sandbox`, and `lib/*` are template packages, not the bot runtime. The bot must remain independent of the API server.
 
-## Where things live
+## Configuration
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `OWNER_IDS`, `DATABASE_URL`, `BOOTSTRAP_CONFIRM_GUILD_ID`, and `PROTECTED_GUILD_IDS`. `APPROVER_IDS` is optional. Replit currently supplies the runtime-managed `DATABASE_URL`; do not request or print it, and do not replace the database without the user's instruction.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Keep a dedicated console workflow for the persistent bot, without a web server or public admin endpoint. **Why:** the user explicitly requested a separate persistent process.
+- Registration is preview-only by default. Every Discord write path requires target confirmation and an old-server denylist before login. **Why:** setup must not accidentally change the old server.
+- Member/framework/interest role grants refuse elevated server permissions and unsafe role hierarchy. **Why:** manual permission drift must not turn a self-service role into an escalation path.
+- Continuous production hosting is a later setup step, not a sleeping web preview or autoscaling request server. Read the deployment skill before configuring it.
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- `apps/agent-smith/README.md` — complete operator setup, permission assumptions, and live acceptance checklist
+- `pnpm-workspace` skill — workspace dependency and package conventions
