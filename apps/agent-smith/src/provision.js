@@ -2,6 +2,7 @@ import { ChannelType, PermissionsBitField } from 'discord.js';
 import { connect, overwrites, botPermissions } from './discord.js';
 import { pool, resource, locked } from './db.js';
 import { categories, roleNames, rules, frameworks } from './blueprint.js';
+import { communityChannels, starterChannels } from './community.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
 const apply = process.argv.includes('--apply');
@@ -14,16 +15,47 @@ try {
     const roles = {};
     // Persist each resource separately: successful Discord creates survive partial runs.
     const remember = (kind,name,id) => pool.query('INSERT INTO resources VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', [guild.id,kind,name,id]);
+    const community = communityChannels(guild, cfg, client.user.id);
+    const starters = starterChannels(guild);
+    for (const channel of starters) {
+      const row = saved.find(x => x.kind === 'starter-channel' && x.name === channel.name);
+      if (row && row.discord_id !== channel.id) throw new Error(`Starter channel identity changed: ${channel.name}; review required.`);
+    }
+    for (const [kind, name, channel] of [['channel', 'rules', community.rules], ['community-channel', 'moderator-only', community.updates]]) {
+      const row = saved.find(x => x.kind === kind && x.name === name);
+      if (row && row.discord_id !== channel.id) throw new Error(`Community channel identity changed: ${name}; review required.`);
+    }
     if (mode === 'bootstrap') {
       console.log(JSON.stringify({ guild: guild.id, roles: roleNames, categories }, null, 2));
       if (process.env.BOOTSTRAP_CONFIRM_GUILD_ID !== guild.id) throw new Error('New guild confirmation missing');
       if (!guild.features.includes('COMMUNITY')) throw new Error('Enable Community first; forums require it.');
-      if (!saved.length && (guild.channels.cache.size > 6 || guild.roles.cache.filter(r => !r.managed && r.id !== guild.id).size > 0 || guild.memberCount > 5)) throw new Error('Not a clean new server; bootstrap refused');
+      if (!saved.some(x => ['role','channel'].includes(x.kind)) && (guild.channels.cache.size > 6 || guild.roles.cache.filter(r => !r.managed && r.id !== guild.id).size > 0 || guild.memberCount > 5)) throw new Error('Not a clean new server; bootstrap refused');
       const bot = await guild.members.fetchMe();
       const missing = bot.permissions.missing(botPermissions);
       if (missing.length) throw new Error(`Bot is missing required server permissions: ${missing.join(', ')}`);
+      for (const name of roleNames) {
+        if (!saved.some(x => x.kind === 'role' && x.name === name) && guild.roles.cache.some(r => r.name === name)) {
+          throw new Error(`Untracked role collision: ${name}`);
+        }
+      }
+      for (const name of categories.flatMap(cat => [cat.name, ...cat.channels.map(([name]) => name)])) {
+        if (name === 'rules' || saved.some(x => x.kind === 'channel' && x.name === name)) continue;
+        if (guild.channels.cache.some(c => c.name === name)) throw new Error(`Untracked channel collision: ${name}`);
+      }
+      console.log('Adopt existing Community #rules into START HERE with planned read-only permissions; preserve private #moderator-only without changes.');
+      console.log('Preserve default starter channels/categories as staff-only:', starters.map(c => c.name).join(', '));
+      console.log('Existing channels:', [...guild.channels.cache.values()].map(c => c.name).join(', '));
       console.log('Fixed target, owner, Community, clean-server, and bot permissions checks passed.');
       if (!apply) { console.log('PLAN ONLY. No Discord resources were changed.'); return; }
+      await remember('community-channel', 'moderator-only', community.updates.id);
+      for (const channel of starters) {
+        if (saved.some(x => x.kind === 'starter-channel' && x.name === channel.name)) continue;
+        await channel.edit({
+          permissionOverwrites: overwrites(guild, cfg, client.user.id, 'staff', {}),
+          reason: 'Agent Smith: preserve default starter channel contents with staff-only visibility'
+        });
+        await remember('starter-channel', channel.name, channel.id);
+      }
     }
     for (const name of roleNames) {
       const row = saved.find(x => x.kind === 'role' && x.name === name);
@@ -49,6 +81,13 @@ try {
         let channel = row && guild.channels.cache.get(row.discord_id);
         if (cat.gate && cat.gate !== 'staff' && !roles[cat.gate]) continue;
         const expected = overwrites(guild,cfg,client.user.id,cat.gate,roles,readonly);
+        if (!channel && mode === 'bootstrap' && name === 'rules') {
+          channel = await community.rules.edit({
+            parent, permissionOverwrites: expected,
+            reason: 'Agent Smith: adopt confirmed Community rules channel without deleting messages'
+          });
+          await remember('channel', name, channel.id);
+        }
         if (!channel && mode === 'bootstrap') {
           if (guild.channels.cache.some(c => c.name === name)) throw new Error(`Untracked channel collision: ${name}`);
           channel = await guild.channels.create({ name,type,parent,permissionOverwrites:expected,
@@ -80,7 +119,13 @@ try {
         if (held.some(f => !record?.accepted_at || (record.primary_framework !== f && !grants.includes(f)))) failures.push(`Unrecorded framework access: ${member.id}`);
         if (member.permissions.has('Administrator') && !cfg.owners.includes(member.id)) failures.push(`Administrator bypass: ${member.id}`);
       }
-      const known = new Set(saved.filter(x=>x.kind==='channel').map(x=>x.discord_id));
+      if (!saved.some(x => x.kind === 'community-channel' && x.name === 'moderator-only' && x.discord_id === community.updates.id)) failures.push('Community Updates channel is not tracked.');
+      for (const row of saved.filter(x => x.kind === 'starter-channel')) {
+        const channel = guild.channels.cache.get(row.discord_id);
+        if (!channel || channel.name !== row.name) failures.push(`Missing/renamed preserved starter: ${row.name}`);
+        else compare(channel, overwrites(guild, cfg, client.user.id, 'staff', {}));
+      }
+      const known = new Set(saved.filter(x=>['channel','community-channel','starter-channel'].includes(x.kind)).map(x=>x.discord_id));
       for (const channel of guild.channels.cache.values()) if (!known.has(channel.id)) failures.push(`Unmanaged channel (review visibility manually): ${channel.name}`);
     }
   });

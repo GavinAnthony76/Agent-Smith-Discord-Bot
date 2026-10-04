@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, PermissionFlagsBits as P } from 'discord.js';
+import { Client, GatewayIntentBits, PermissionFlagsBits as P, OverwriteType } from 'discord.js';
 import { config, assertWriteTarget } from './config.js';
 export async function connect({ allowWrites = false } = {}) {
   const cfg = config();
@@ -21,14 +21,17 @@ export const read = [P.ViewChannel, P.ReadMessageHistory, P.UseApplicationComman
 export const write = [...read, P.SendMessages, P.SendMessagesInThreads, P.CreatePublicThreads, P.AddReactions, P.Connect, P.Speak];
 export const botPermissions = [...write, P.ManageChannels, P.ManageRoles, P.ManageThreads];
 export function overwrites(guild, cfg, botId, gate, roles, readonly = false) {
-  const entries = [{ id: guild.id, deny: [P.ViewChannel] }, { id: botId, allow: botPermissions }];
-  for (const id of new Set([...cfg.owners, ...cfg.approvers])) entries.push({ id, allow: write });
+  const entries = [{ id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] }, { id: botId, type: OverwriteType.Member, allow: botPermissions }];
+  // The actual guild owner always bypasses overwrites; never attempt to edit it.
+  for (const id of new Set([...cfg.owners, ...cfg.approvers])) {
+    if (id !== guild.ownerId) entries.push({ id, type: OverwriteType.Member, allow: write });
+  }
   if (gate !== 'staff') {
     const id = gate ? roles[gate] : guild.id;
     const allow = readonly ? read : write;
     const deny = readonly ? [P.SendMessages, P.SendMessagesInThreads, P.CreatePublicThreads, P.CreatePrivateThreads] : [];
-    if (id === guild.id) entries[0] = { id, allow, deny };
-    else entries.push({ id, allow, deny });
+    if (id === guild.id) entries[0] = { id, type: OverwriteType.Role, allow, deny };
+    else entries.push({ id, type: OverwriteType.Role, allow, deny });
   }
   return entries;
 }

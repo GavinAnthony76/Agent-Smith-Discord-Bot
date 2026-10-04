@@ -1,0 +1,1 @@
+- [Discord permission validation](discord-permission-validation.md) — effective permission flags are preflight only; Discord can still deny overwrite writes.

@@ -9,6 +9,8 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - Never put bot tokens in chat, source code, client code, or a public endpoint. Use Replit Secrets.
 - The user authorized migrations, live bootstrap preview/application, command registration, audit, and bot startup for the fixed target.
 - Preserve the actual-owner allowlist and initial clean-server checks. Stop if Discord Community is not enabled; do not enable it automatically.
+- Adopt only Discord's designated existing #rules channel, preserving messages while applying planned placement and read-only permissions. Preserve the private #moderator-only Community Updates channel unchanged.
+- Preserve the four standard Discord starter channels/categories with staff-only visibility rather than deleting their contents; track and audit them separately from the blueprint.
 
 ## Run & Operate
 
@@ -35,6 +37,7 @@ Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUIL
 - Keep a dedicated console workflow for the persistent bot, without a web server or public admin endpoint. **Why:** the user explicitly requested a separate persistent process.
 - Registration is preview-only by default. Every connection requires both target settings to equal the fixed Hallowed Core ID; write paths independently recheck it before login. **Why:** the old server is deleted, and the user explicitly authorized only this one server.
 - Member/framework/interest role grants refuse elevated server permissions and unsafe role hierarchy. **Why:** manual permission drift must not turn a self-service role into an escalation path.
+- Permission overwrites must specify Role/Member types explicitly. **Why:** a fresh Discord login may not cache configured humans, and discord.js cannot safely infer their principal types from IDs alone.
 - Continuous production hosting is a later setup step, not a sleeping web preview or autoscaling request server. Read the deployment skill before configuring it.
 
 ## Pointers

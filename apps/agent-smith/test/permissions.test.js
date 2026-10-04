@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PermissionsBitField,PermissionFlagsBits as P} from 'discord.js';
+import {PermissionsBitField,PermissionFlagsBits as P,OverwriteType} from 'discord.js';
 import {overwrites,botPermissions} from '../src/discord.js';
 import {commands} from '../src/commands.js';
 const cfg={owners:['owner'],approvers:['reviewer']};
@@ -28,4 +28,17 @@ test('all slash command definitions serialize',()=>{
   const json=commands.map(x=>x.toJSON());
   assert.deepEqual(json.map(x=>x.name).sort(),['accept','join','request','interest','pending','review','revoke','trivia','answer','profile'].sort());
   assert.equal(new Set(json.map(x=>x.name)).size,json.length);
+});
+test('overwrite principal types are explicit even when human users are not cached',()=>{
+  for (const gate of [null, 'staff', 'Member', 'Faith']) {
+    const entries = overwrites({id:'guild'},cfg,'bot',gate,roles);
+    for (const entry of entries) {
+      assert.equal(entry.type, ['bot','owner','reviewer'].includes(entry.id) ? OverwriteType.Member : OverwriteType.Role);
+    }
+  }
+});
+test('actual guild owner needs no overwrite while other designated staff retain access',()=>{
+  const entries = overwrites({id:'guild',ownerId:'owner'},cfg,'bot','staff',roles);
+  assert.equal(entries.some(x=>x.id==='owner'),false);
+  assert.equal(entries.some(x=>x.id==='reviewer'&&x.type===OverwriteType.Member),true);
 });
