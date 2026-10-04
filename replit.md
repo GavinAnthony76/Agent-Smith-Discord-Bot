@@ -4,11 +4,11 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 
 ## Safety and scope
 
-- Do not modify the user's old Discord server. Install and operate the new bot only in Hallowed Core.
-- Before live writes, `DISCORD_GUILD_ID` and `BOOTSTRAP_CONFIRM_GUILD_ID` must identify Hallowed Core, and `PROTECTED_GUILD_IDS` must list the old server ID(s).
+- The user confirmed the old server was deleted. Install and operate the bot only in Hallowed Core; never operate on another server.
+- Both `DISCORD_GUILD_ID` and `BOOTSTRAP_CONFIRM_GUILD_ID` must equal the fixed authorized target `1556423230590423042` before any connection. `PROTECTED_GUILD_IDS` is no longer required.
 - Never put bot tokens in chat, source code, client code, or a public endpoint. Use Replit Secrets.
-- The preparation phase is offline: no Discord connection, database migration, bootstrap application, or member invitations.
-- Do not start the bot or run live setup commands until the user is ready for the connection phase.
+- The user authorized migrations, live bootstrap preview/application, command registration, audit, and bot startup for the fixed target.
+- Preserve the actual-owner allowlist and initial clean-server checks. Stop if Discord Community is not enabled; do not enable it automatically.
 
 ## Run & Operate
 
@@ -28,12 +28,12 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 
 ## Configuration
 
-Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `OWNER_IDS`, `DATABASE_URL`, `BOOTSTRAP_CONFIRM_GUILD_ID`, and `PROTECTED_GUILD_IDS`. `APPROVER_IDS` is optional. Replit currently supplies the runtime-managed `DATABASE_URL`; do not request or print it, and do not replace the database without the user's instruction.
+Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `OWNER_IDS`, `DATABASE_URL`, and `BOOTSTRAP_CONFIRM_GUILD_ID`. `APPROVER_IDS` is optional. Replit currently supplies the runtime-managed `DATABASE_URL`; do not request or print it, and do not replace the database without the user's instruction.
 
 ## Architecture decisions
 
 - Keep a dedicated console workflow for the persistent bot, without a web server or public admin endpoint. **Why:** the user explicitly requested a separate persistent process.
-- Registration is preview-only by default. Every Discord write path requires target confirmation and an old-server denylist before login. **Why:** setup must not accidentally change the old server.
+- Registration is preview-only by default. Every connection requires both target settings to equal the fixed Hallowed Core ID; write paths independently recheck it before login. **Why:** the old server is deleted, and the user explicitly authorized only this one server.
 - Member/framework/interest role grants refuse elevated server permissions and unsafe role hierarchy. **Why:** manual permission drift must not turn a self-service role into an escalation path.
 - Continuous production hosting is a later setup step, not a sleeping web preview or autoscaling request server. Read the deployment skill before configuring it.
 

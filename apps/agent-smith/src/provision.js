@@ -1,5 +1,5 @@
 import { ChannelType, PermissionsBitField } from 'discord.js';
-import { connect, overwrites } from './discord.js';
+import { connect, overwrites, botPermissions } from './discord.js';
 import { pool, resource, locked } from './db.js';
 import { categories, roleNames, rules, frameworks } from './blueprint.js';
 const mode = process.argv[2];
@@ -16,10 +16,14 @@ try {
     const remember = (kind,name,id) => pool.query('INSERT INTO resources VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', [guild.id,kind,name,id]);
     if (mode === 'bootstrap') {
       console.log(JSON.stringify({ guild: guild.id, roles: roleNames, categories }, null, 2));
-      if (!apply) { console.log('PLAN ONLY. Re-run with --apply after setting BOOTSTRAP_CONFIRM_GUILD_ID.'); return; }
       if (process.env.BOOTSTRAP_CONFIRM_GUILD_ID !== guild.id) throw new Error('New guild confirmation missing');
       if (!guild.features.includes('COMMUNITY')) throw new Error('Enable Community first; forums require it.');
       if (!saved.length && (guild.channels.cache.size > 6 || guild.roles.cache.filter(r => !r.managed && r.id !== guild.id).size > 0 || guild.memberCount > 5)) throw new Error('Not a clean new server; bootstrap refused');
+      const bot = await guild.members.fetchMe();
+      const missing = bot.permissions.missing(botPermissions);
+      if (missing.length) throw new Error(`Bot is missing required server permissions: ${missing.join(', ')}`);
+      console.log('Fixed target, owner, Community, clean-server, and bot permissions checks passed.');
+      if (!apply) { console.log('PLAN ONLY. No Discord resources were changed.'); return; }
     }
     for (const name of roleNames) {
       const row = saved.find(x => x.kind === 'role' && x.name === name);

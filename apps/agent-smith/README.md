@@ -19,7 +19,7 @@ Forums provide threaded conversations; voice rooms are framework-private. There 
 
 ## 1. Create the new server and application
 
-1. In Discord, create a NEW server named Hallowed Core that you own. Do not run this against the old server. Enable Developer Mode, then copy the new server ID and the old server ID for the protection denylist.
+1. Use the confirmed Hallowed Core server you own. Both target settings must equal the fixed authorized ID `1556423230590423042`; connections to any other server are refused. The user confirmed the old server was deleted, so no old-server ID or denylist is required.
 2. Enable Community in the new server settings so forum channels can be created. Complete Discord's safety, rules-channel, and updates-channel setup. Leave its initial setup channels in place until bootstrap finishes. The new-server guard permits at most six initial channels, five members, and no custom unmanaged roles.
 3. Open [Discord Developer Portal](https://discord.com/developers/applications), create an application named **Agent Smith**, and open its Bot page. Create/configure the bot if needed. Copy/reset its token and save it only in Secrets. Disable Public Bot if you want to restrict installations.
 4. Enable **Server Members Intent**. Message Content and Presence intents are not needed. Copy the application ID from General Information.
@@ -46,12 +46,11 @@ pnpm --filter @workspace/agent-smith run discord:register
 |---|---|
 | DISCORD_TOKEN | New Agent Smith bot token |
 | DISCORD_CLIENT_ID | New application ID |
-| DISCORD_GUILD_ID | Hallowed Core's NEW server ID |
+| DISCORD_GUILD_ID | Must equal the fixed authorized Hallowed Core ID |
 | OWNER_IDS | Comma-separated owner USER IDs, including the actual server owner |
 | APPROVER_IDS | Optional comma-separated trusted human reviewer IDs |
 | DATABASE_URL | Already supplied by Replit's managed PostgreSQL environment; do not replace it casually |
-| BOOTSTRAP_CONFIRM_GUILD_ID | Same NEW server ID; required before bot startup or any Discord writes |
-| PROTECTED_GUILD_IDS | Old server ID(s), comma-separated; required before bot startup or any Discord writes |
+| BOOTSTRAP_CONFIRM_GUILD_ID | Must equal the same fixed authorized Hallowed Core ID before any connection |
 
 For local use, copy `.env.example` to `.env`. Never commit `.env` or tokens. The target guild's actual owner must appear in `OWNER_IDS`.
 
@@ -62,7 +61,7 @@ pnpm --filter @workspace/agent-smith run db:migrate
 pnpm --filter @workspace/agent-smith run discord:bootstrap
 ```
 
-The bootstrap plan connects to Discord to inspect the target, but does not change Discord. Do not run it during the offline preparation phase. Review the target guild ID and names. Only when ready, confirm the target and denylist, then:
+The bootstrap plan connects to Discord to inspect only the fixed authorized target, but does not change Discord. It checks the owner allowlist, Community feature, initial clean-server condition, and required bot permissions before approving the plan. If Community is disabled, enable it in Server Settings → Enable Community and complete Discord's setup before continuing. The user authorized applying the planned resources to this target:
 
 ```sh
 pnpm --filter @workspace/agent-smith run discord:bootstrap --apply
@@ -101,7 +100,7 @@ In #arcade, Gaming members use `/trivia`, `/answer`, and `/profile`. One questio
 
 ## Validation and recovery
 
-The tests cover framework selection, human allowlists, protected-guild refusal, write confirmations, safe role grants, category visibility, read-only onboarding, and command serialization. The offline preflight checks the full blueprint's visibility grants and confirms no Administrator grant. Role assignment refuses roles with nonzero server permissions or unsafe hierarchy. Live API and PostgreSQL acceptance checks require configuration and have not been run during this import.
+The tests cover framework selection, human allowlists, fixed-target refusal, write confirmations, safe role grants, category visibility, read-only onboarding, and command serialization. The offline preflight checks the full blueprint's visibility grants and confirms no Administrator grant. Role assignment refuses roles with nonzero server permissions or unsafe hierarchy. Live API and PostgreSQL acceptance checks require configuration.
 
 Before inviting members, use a normal test account: confirm it sees only START HERE; accept rules and confirm hub access; join one framework; verify both other frameworks remain hidden; attempt a second join; request a second framework; verify only an allowlisted human can approve and that self-approval fails; revoke it; run audit. Test trivia replay/cooldown and feed deduplication. Check a second process cannot concurrently select two frameworks for the same member. Review Discord's View Server As Role as a supplement, not a substitute for the test account.
 
