@@ -7,6 +7,9 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - The user confirmed the old server was deleted. Install and operate the bot only in Hallowed Core; never operate on another server.
 - Both `DISCORD_GUILD_ID` and `BOOTSTRAP_CONFIRM_GUILD_ID` must equal the fixed authorized target `1556423230590423042` before any connection. `PROTECTED_GUILD_IDS` is no longer required.
 - Never put bot tokens in chat, source code, client code, or a public endpoint. Use Replit Secrets.
+- The user authorized seven independent progression ranks per framework, additive progression migration, creation/tracking of 21 cosmetic rank roles, command registration, and restart in Hallowed Core only. Preserve all existing access, XP, resource IDs and audit history.
+- Progression is participation/service recognition, never message volume, spiritual worth, teaching/moderation authority, or access approval. Faith levels 3–7 need allowlisted human approval; no self-awards or self-approval. No Message Content Intent or AI scoring.
+- Future rank-gated unlocks must use a separate framework-specific role and enforce approved membership AND rank in the bot. Never grant channel access with a global/cosmetic rank role or assume Discord role overwrites enforce an AND condition. Unlocks start disabled; do not change channel privacy without explicit approval.
 - The user authorized migrations, live bootstrap preview/application, command registration, audit, and bot startup for the fixed target.
 - Preserve the actual-owner allowlist and initial clean-server checks. Stop if Discord Community is not enabled; do not enable it automatically.
 - Adopt only Discord's designated existing #rules channel, preserving messages while applying planned placement and read-only permissions. Preserve the private #moderator-only Community Updates channel unchanged.

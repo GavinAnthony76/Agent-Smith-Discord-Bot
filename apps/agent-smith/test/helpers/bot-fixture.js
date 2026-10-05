@@ -103,6 +103,11 @@ export async function botFixture() {
     './blueprint.js': blueprint, './policy.js': policy, './onboarding.js': onboarding,
     './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
     './access-recovery.js': recovery,
+    './progression.js': { createProgression: async () => ({
+      enqueue: async () => {}, scan: async () => {}, stop() {},
+      earnTx: async () => { throw new Error('Progression earning must use its isolated test fixture.'); }
+    }) },
+    './progression-interactions.js': { createProgressionInteractions: () => async () => false },
     './moderation.js': { isModerationInteraction: () => false, createModeration: () => ({
       handle: () => { throw new Error('Unexpected moderation dispatch'); }
     }) },

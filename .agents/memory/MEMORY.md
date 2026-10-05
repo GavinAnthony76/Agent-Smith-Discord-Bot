@@ -3,3 +3,4 @@
 - [Approval recovery authorization](access-recovery-contract.md) — guarded compensation was explicitly approved; uncertain writes preserve access and require staff reconciliation.
 - [Access notification recovery](access-notification-recovery.md) — saved requests survive delivery failures; explicit retries may duplicate notifications, never approval.
 - [Access concurrency tests](access-concurrency-tests.md) — force observable transaction overlap in isolated tests; sequential refusals and recorded lock calls do not prove concurrency safety.
+- [Native onboarding read limit](discord-onboarding-rate-limits.md) — share brief UI metadata snapshots; fresh per-member reads exceed the live five-request limit and stall recovery.

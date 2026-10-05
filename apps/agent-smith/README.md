@@ -4,7 +4,7 @@ Hallowed Core is the NEW target server. Keep your old server unchanged and invit
 
 ## What is included
 
-Node.js 22.12+ / discord.js 14, PostgreSQL with parameterized SQL and versionable migration source (no ORM required), guild slash commands, durable access requests and audit records, RSS/Atom polling, YouTube feed placeholders, and simple gaming trivia with persistent XP and cosmetic reward tiers. No AI service is involved in permissions. The bot runs as its own long-lived process; there is no web server or public admin endpoint.
+Node.js 22.12+ / discord.js 14, PostgreSQL with parameterized SQL and versionable migration source (no ORM required), guild slash commands, durable access requests and audit records, RSS/Atom polling, YouTube feed placeholders, gaming trivia, and independent seven-rank framework progression. No AI service is involved in permissions or XP scoring. The bot runs as its own long-lived process; there is no web server or public admin endpoint.
 
 | Area | Access | Channels |
 |---|---|---|
@@ -142,7 +142,7 @@ Edit `feeds.json` with trusted public HTTPS RSS/Atom URLs and enable only the en
 
 Run `pnpm --filter @workspace/agent-smith run feeds:run` separately on a scheduled job (for example every 15 minutes). It polls once and exits, with persistent deduplication and at most five recent items per source per run. First activation may post the latest five entries. Failed feeds return a failing exit status; database audit records successful polls. The feed-status channel is reserved for future operational alerts. A crash after sending but before committing can duplicate an item on the next run; delivery is not exactly-once.
 
-In #arcade, Gaming members use `/trivia`, `/answer`, and `/profile`. One question per minute, one answer per session, two-minute expiry, and 10 XP per correct answer. At 100 XP the profile displays the cosmetic Arcade Regular tier. This is a small sample foundation, not a complete game economy; add a curated question bank and balance before promoting it. XP cannot award access roles, reviewer status, or permissions.
+In #arcade, Gaming members use `/trivia` and `/answer`: one question per minute, one answer per session, and two-minute expiry. Correct answers earn up to 10 Gaming XP with a 10-minute earning cooldown, 30 trivia XP/day, and the shared 150 earned XP/framework/day maximum. `/profile` privately shows all of the caller's approved frameworks; `/ranks` explains the seven ladders and earning rules. Faith levels 3–7 require explicit human approval. See [PROGRESSION.md](PROGRESSION.md) for exact thresholds, contribution controls, safe migration, role reconciliation, and remaining recovery limitations. XP and cosmetic ranks never grant membership or administrative permissions.
 
 ## 5. Owner-only moderation and alerts-only anti-spam
 

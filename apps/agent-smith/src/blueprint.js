@@ -1,3 +1,4 @@
+import { rankDefinitions } from './progression-config.js';
 export const frameworks = ['Faith', 'Gaming', 'Tech'];
 export const interests = {
   Faith: ['Bible Study', 'Prayer', 'Fellowship'],
@@ -6,7 +7,7 @@ export const interests = {
 };
 export const selectionRoleNames = frameworks.map(f => `Selection: ${f}`);
 export const ARRIVAL_CHANNEL_ID = '1556451709272719451';
-export const roleNames = ['Member', ...frameworks, ...Object.values(interests).flat().map(x => `Interest: ${x}`), ...selectionRoleNames];
+export const roleNames = ['Member', ...frameworks, ...Object.values(interests).flat().map(x => `Interest: ${x}`), ...selectionRoleNames, ...rankDefinitions.map(d => d.name)];
 export const categories = [
   { name: 'START HERE', gate: null, channels: [['welcome', 'text', true], ['rules', 'text', true], ['onboarding', 'text', true], ['arrival-lounge', 'text']] },
   { name: 'SHARED HUB', gate: 'Member', channels: [['announcements', 'text', true], ['community-help', 'forum'], ['introductions', 'forum'], ['access-requests', 'text', true]] },

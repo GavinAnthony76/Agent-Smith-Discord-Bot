@@ -10,10 +10,14 @@ import { createAntiSpam } from './antispam.js';
 import { createNativeReconciler } from './native-reconcile.js';
 import { legacyAllowed } from './native-policy.js';
 import { recoverApproval } from './access-recovery.js';
+import { createProgression } from './progression.js';
+import { createProgressionInteractions } from './progression-interactions.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const moderation = createModeration({ guild, cfg, pool, resource, spam });
 const native = await createNativeReconciler({ guild, client });
+const progression = await createProgression({ guild, client, cfg });
+const handleProgression = createProgressionInteractions({ progression, guild, cfg, client, pool, resource, audit });
 const roleIds = Object.fromEntries(await Promise.all([...frameworks,'Member'].map(async f=>[f,await resource('role',f)])));
 const human = id => canReview(id,cfg);
 async function log(actor, action, detail) {
@@ -22,9 +26,14 @@ async function log(actor, action, detail) {
   catch { console.error('Discord audit mirror unavailable; see database audit table.'); }
 }
 client.on('interactionCreate', async i => {
-  if (isModerationInteraction(i)) { await moderation.handle(i); return; }
+  if (await handleProgression(i)) return;
+  if (isModerationInteraction(i)) {
+    try { await moderation.handle(i); } catch (error) { console.error('Moderation interaction failed:', error.code ?? error.message); }
+    return;
+  }
   if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isPendingInteraction(i) && !isAccessRequestInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
-  await i.deferReply({flags:64});
+  try { await i.deferReply({flags:64}); }
+  catch (error) { console.error('Interaction acknowledgement failed:', error.code ?? error.message); return; }
   let approvalAttempt;
   try {
     const onboarding=onboardingAction(i), review=reviewAction(i), accessRequest=accessRequestAction(i), pending=pendingAction(i);
@@ -120,22 +129,24 @@ client.on('interactionCreate', async i => {
          if (member.roles.cache.has(role)) await member.roles.remove(role);
          else await member.roles.add(assertAssignableRole(await guild.roles.fetch(role)));
         reply=`Updated interest: ${interest}. This role grants no channel access.`;
-      } else if (['trivia','answer','profile'].includes(name)) {
+      } else if (['trivia','answer'].includes(name)) {
         if (!m.accepted_at || !held.includes('Gaming') || i.channelId!==await resource('channel','arcade')) throw new Error('Gaming members may use this command in #arcade.');
-        if (name==='profile') reply=`XP: ${m.xp}. Cosmetic tier: ${m.xp>=100?'Arcade Regular':'New Challenger'}. Rewards never grant framework access.`;
         if (name==='trivia') {
           if (m.last_trivia && Date.now()-new Date(m.last_trivia).getTime()<60000) throw new Error('Please wait one minute between questions.');
           const questions=[['Which Street Fighter character uses the Hadouken and is named Ryu?','ryu'],['What is the abbreviation for World of Warcraft?','wow'],['How many players compete in a standard one-on-one fighting game match?','2']];
           const [q,a]=questions[Math.floor(Math.random()*questions.length)];
           await db.query("INSERT INTO trivia_sessions VALUES($1,$2,$3,now()+interval '2 minutes') ON CONFLICT(guild_id,user_id) DO UPDATE SET answer=$3,expires_at=now()+interval '2 minutes'",[guild.id,subject,a]);
-          await db.query('UPDATE members SET last_trivia=now() WHERE guild_id=$1 AND user_id=$2',[guild.id,subject]); reply=`${q}\nUse /answer within two minutes. Correct answers earn 10 XP.`;
+          await db.query('UPDATE members SET last_trivia=now() WHERE guild_id=$1 AND user_id=$2',[guild.id,subject]); reply=`${q}\nUse /answer within two minutes. Correct answers earn up to 10 Gaming XP, with a 10-minute XP cooldown and daily limits.`;
         }
         if (name==='answer') {
           const session=(await db.query('DELETE FROM trivia_sessions WHERE guild_id=$1 AND user_id=$2 RETURNING *',[guild.id,subject])).rows[0];
           if (!session) throw new Error('Start with /trivia.');
           const correct=new Date(session.expires_at)>new Date() && i.options.getString('answer').trim().toLowerCase()===session.answer;
-          if (correct) await db.query('UPDATE members SET xp=xp+10 WHERE guild_id=$1 AND user_id=$2',[guild.id,subject]);
-          reply=correct?'Correct! +10 XP.':'Incorrect or expired. Try another question after the cooldown.';
+          if (correct) {
+            const earned = await progression.earnTx(db, { uid: subject, framework: 'Gaming', source: 'trivia',
+              key: `trivia:${new Date(session.expires_at).toISOString()}`, actor: cfg.clientId, reason: 'Correct answer to a consumed, unexpired Gaming trivia session' });
+            reply=`Correct! +${earned.amount} Gaming XP (${earned.outcome}).`;
+          } else reply='Incorrect or expired. Try another question after the cooldown.';
         }
       } else throw new Error('Unknown command.');
       await audit(db,uid,name,{subject,framework:target,request:request?.id}); return reply;
@@ -162,6 +173,7 @@ client.on('interactionCreate', async i => {
       await log(uid,name,{subject,framework:target,request:request.id});
       return;
     }
+    progression.enqueue(subject).catch(() => console.error('Rank enqueue deferred; periodic recovery remains active.'));
     await i.editReply(result); await log(uid,name,{subject,framework:target,request:request?.id});
   } catch (e) {
     console.error('Command failed:',e.message);
@@ -174,12 +186,15 @@ client.on('interactionCreate', async i => {
 const queueNative = member => {
   if (member.guild.id !== guild.id || member.user.bot) return;
   native.enqueue(member.id).then(() => native.drain()).catch(() => console.error('Native event queue unavailable; periodic rescan will recover.'));
+  progression.enqueue(member.id).catch(() => console.error('Progression event enqueue deferred.'));
 };
 client.on('guildMemberAdd', queueNative);
 client.on('guildMemberUpdate', (_old, member) => queueNative(member));
 native.scan().catch(() => console.error('Native startup scan deferred; periodic recovery remains active.'));
+progression.scan().catch(() => console.error('Progression startup scan deferred; recovery remains active.'));
+client.on('error', error => console.error('Discord client error:', error.code ?? error.name));
 client.on('messageCreate', message => {
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{native.stop();client.destroy();await pool.end();process.exit(0);});
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{native.stop();progression.stop();client.destroy();await pool.end();process.exit(0);});
 console.log('Agent Smith ready. No AI access-control path exists.');

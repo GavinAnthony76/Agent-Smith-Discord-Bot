@@ -1,0 +1,61 @@
+Implement seven progression ranks within each framework for The Hallowed Core, guild ID 1556423230590423042. Inspect the current Agent Smith code and database first. Preserve onboarding, moderation, approved access, resource IDs, existing XP, and audit history.
+
+Use these cumulative XP thresholds and exact titles:
+
+| Level | Total XP | Gaming | Faith | Tech |
+|---|---:|---|---|---|
+| 1 | 0 | Novice | Initiate | Tech Apprentice |
+| 2 | 1,000 | Beginner | Student of the Word | Technician |
+| 3 | 3,500 | Skilled | Bible Worker | Tech Pro |
+| 4 | 9,000 | Expert | Bible Scholar | Tech Giant |
+| 5 | 22,000 | Champion | Disciple of the Word | Tech Lord |
+| 6 | 50,000 | Master | Steward of the Word | Lord Digital |
+| 7 | 100,000 | Legend | Master of the Word | The One |
+
+PROGRESSION AND PACING
+- Track Gaming, Faith, and Tech XP independently.
+- Level 1 is the starting rank after approved framework membership.
+- Aim for roughly 100 XP on an actively participating day. At that pace, levels 2–7 require approximately 10, 35, 90, 220, 500, and 1,000 active days respectively.
+- Set a configurable maximum of 150 earned XP per framework per day, shared across earning sources. Store timestamps in UTC and use America/Chicago for daily limits.
+- Award participation and contribution, not message volume. Use cooldowns, deduplication, and capped rewards for trivia, verified events, helpful answers, and completed activities.
+- No XP for bot messages, commands, repeated messages, idle voice time, or activity outside an approved framework.
+- Do not add a Message Content Intent dependency or AI scoring. If a contribution cannot be verified deterministically, use a human-reviewed award.
+- Document the exact earning rates. Keep thresholds and rates in centralized configuration.
+- Preserve existing XP. Inspect its source before migration; migrate known gaming/trivia XP to Gaming only, never copy a legacy balance into all three frameworks. Report ambiguous balances without discarding or guessing their attribution.
+
+ROLES AND ACCESS
+- Create and track all 21 Discord rank roles idempotently. Use names such as “Gaming • Legend”, “Faith • Bible Scholar”, and “Tech • The One”.
+- Rank roles have no administrative or channel-access permissions. They are not self-assignable through native onboarding.
+- Each member holds exactly one current rank role per approved framework. A promotion replaces the previous rank within that framework only.
+- Preserve human-approved membership in multiple frameworks; each progresses independently.
+- If framework access is revoked, remove its rank and unlock roles but retain its XP history.
+- XP must never grant another framework, moderator powers, or bypass human access approval.
+- Build an optional channel-unlock configuration, initially empty. Any later gated unlock must use a framework-specific access role and require both approved framework membership and the configured rank. Do not grant private channel access to a global rank or assume Discord supports an AND condition between roles.
+- Do not create speculative reward channels or modify existing channel privacy.
+
+FAITH RANK APPROVAL
+- Faith levels 1–2 may progress automatically.
+- Faith levels 3–7 require both the XP threshold and explicit approval from an allowlisted human.
+- Reaching a threshold creates a pending promotion; the current approved title remains until approval.
+- No self-approval, AI approval, or teaching/moderation authority granted by rank.
+- Explain publicly that titles recognize community participation and service, not spiritual worth or unquestionable religious authority.
+
+COMMANDS AND DISPLAY
+- Update /profile to show each approved framework’s XP, current rank, next threshold, progress, and any pending Faith promotion.
+- Provide /ranks to explain each ladder and earning rules.
+- Add private, allowlisted controls for contribution awards, corrections, and Faith promotion review.
+- Require a reason for manual awards and corrections. Log actor, recipient, framework, amount, source, and outcome. Reviewers cannot award themselves XP or approve their own promotions.
+- Human-approved contribution awards count toward daily limits. Exceptional owner corrections must be separately identified and audited, rather than silently bypassing caps.
+- Post promotion announcements only inside the appropriate framework, with allowed mentions restricted to the promoted member.
+- Keep private framework information out of shared announcements and leaderboards.
+
+RELIABILITY AND TESTING
+- Use durable XP events with idempotency keys, transactional updates, and per-member/framework locking.
+- Reconcile rank roles after restarts and access changes. Handle Discord API failures with safe retries without duplicating XP or announcements.
+- Test every threshold boundary, framework isolation, cooldowns, shared daily caps, duplicate and concurrent events, Faith approvals, unauthorized/self-awards, access revocation, legacy migration, and restart recovery.
+- Extend the permission audit to verify that rank roles grant no permissions and optional unlocks cannot cross framework boundaries.
+- Keep progression separate from existing onboarding work and preserve all current security guards.
+
+Complete the implementation, tests, safe database migration, creation of the 21 rank roles, command registration, and restart of the existing dedicated bot process. Do not publish paid hosting, expose Secrets, change other servers, or use real members for destructive tests.
+
+Report the earning rates, migration outcome, created roles, test results, live audit results, and any remaining limitations. Do not claim success for live checks that were not performed.

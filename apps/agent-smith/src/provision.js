@@ -5,6 +5,8 @@ import { categories, roleNames, rules, frameworks, ARRIVAL_CHANNEL_ID, selection
 import { onboardingMessage } from './onboarding.js';
 import { accessRequestMessage } from './access-request.js';
 import { communityChannels, starterChannels } from './community.js';
+import { auditProgressionRoles } from './progression-worker.js';
+import { progressionConfig } from './progression-config.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
 const apply = process.argv.includes('--apply');
@@ -129,6 +131,7 @@ try {
       }
     }
     if (mode === 'audit') {
+      failures.push(...await auditProgressionRoles({ guild, resource, config: progressionConfig }));
       await guild.members.fetch();
       for (const member of guild.members.cache.values()) {
         if (member.user.bot) continue;
