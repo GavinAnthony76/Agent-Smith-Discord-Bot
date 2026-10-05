@@ -3,6 +3,7 @@ import { connect, overwrites, botPermissions } from './discord.js';
 import { pool, resource, locked } from './db.js';
 import { categories, roleNames, rules, frameworks, ARRIVAL_CHANNEL_ID, selectionRoleNames } from './blueprint.js';
 import { onboardingMessage } from './onboarding.js';
+import { accessRequestMessage } from './access-request.js';
 import { communityChannels, starterChannels } from './community.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
@@ -122,7 +123,8 @@ try {
       for (const [name, content] of Object.entries({welcome:'Welcome to Hallowed Core, the shared home of Faith, Gaming, and Tech. Start in #rules, then use /accept and /join in #onboarding.',rules,onboarding:'Use /accept, then /join. Use /interest after joining. /request asks an allowlisted human for additional access.', 'access-requests':'Use /request framework:<name>. Requests are private; reviewers use /pending and /review in the control room.'})) {
         if (saved.some(x => x.kind === 'message' && x.name === name)) continue;
         const channel = await guild.channels.fetch(await resource('channel',name));
-        const msg = await channel.send(name === 'onboarding' ? onboardingMessage() : {content,allowedMentions:{parse:[]}});
+        const msg = await channel.send(name === 'onboarding' ? onboardingMessage()
+          : name === 'access-requests' ? accessRequestMessage() : {content,allowedMentions:{parse:[]}});
         await remember('message',name,msg.id);
       }
     }

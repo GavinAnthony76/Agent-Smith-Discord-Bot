@@ -125,7 +125,8 @@ expose the bot token to it or a browser.
 - The **Choose your community** menu in #onboarding (or `/join framework:Faith|Gaming|Tech`) selects exactly one initial framework after rules acceptance. Once chosen, a member cannot use it again, even after role removal.
 - Buttons/menu replies are private and use the same database locks, role safety checks, and audit path as slash commands. They only work on the tracked bot-owned onboarding message. Discord rules screening, when enabled, must be completed first.
 - `/interest` toggles an interest within a framework the member already holds.
-- `/request` submits an additional framework request. Duplicate pending requests reuse the same ID. No access is granted at submission.
+- The **Request another community** menu in #access-requests works without typing in that read-only channel. It submits the same private, human-reviewed request as `/request`. Only the tracked bot-owned message is accepted; it cannot grant roles or change the first community. Duplicate pending requests reuse the same ID. No access is granted at submission.
+- To update only the existing tracked request message, preview with `pnpm --filter @workspace/agent-smith run access-requests:refresh`, then use `--apply` for the authorized edit. This does not bootstrap, change permissions, or reactivate legacy onboarding.
 - Allowlisted humans use `/pending` and `/review id:… approve:true|false` in #access-review or #smith-controls. Self-approval is refused. A second human must review an owner's own request too.
 - `/revoke user:… framework:…` is owner-only and removes additional framework access plus its interest roles. Primary framework changes are intentionally a manual owner operation with database reconciliation; they are not self-service.
 

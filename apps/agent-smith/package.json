@@ -7,6 +7,7 @@
     "discord:bootstrap": "node --env-file-if-exists=.env src/provision.js bootstrap",
     "discord:audit": "node --env-file-if-exists=.env src/provision.js audit",
     "onboarding:refresh": "node --env-file-if-exists=.env src/refresh-onboarding.js",
+    "access-requests:refresh": "node --env-file-if-exists=.env src/refresh-access-requests.js",
     "onboarding:native": "node --env-file-if-exists=.env src/native-admin.js",
     "onboarding:cutover": "node --env-file-if-exists=.env src/native-cutover.js",
     "discord:register": "node --env-file-if-exists=.env src/register.js",

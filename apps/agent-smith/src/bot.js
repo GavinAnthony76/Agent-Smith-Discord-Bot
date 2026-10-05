@@ -3,6 +3,7 @@ import { pool, locked, resource, audit } from './db.js';
 import { frameworks, interests } from './blueprint.js';
 import { maySelfJoin, canReview, assertFramework, assertAssignableRole } from './policy.js';
 import { isOnboardingInteraction, onboardingAction } from './onboarding.js';
+import { isAccessRequestInteraction, accessRequestAction } from './access-request.js';
 import { isReviewInteraction, reviewAction, parseRequestId, pendingMessage } from './review.js';
 import { createModeration, isModerationInteraction } from './moderation.js';
 import { createAntiSpam } from './antispam.js';
@@ -21,17 +22,22 @@ async function log(actor, action, detail) {
 }
 client.on('interactionCreate', async i => {
   if (isModerationInteraction(i)) { await moderation.handle(i); return; }
-  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
+  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isAccessRequestInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
   await i.deferReply({flags:64});
   try {
-    const onboarding=onboardingAction(i), review=reviewAction(i);
-    const action=onboarding ?? review;
+    const onboarding=onboardingAction(i), review=reviewAction(i), accessRequest=accessRequestAction(i);
+    const action=onboarding ?? review ?? accessRequest;
     if (onboarding && (i.channelId !== await resource('channel','onboarding')
       || i.message.id !== await resource('message','onboarding')
       || i.message.author.id !== client.user.id)) {
       throw new Error('Use the official onboarding message in #onboarding.');
     }
     if (review && i.message.author.id !== client.user.id) throw new Error('Use the bot’s review buttons from /pending.');
+    if (accessRequest && (i.channelId !== await resource('channel','access-requests')
+      || i.message.id !== await resource('message','access-requests')
+      || i.message.author.id !== client.user.id)) {
+      throw new Error('Use the official request menu in #access-requests.');
+    }
     const name=action?.name ?? i.commandName, uid=i.user.id,
       target=action ? action.framework : i.options.getString('framework');
     if (['join','request','revoke'].includes(name)) assertFramework(target);
