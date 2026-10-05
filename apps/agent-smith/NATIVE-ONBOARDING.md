@@ -170,3 +170,44 @@ Discord/store fake. Live preparation/audits verify real settings and resource
 IDs without mutating member roles. A real non-staff join/screening/native UI
 journey still needs owner-assisted acceptance after publication; do not claim
 that API checks or unit tests are that acceptance test.
+
+### Owner-assisted acceptance attempt — 2026-10-05
+
+**Result: live non-staff acceptance remains unverified.** The owner authorized
+read-only bot/SQL evidence capture, but the supplied account was the guild owner
+and had already completed screening. The owner confirmed that no suitable fresh,
+consenting non-staff account was available. Owner visibility bypasses channel
+restrictions, so that account cannot establish the intended member experience.
+
+At 23:28 UTC, a bot REST snapshot and a PostgreSQL repeatable-read, read-only
+transaction showed the supplied account had `pending=false`, all three Selection
+roles, all three framework roles, no recorded primary, and no grant or progression
+records. A durable `multiple-selections` alert had been delivered to staff. These
+are current-state observations only, not proof of fresh initialization, screening
+enforcement, or the origin of existing roles. Account identifiers are omitted.
+Legacy mode remained enabled with cutover status `legacy`.
+
+None of the required fresh-member checks passed through this attempt:
+
+| Required observation | Status |
+| --- | --- |
+| Screening prevents bot access grants until completed | Unverified; no pre-screening snapshot |
+| Exactly one Gaming Selection initializes Member, recorded Gaming primary, and Gaming starting rank only | Unverified; supplied account was not a fresh non-staff member |
+| Cosmetic interests add no permissions | Unverified in the real member journey |
+| Staff and other frameworks remain hidden | Unverified; owner bypass makes this account unsuitable |
+| Guide welcome/onboarding visit tasks and arrival-lounge send task are usable | Unverified in the real member UI |
+| Changing Selection cannot grant a second framework or replace the recorded primary | Unverified in the real member journey |
+
+No Discord mutations, database writes, migrations, cutover, manual reconciliation,
+or member/progression resets were performed. Existing unrecorded access cases
+were not approved or revoked.
+
+Resume with an owner-approved consenting non-staff account that has not joined.
+Capture an account-scoped baseline before joining, pause before screening
+completion to inspect `pending` and the absence of access grants, then inspect
+the completed Gaming initialization. Have the tester exercise cosmetic interests,
+channel visibility, all three Guide tasks, and a changed Selection, with
+read-only role/store evidence after each relevant stage. Do not use legacy
+accept/join controls or manual staff role grants during the native test. Keep
+legacy mode and all other members unchanged; do not reset an existing account
+merely to manufacture a fresh baseline.
