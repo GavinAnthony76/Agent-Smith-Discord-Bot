@@ -1,0 +1,180 @@
+I need you to perform a SELF-AUDIT of this Discord bot project before making any changes.
+
+IMPORTANT:
+Do not rebuild, refactor, migrate, deploy, install new infrastructure, or spend effort changing architecture yet.
+First inspect the current project and explain exactly what exists, how it runs, and why this project appears to require VM/Reserved VM/persistent hosting in a way my previous Discord bot project did not appear to during development.
+
+REFERENCE PROJECT:
+I previously built a working Discord bot in another Replit project associated with the LMOC / Live Revamp project.
+
+That project successfully used Discord integration, a working bot, slash commands, roles, onboarding-related functionality, and website integration.
+
+If you have access to that previous Replit project in this account/workspace, inspect its architecture and compare it to this project.
+
+Do NOT modify the LMOC / Live Revamp project.
+
+The goal is to determine whether this new Agent Smith project was unnecessarily architected differently.
+
+BACKGROUND:
+The previous LMOC Discord setup followed this general pattern:
+
+- Website and Discord bot were separate concerns/processes.
+- The Discord bot could be run directly during development inside Replit.
+- Discord bootstrap/setup scripts handled server structure, roles, commands, etc.
+- The bot process handled ongoing Discord Gateway events and interactions.
+- 24/7 hosting was a deployment concern, not a requirement for development.
+- The bot was deliberately kept separate from the website startup.
+- We did not need to redesign the whole application around VM hosting just to build and test it.
+
+This new project is for a Discord bot called Agent Smith.
+
+Agent Smith should eventually handle:
+- Discord onboarding
+- Roles
+- Slash commands
+- Moderation
+- Community management
+- Faith community features
+- Gaming community features
+- Tech community features
+- Server automation
+- Possibly website/admin integration later
+
+The server will have three primary community frameworks:
+1. Faith
+2. Gaming
+3. Tech
+
+Gaming will include areas such as:
+- World of Warcraft
+- Monsters & Memories
+- Street Fighter
+- Marvel Tokon
+- 2XKO
+- other fighting games/MMOs
+
+AUDIT THIS PROJECT AND REPORT THE FOLLOWING:
+
+1. CURRENT ARCHITECTURE
+Show the important file/folder structure and identify:
+- bot entrypoint
+- website/server entrypoint, if any
+- bootstrap/setup scripts
+- command registration
+- Discord event handlers
+- database usage
+- environment variables/secrets required
+- deployment configuration
+- Replit configuration
+- package.json scripts
+
+2. HOW THE BOT CURRENTLY RUNS
+Explain:
+- exact command that starts Agent Smith
+- whether it can run normally inside the Replit development workspace
+- whether a website/server process is coupled to the bot
+- whether the bot requires an HTTP server to remain alive
+- whether any keep-alive workaround was added
+- whether the code assumes a VM/Reserved VM deployment
+
+3. WHY VM HOSTING WAS INTRODUCED
+Identify exactly what part of this project's implementation or Replit configuration caused VM/Reserved VM/persistent hosting to become part of the discussion.
+
+Clearly distinguish between:
+A. development/testing
+B. production 24/7 uptime
+
+Tell me whether a VM is actually required for development.
+
+4. COMPARE AGAINST LMOC / LIVE REVAMP
+If you can access the previous LMOC / Live Revamp Replit project, compare:
+
+- bot startup architecture
+- package.json scripts
+- .replit configuration
+- deployment type
+- bot process separation
+- website process separation
+- Discord Gateway connection
+- command registration
+- bootstrap scripts
+- environment variable handling
+- database integration
+
+Identify specific architectural differences.
+
+5. DETERMINE WHETHER THIS PROJECT IS OVERENGINEERED
+Tell me if this current Agent Smith project was unnecessarily built around:
+- VM deployment
+- web hosting
+- keep-alive servers
+- multiple services
+- Docker
+- external workers
+- deployment-specific infrastructure
+- anything else not needed just to develop and test a Discord.js bot
+
+6. RECOMMENDED TARGET ARCHITECTURE
+I want the simplest architecture possible, preferably similar to LMOC:
+
+Example target:
+
+project/
+  src/
+    bot/
+      agent-smith.js or agent-smith.ts
+      commands/
+      events/
+      onboarding/
+      roles/
+      moderation/
+    web/
+      optional admin/API server
+
+  scripts/
+    discord/
+      bootstrap.js
+      register-commands.js
+
+  shared/
+    config/
+    database/
+
+  package.json
+  .replit
+
+Desired scripts should conceptually resemble:
+
+npm run bot
+npm run bootstrap
+npm run register-commands
+npm run web
+
+The bot should be independently runnable from the web application.
+
+7. DO NOT CHANGE ANYTHING YET
+After the audit, stop.
+
+Do not edit files.
+Do not install packages.
+Do not change deployment.
+Do not create a VM.
+Do not create a Reserved VM.
+Do not create additional services.
+Do not regenerate the project.
+
+Return a written audit first.
+
+End the audit with these sections:
+
+A. WHAT IS CURRENTLY WRONG, if anything
+B. WHAT IS ACTUALLY REQUIRED
+C. WHAT IS NOT REQUIRED
+D. DIFFERENCES FROM LMOC / LIVE REVAMP
+E. MINIMAL FIX PLAN
+F. FILES THAT WOULD NEED TO CHANGE
+G. ESTIMATED RISK OF THE FIX: LOW / MEDIUM / HIGH
+
+Also state clearly whether the existing work can be preserved or whether anything truly needs rebuilding.
+
+The priority is to SAVE the current work and simplify it, not start over.
