@@ -9,6 +9,7 @@ import { createModeration, isModerationInteraction } from './moderation.js';
 import { createAntiSpam } from './antispam.js';
 import { createNativeReconciler } from './native-reconcile.js';
 import { legacyAllowed } from './native-policy.js';
+import { recoverApproval } from './access-recovery.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const moderation = createModeration({ guild, cfg, pool, resource, spam });
@@ -24,6 +25,7 @@ client.on('interactionCreate', async i => {
   if (isModerationInteraction(i)) { await moderation.handle(i); return; }
   if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isAccessRequestInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
   await i.deferReply({flags:64});
+  let approvalAttempt;
   try {
     const onboarding=onboardingAction(i), review=reviewAction(i), accessRequest=accessRequestAction(i);
     const action=onboarding ?? review ?? accessRequest;
@@ -93,7 +95,13 @@ client.on('interactionCreate', async i => {
         if (approved) {
            assertFramework(request.framework);
           if (!m.accepted_at || !m.primary_framework) throw new Error('Member must complete onboarding first.');
-          await add(request.framework);
+          const role = assertAssignableRole(await guild.roles.fetch(roleIds[request.framework]));
+          approvalAttempt = { subject, framework: request.framework, roleId: role.id,
+            requestId: request.id, preExisting: member.roles.cache.has(role.id), added: false };
+          if (!approvalAttempt.preExisting) {
+            await member.roles.add(role, 'Agent Smith explicit access workflow');
+            approvalAttempt.added = true;
+          }
           await db.query('INSERT INTO grants(guild_id,user_id,framework,reviewer) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',[guild.id,subject,request.framework,uid]);
         }
         await db.query('UPDATE requests SET status=$2,reviewer=$3 WHERE id=$1',[request.id,approved?'approved':'denied',uid]);
@@ -130,6 +138,8 @@ client.on('interactionCreate', async i => {
       } else throw new Error('Unknown command.');
       await audit(db,uid,name,{subject,framework:target,request:request?.id}); return reply;
     });
+    // Subsequent reply/mirror failures cannot undo an acknowledged commit.
+    approvalAttempt = undefined;
     if (name==='request') {
       // Storage is committed. Delivery failure must not imply the request failed.
       // Each explicit resubmission reuses the pending ID and retries once; no
@@ -151,7 +161,13 @@ client.on('interactionCreate', async i => {
       return;
     }
     await i.editReply(result); await log(uid,name,{subject,framework:target,request:request?.id});
-  } catch (e) { console.error('Command failed:',e.message); await i.editReply({content:`Unable to complete: ${e.message}`.slice(0,1900),allowedMentions:{parse:[]}}).catch(()=>{}); }
+  } catch (e) {
+    console.error('Command failed:',e.message);
+    const content = approvalAttempt
+      ? await recoverApproval({ attempt: approvalAttempt, error: e, locked, guild })
+      : `Unable to complete: ${e.message}`;
+    await i.editReply({content:content.slice(0,1900),allowedMentions:{parse:[]}}).catch(()=>{});
+  }
 });
 const queueNative = member => {
   if (member.guild.id !== guild.id || member.user.bot) return;

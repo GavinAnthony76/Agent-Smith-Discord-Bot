@@ -1,15 +1,9 @@
 import pg from 'pg';
 import { config } from './config.js';
+import { runLocked } from './transaction.js';
 export const pool = new pg.Pool({ connectionString: config().databaseUrl });
 export async function locked(key, fn) {
-  const db = await pool.connect();
-  try {
-    await db.query('BEGIN');
-    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
-    const value = await fn(db);
-    await db.query('COMMIT'); return value;
-  } catch (e) { await db.query('ROLLBACK'); throw e; }
-  finally { db.release(); }
+  return runLocked(pool, key, fn);
 }
 export async function resource(kind, name, db = pool) {
   const r = await db.query('SELECT discord_id FROM resources WHERE guild_id=$1 AND kind=$2 AND name=$3', [config().guildId, kind, name]);

@@ -1,3 +1,4 @@
 - [Discord channel permissions](discord-permission-validation.md) — Manage Roles belongs on the bot guild role, not channel-creation overwrites.
 - [Read-only member actions](discord-onboarding-usability.md) — onboarding and access requests need usable controls; permission audits alone do not establish a working member flow.
+- [Approval recovery authorization](access-recovery-contract.md) — guarded compensation was explicitly approved; uncertain writes preserve access and require staff reconciliation.
 - [Access notification recovery](access-notification-recovery.md) — saved requests survive delivery failures; explicit retries may duplicate notifications, never approval.

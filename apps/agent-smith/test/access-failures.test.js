@@ -36,7 +36,10 @@ test('role-add rejection leaves review pending with no grant; a later retry can 
         message: 'Discord role add unavailable' });
       const i = await dispatch(reviewOptions(kind));
       assert.equal(fault.used, true);
-      assertFailure(i, fault.message);
+      assertPrivate(i);
+      assert.match(replyText(i), /approval was not saved.*role-add confirmation is uncertain/);
+      assert.match(replyText(i), /Staff reconciliation is required before retrying/);
+      assert.deepEqual(Array.from(i.replies[0].allowedMentions.parse), []);
       assertPending(state, before);
       assert.deepEqual(state.roleAddAttempts, [roleChange]);
       assert.deepEqual(state.roleAdds, []);
@@ -58,7 +61,7 @@ test('role-add rejection leaves review pending with no grant; a later retry can 
   }
 });
 
-test('known database rollback after Discord grants access leaves an unrecorded role and unsafe retry messaging', async t => {
+test('known database rollback removes only newly acknowledged access and leaves a retryable pending review', async t => {
   const stages = [
     ['grant insert', 'query', { match: ({ sql }) => sql.startsWith('INSERT INTO grants') }],
     ['decision update', 'query', { match: ({ sql }) => sql.startsWith('UPDATE requests SET status') }],
@@ -75,26 +78,25 @@ test('known database rollback after Discord grants access leaves an unrecorded r
         const fault = failNext(point, { ...options, message: `Database unavailable at ${label}` });
         const i = await dispatch(reviewOptions(kind));
         assert.equal(fault.used, true);
-        assertFailure(i, fault.message);
+        assertPrivate(i);
+        assert.equal(replyText(i), 'Request 1: approval was not saved. The new role is absent after recovery; the request remains pending. An allowlisted human can retry the review.');
+        assert.deepEqual(Array.from(i.replies[0].allowedMentions.parse), []);
         assertPending(state, before);
         assert.deepEqual(state.roleAdds, [roleChange]);
-        assert.equal(state.members.get('member').held.has('role:Tech'), true);
-        assert.deepEqual(state.roleRemoves, []);
+        assert.equal(state.members.get('member').held.has('role:Tech'), false);
+        assert.deepEqual(state.roleRemoves, [roleChange]);
         assert.deepEqual(structuredClone(state.messages), messages);
         assert.deepEqual(state.errors.at(-1), ['Command failed:', fault.message]);
-        // Characterization, not a safety endorsement: the private error omits
-        // the already-granted access and gives no reconciliation/retry warning.
-        assert.doesNotMatch(replyText(i), /role|granted|reconcil|retry/i);
-
         const pending = await dispatch({ kind: 'command', command: 'pending', user: 'reviewer' });
         assertPrivate(pending);
         assert.match(replyText(pending), /Request #1/);
         const memberRetry = await dispatch();
-        assertFailure(memberRetry, 'You already have this framework.');
-        assertPending(state, before);
+        assert.equal(replyText(memberRetry), 'Request 1 is pending human review. No access was granted.');
+        assert.equal(state.requests.length, 1);
+        assert.equal(state.grants.length, 0);
 
-        // Retrying review calls Discord again rather than recognizing partial
-        // success. The fake Set models role-add idempotence, not compensation.
+        // Once compensation removed the new role, a fresh human approval can
+        // legitimately add it again and persist the decision.
         const retry = await dispatch(reviewOptions(kind));
         assertPrivate(retry);
         assert.equal(replyText(retry), 'Request 1 approved by human reviewer.');

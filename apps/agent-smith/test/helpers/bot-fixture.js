@@ -7,6 +7,8 @@ import * as onboarding from '../../src/onboarding.js';
 import * as accessRequest from '../../src/access-request.js';
 import * as review from '../../src/review.js';
 import * as nativePolicy from '../../src/native-policy.js';
+import * as recovery from '../../src/access-recovery.js';
+import { runLocked } from '../../src/transaction.js';
 
 // Evaluate the actual bot entry point in a closed module graph. Never import
 // discord.js's connection wrapper, db.js, config.js, or any live worker.
@@ -19,15 +21,21 @@ export async function botFixture() {
   };
   const cfg = { guildId: 'test-guild', owners: ['owner'], approvers: ['reviewer'] };
   const faults = [];
-  function failNext(point, { match = () => true, message = `Injected ${point} failure` } = {}) {
-    assert.ok(['roleAdd', 'query', 'audit', 'commit', 'channelFetch', 'channelSend', 'editReply'].includes(point));
-    const fault = { point, match, message, used: false };
+  function failNext(point, { match = () => true, message = `Injected ${point} failure`, code, effect } = {}) {
+    assert.ok(['roleAdd', 'roleAddAfter', 'roleRemove', 'memberFetch', 'query', 'audit', 'commit', 'commitAfter', 'rollback', 'channelFetch', 'channelSend', 'editReply'].includes(point));
+    const fault = { point, match, message, code, effect, used: false };
     faults.push(fault);
     return fault;
   }
   function trip(point, detail) {
     const fault = faults.find(f => !f.used && f.point === point && f.match(detail));
-    if (fault) { fault.used = true; throw new Error(fault.message); }
+    if (fault) {
+      fault.used = true;
+      fault.effect?.(state);
+      const error = new Error(fault.message);
+      error.code = fault.code ?? (point === 'commit' ? '40001' : undefined);
+      throw error;
+    }
   }
   const events = new Map();
   const client = { user: { id: 'test-bot' }, on: (name, fn) => events.set(name, fn) };
@@ -36,6 +44,7 @@ export async function botFixture() {
     id: cfg.guildId,
     members: { fetch: async ({ user, force }) => {
       assert.equal(force, true);
+      trip('memberFetch', { user });
       const member = state.members.get(user);
       assert.ok(member, `Unseeded fake member ${user}`);
       return {
@@ -47,8 +56,10 @@ export async function botFixture() {
             trip('roleAdd', { user, role: role.id });
             state.roleAdds.push({ user, role: role.id });
             member.held.add(role.id);
+            trip('roleAddAfter', { user, role: role.id });
           },
           remove: async id => {
+            trip('roleRemove', { user, role: id });
             state.roleRemoves.push({ user, role: id });
             member.held.delete(id);
           }
@@ -100,6 +111,8 @@ export async function botFixture() {
       if (!state.grants.some(g => g.guild_id === guild_id && g.user_id === user_id && g.framework === framework)) {
         state.grants.push({ guild_id, user_id, framework, reviewer });
       }
+    } else if (sql.startsWith('SELECT * FROM grants')) {
+      rows = state.grants.filter(g => g.guild_id === args[0] && g.user_id === args[1] && g.framework === args[2]);
     } else if (sql === 'UPDATE requests SET status=$2,reviewer=$3 WHERE id=$1') {
       Object.assign(state.requests.find(r => r.id === args[0]), { status: args[1], reviewer: args[2] });
     } else {
@@ -109,20 +122,31 @@ export async function botFixture() {
   };
   const locked = async (key, fn) => {
     state.locks.push(key);
-    // Only database records roll back. Discord roles and delivery attempts are
-    // external side effects and must survive an aborted transaction.
     const records = structuredClone(new Map([...state.members].map(([id, member]) => [id, member.record])));
     const snapshot = structuredClone({ requests: state.requests, grants: state.grants, audits: state.audits });
-    try {
-      const result = await fn({ query });
-      // Models a rejected COMMIT before persistence, not an ambiguous lost ACK.
-      trip('commit', { key });
-      return result;
-    } catch (error) {
-      Object.assign(state, snapshot);
-      for (const [id, record] of records) state.members.get(id).record = record;
-      throw error;
-    }
+    let committed = false;
+    return runLocked({ connect: async () => ({
+      query: async (sql, args) => {
+        if (sql === 'BEGIN') return {};
+        if (sql === 'COMMIT') {
+          trip('commit', { key });
+          committed = true;
+          trip('commitAfter', { key });
+          return { command: 'COMMIT' };
+        }
+        if (sql === 'ROLLBACK') {
+          if (!committed) {
+            Object.assign(state, structuredClone(snapshot));
+            for (const [id, record] of records) state.members.get(id).record = structuredClone(record);
+          }
+          trip('rollback', { key });
+          state.afterRollback?.();
+          return {};
+        }
+        return query(sql, args);
+      },
+      release: () => {}
+    }) }, key, fn);
   };
   const inert = async () => {};
   const dependencies = {
@@ -134,6 +158,7 @@ export async function botFixture() {
       } },
     './blueprint.js': blueprint, './policy.js': policy, './onboarding.js': onboarding,
     './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
+    './access-recovery.js': recovery,
     './moderation.js': { isModerationInteraction: () => false, createModeration: () => ({
       handle: () => { throw new Error('Unexpected moderation dispatch'); }
     }) },
