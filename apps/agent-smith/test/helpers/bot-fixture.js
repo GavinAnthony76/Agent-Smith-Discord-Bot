@@ -1,0 +1,172 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { SourceTextModule, SyntheticModule, createContext } from 'node:vm';
+import * as blueprint from '../../src/blueprint.js';
+import * as policy from '../../src/policy.js';
+import * as onboarding from '../../src/onboarding.js';
+import * as accessRequest from '../../src/access-request.js';
+import * as review from '../../src/review.js';
+import * as nativePolicy from '../../src/native-policy.js';
+
+// Evaluate the actual bot entry point in a closed module graph. Never import
+// discord.js's connection wrapper, db.js, config.js, or any live worker.
+// Unknown imports and SQL fail closed rather than falling through to a service.
+export async function botFixture() {
+  const state = {
+    members: new Map(), requests: [], grants: [], audits: [], queries: [],
+    locks: [], roleAdds: [], roleRemoves: [], messages: [], errors: [],
+    onboarding: { legacy_enabled: true, cutover_status: 'legacy' }
+  };
+  const cfg = { guildId: 'test-guild', owners: ['owner'], approvers: ['reviewer'] };
+  const events = new Map();
+  const client = { user: { id: 'test-bot' }, on: (name, fn) => events.set(name, fn) };
+  const resource = async (kind, name) => `${kind}:${name}`;
+  const guild = {
+    id: cfg.guildId,
+    members: { fetch: async ({ user, force }) => {
+      assert.equal(force, true);
+      const member = state.members.get(user);
+      assert.ok(member, `Unseeded fake member ${user}`);
+      return {
+        user: { id: user, bot: member.bot }, pending: member.pending,
+        roles: {
+          cache: { has: id => member.held.has(id) },
+          add: async role => {
+            state.roleAdds.push({ user, role: role.id });
+            member.held.add(role.id);
+          },
+          remove: async id => {
+            state.roleRemoves.push({ user, role: id });
+            member.held.delete(id);
+          }
+        }
+      };
+    } },
+    roles: { fetch: async id => ({ id, editable: true, permissions: { bitfield: 0n } }) },
+    channels: { fetch: async id => ({ send: async payload => {
+      state.messages.push({ channel: id, payload });
+    } }) }
+  };
+  const query = async (sql, args = []) => {
+    state.queries.push({ sql, args });
+    let rows = [];
+    if (sql.startsWith('SELECT pg_advisory_xact_lock')) {
+      // Transaction lock is recorded, not sent to PostgreSQL.
+    } else if (sql.startsWith('SELECT * FROM onboarding_state')) {
+      rows = [{ ...state.onboarding }];
+    } else if (sql.startsWith('INSERT INTO members')) {
+      assert.equal(args[0], guild.id);
+      assert.ok(state.members.has(args[1]));
+    } else if (sql.startsWith('SELECT * FROM members')) {
+      assert.equal(args[0], guild.id);
+      rows = [{ ...state.members.get(args[1]).record }];
+    } else if (sql.startsWith('INSERT INTO requests')) {
+      assert.match(sql, /ON CONFLICT \(guild_id,user_id,framework\) WHERE status='pending' DO UPDATE/);
+      assert.match(sql, /RETURNING id/);
+      const [guild_id, user_id, framework] = args;
+      let request = state.requests.find(r => r.guild_id === guild_id && r.user_id === user_id
+        && r.framework === framework && r.status === 'pending');
+      if (!request) {
+        request = { id: String(state.requests.length + 1), guild_id, user_id, framework, status: 'pending', reviewer: null };
+        state.requests.push(request);
+      }
+      rows = [{ id: request.id }];
+    } else if (sql.startsWith('SELECT id,user_id,framework FROM requests')) {
+      rows = state.requests.filter(r => r.guild_id === args[0] && r.status === 'pending').slice(0, 20);
+    } else if (sql === 'SELECT * FROM requests WHERE guild_id=$1 AND id=$2') {
+      rows = state.requests.filter(r => r.guild_id === args[0] && r.id === args[1]);
+    } else if (sql === 'SELECT * FROM requests WHERE id=$1 FOR UPDATE') {
+      rows = state.requests.filter(r => r.id === args[0]);
+    } else if (sql.startsWith('INSERT INTO grants')) {
+      const [guild_id, user_id, framework, reviewer] = args;
+      if (!state.grants.some(g => g.guild_id === guild_id && g.user_id === user_id && g.framework === framework)) {
+        state.grants.push({ guild_id, user_id, framework, reviewer });
+      }
+    } else if (sql === 'UPDATE requests SET status=$2,reviewer=$3 WHERE id=$1') {
+      Object.assign(state.requests.find(r => r.id === args[0]), { status: args[1], reviewer: args[2] });
+    } else {
+      throw new Error(`Unexpected fake database SQL: ${sql}`);
+    }
+    return { rows: structuredClone(rows) };
+  };
+  const locked = async (key, fn) => {
+    state.locks.push(key);
+    const snapshot = structuredClone({ members: state.members, requests: state.requests, grants: state.grants, audits: state.audits });
+    try { return await fn({ query }); }
+    catch (error) { Object.assign(state, snapshot); throw error; }
+  };
+  const inert = async () => {};
+  const dependencies = {
+    './discord.js': { connect: async () => ({ client, guild, cfg }) },
+    './db.js': { pool: { query, end: inert }, locked, resource,
+      audit: async (_db, actor, action, detail) => state.audits.push({ actor, action, detail }) },
+    './blueprint.js': blueprint, './policy.js': policy, './onboarding.js': onboarding,
+    './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
+    './moderation.js': { isModerationInteraction: () => false, createModeration: () => ({
+      handle: () => { throw new Error('Unexpected moderation dispatch'); }
+    }) },
+    './antispam.js': { createAntiSpam: async () => ({ handleMessage: inert }) },
+    './native-reconcile.js': { createNativeReconciler: async () => ({
+      enqueue: inert, drain: inert, scan: inert, stop: () => {}
+    }) }
+  };
+  const context = createContext({
+    console: { log: () => {}, error: (...args) => state.errors.push(args) },
+    process: { on: () => {} }
+  });
+  const source = await readFile(new URL('../../src/bot.js', import.meta.url), 'utf8');
+  const module = new SourceTextModule(source, { context, identifier: 'isolated-bot.js' });
+  await module.link(specifier => {
+    assert.ok(Object.hasOwn(dependencies, specifier), `Unmocked bot import: ${specifier}`);
+    const exports = dependencies[specifier];
+    return new SyntheticModule(Object.keys(exports), function () {
+      for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
+    }, { context });
+  });
+  await module.evaluate();
+  assert.ok(events.has('interactionCreate'));
+
+  function seed(user = 'member', overrides = {}) {
+    state.members.set(user, {
+      bot: false, pending: false, held: new Set(['role:Member', 'role:Gaming']),
+      record: { accepted_at: '2026-01-01T00:00:00Z', primary_framework: 'Gaming' },
+      ...overrides
+    });
+  }
+  function interaction({ kind = 'menu', user = 'member', command, framework = 'Tech',
+    id = '1', approve = true, ...overrides } = {}) {
+    const deferred = [], replies = [];
+    return {
+      guildId: cfg.guildId, channelId: kind === 'menu' ? 'channel:access-requests' : 'channel:access-review',
+      user: typeof user === 'string' ? { id: user, bot: false } : user,
+      message: { id: 'message:access-requests', author: { id: client.user.id } },
+      customId: kind === 'menu' ? accessRequest.REQUEST_FRAMEWORK_ID : `smith:review:${approve ? 'approve' : 'deny'}:${id}`,
+      commandName: command, values: [framework],
+      isChatInputCommand: () => kind === 'command',
+      isStringSelectMenu: () => kind === 'menu',
+      isButton: () => kind === 'button',
+      options: { getString: key => ({ framework, id })[key] ?? null, getBoolean: () => approve },
+      deferReply: async payload => { deferred.push(payload); },
+      editReply: async payload => { replies.push(payload); },
+      deferred, replies, ...overrides
+    };
+  }
+  async function dispatch(options) {
+    const i = interaction(options);
+    await events.get('interactionCreate')(i);
+    return i;
+  }
+  seed();
+  return { state, cfg, seed, dispatch };
+}
+
+export function replyText(i) {
+  const reply = i.replies.at(-1);
+  return typeof reply === 'string' ? reply : reply?.content;
+}
+
+export function assertPrivate(i) {
+  assert.equal(i.deferred.length, 1);
+  assert.equal(i.deferred[0].flags, 64);
+  assert.equal(i.replies.length, 1);
+}

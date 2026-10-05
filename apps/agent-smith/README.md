@@ -46,7 +46,7 @@ Root shortcuts:
 | `pnpm run bot` | Run the bot independently |
 | `pnpm run bootstrap` | Inspect the live target and preview setup; no Discord writes |
 | `pnpm run register-commands` | Offline slash-command preview |
-| `pnpm run bot:test` | Offline unit tests |
+| `pnpm run bot:test` | Offline unit and isolated interaction tests |
 | `pnpm run bot:preflight` | Offline blueprint/permission checks |
 | `pnpm run bot:audit` | Live read-only permission/access audit |
 
@@ -177,6 +177,8 @@ The shared Accept rules control remains for new members. Repeated acceptance kee
 ## Validation and recovery
 
 The tests cover framework selection, human allowlists, fixed-target refusal, write confirmations, safe role grants, category visibility, read-only onboarding, and command serialization. The offline preflight checks the full blueprint's visibility grants and confirms no Administrator grant. Role assignment refuses roles with nonzero server permissions or unsafe hierarchy. Live API and PostgreSQL acceptance checks require configuration.
+
+The request-pipeline tests evaluate the actual `src/bot.js` interaction listener with fake Discord interactions and an in-memory database. They cover private replies, onboarding requirements, pending-request ID reuse, submission without access changes, official-message checks, human approval/denial, self-approval refusal, and requests after native cutover while legacy accept/join stays disabled. Live connection modules and background workers are replaced in a closed module graph; unexpected imports or SQL are refused. Run these through `pnpm run bot:test` or the package's `test` script, which enables Node's VM modules (an experimental warning is expected). These checks do not connect to Discord or PostgreSQL and do not prove real database concurrency or Discord delivery.
 
 Before inviting members, use a normal test account: confirm it sees only START HERE; accept rules and confirm hub access; join one framework; verify both other frameworks remain hidden; attempt a second join; request a second framework; verify only an allowlisted human can approve and that self-approval fails; revoke it; run audit. Test trivia replay/cooldown and feed deduplication. Check a second process cannot concurrently select two frameworks for the same member. Review Discord's View Server As Role as a supplement, not a substitute for the test account.
 
