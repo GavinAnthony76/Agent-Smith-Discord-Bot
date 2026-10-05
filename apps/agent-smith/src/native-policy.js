@@ -49,7 +49,7 @@ export function legacyAllowed(state) {
   return state?.legacy_enabled !== false;
 }
 
-export function nativeQuestionErrors(onboarding, roles) {
+export function nativeQuestionErrors(onboarding, roles, cosmeticRoleIds = []) {
   const errors = [];
   if (!onboarding?.enabled) errors.push('Native onboarding is not published/enabled.');
   const prompts = onboarding?.prompts ?? [];
@@ -66,12 +66,17 @@ export function nativeQuestionErrors(onboarding, roles) {
       }
     }
   }
-  // Do not allow another question to accidentally map Member/framework/interest
-  // roles. Other optional answers may be channel-only; gated IDs are checked
-  // separately against the permission blueprint before cutover.
+  // Optional tracked, audited cosmetic interests are allowed; access and rank
+  // roles are never accepted. Channel privacy is checked separately.
+  const selections = new Set(Object.values(roles)), cosmetics = new Set(cosmeticRoleIds);
   for (const p of prompts) for (const o of p.options ?? []) {
-    if ((o.role_ids ?? []).some(id => !Object.values(roles).includes(id))) errors.push('A native answer maps a non-selection role.');
-    if (p !== question && (o.role_ids ?? []).length) errors.push('Selection roles must appear only in the required question.');
+    const assigned = o.role_ids ?? [];
+    if (assigned.some(id => !selections.has(id) && !cosmetics.has(id))) errors.push('A native answer maps a non-selection/non-cosmetic role.');
+    if (p !== question && assigned.some(id => selections.has(id))) errors.push('Selection roles must appear only in the required question.');
+    if (assigned.some(id => cosmetics.has(id))) {
+      if (p === question || p.required !== false) errors.push('Cosmetic interests must appear only in optional questions.');
+      if ((o.channel_ids ?? []).length) errors.push('Cosmetic interest answers must not map channels.');
+    }
   }
   return [...new Set(errors)];
 }

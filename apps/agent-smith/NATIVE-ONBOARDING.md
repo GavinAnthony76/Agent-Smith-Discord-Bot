@@ -28,10 +28,26 @@ The inspection output reports their IDs for the owner to map in Discord:
 | Gaming | Selection: Gaming | None |
 | Tech | Selection: Tech | None |
 
-Do not map **Member**, **Faith**, **Gaming**, **Tech**, or interest roles to native
-answers. Do not put gated framework/shared/staff channels into native defaults
+Do not map **Member**, **Faith**, **Gaming**, **Tech**, or progression ranks to native
+answers. Optional cosmetic interest questions may assign only tracked
+`Interest: …` roles, with no channel mappings, guild permissions or channel
+overwrites. They do not establish framework membership or count as a Selection.
+Do not put gated framework/shared/staff channels into native defaults
 or answer mappings. Existing humans can choose a Selection role through native
 Channels & Roles once published; their recorded primary does not change.
+
+Detailed read-only REST diagnosis (does not start another Gateway process):
+
+```sh
+cd apps/agent-smith
+node src/native-diagnose.js
+```
+
+It checks saved native mappings, migration mode, effective cosmetic-role
+permissions, Server Guide target permissions, community-help overwrite drift,
+and unmatched framework roles against durable records. Saved Server Guide and
+Discord role audit history may be unavailable to the bot; unsaved drafts are
+never visible. No members, Discord settings, modes or database records change.
 
 ## Reconciliation and recovery
 
@@ -82,6 +98,11 @@ The owner must inspect task types and remove stale/deleted/gated task/resource
 targets in the Discord UI. If the error remains, save the three simple tasks
 with rules as the sole Resource, then add other Resources one at a time. Do not
 “fix” this by opening gated channels or making rules/onboarding writable.
+When View/History on the visit targets and View/History/Send on the message
+target already pass, the generic permission error does not establish a channel
+permission defect. Check the selected task types, resource overlap and saved
+question/default configuration before changing anything. Bot HTTP 403 on saved
+Guide inspection is not evidence that the server owner lacks permission to save.
 
 The bot can read native onboarding and screening settings but may receive
 403/Missing Permissions for saved Server Guide settings. Unsaved UI drafts are

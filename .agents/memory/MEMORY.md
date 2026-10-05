@@ -4,3 +4,4 @@
 - [Access notification recovery](access-notification-recovery.md) — saved requests survive delivery failures; explicit retries may duplicate notifications, never approval.
 - [Access concurrency tests](access-concurrency-tests.md) — force observable transaction overlap in isolated tests; sequential refusals and recorded lock calls do not prove concurrency safety.
 - [Native onboarding read limit](discord-onboarding-rate-limits.md) — share brief UI metadata snapshots; fresh per-member reads exceed the live five-request limit and stall recovery.
+- [Native draft boundaries](discord-native-draft-boundaries.md) — distinguish saved API settings from concurrent owner drafts; bot inspection failures do not establish UI permission defects.

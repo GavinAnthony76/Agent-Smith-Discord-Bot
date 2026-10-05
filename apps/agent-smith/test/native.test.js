@@ -150,6 +150,22 @@ test('bot accounts, invalid selections and incomplete records cannot initialize'
 const ids = { Faith: 'faith-selection', Gaming: 'gaming-selection', Tech: 'tech-selection' };
 const published = () => ({ enabled: true, prompts: [{ required: true, single_select: true, in_onboarding: true,
   options: Object.entries(ids).map(([title, id]) => ({ title, role_ids: [id], channel_ids: [] })) }] });
+test('optional audited cosmetics are allowed but never substitute for Selection or grant membership', () => {
+  const data = published();
+  const optional = { required: false, single_select: false, in_onboarding: false,
+    options: [{ title: 'Programming', role_ids: ['cosmetic'], channel_ids: [] }] };
+  data.prompts.push(optional);
+  assert.deepEqual(nativeQuestionErrors(data, ids, ['cosmetic']), []);
+  assert(nativeQuestionErrors(data, ids).length);
+  optional.required = true;
+  assert(nativeQuestionErrors(data, ids, ['cosmetic']).length);
+  optional.required = false; optional.options[0].channel_ids = ['private-tech'];
+  assert(nativeQuestionErrors(data, ids, ['cosmetic']).length);
+  optional.options[0].channel_ids = []; optional.options[0].role_ids = ['framework-role'];
+  assert(nativeQuestionErrors(data, ids, ['cosmetic']).length);
+  optional.options[0].role_ids = ['rank-role'];
+  assert(nativeQuestionErrors(data, ids, ['cosmetic']).length);
+});
 test('cutover requires enabled native UI and exact required single-choice mappings', () => {
   assert.deepEqual(nativeQuestionErrors(published(), ids), []);
   for (const key of ['required', 'single_select', 'in_onboarding']) {
