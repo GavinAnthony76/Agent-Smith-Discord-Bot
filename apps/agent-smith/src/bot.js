@@ -84,7 +84,8 @@ client.on('interactionCreate', async i => {
         if (!m.accepted_at || !m.primary_framework) throw new Error('Accept rules and choose your first framework before requesting another.');
         if (held.includes(target)) throw new Error('You already have this framework.');
         const r=await db.query("INSERT INTO requests(guild_id,user_id,framework) VALUES($1,$2,$3) ON CONFLICT (guild_id,user_id,framework) WHERE status='pending' DO UPDATE SET framework=EXCLUDED.framework RETURNING id",[guild.id,subject,target]);
-        reply=`Request ${r.rows[0].id} is pending human review. No access was granted.`;
+        request=r.rows[0];
+        reply=`Request ${request.id} is pending human review. No access was granted.`;
       } else if (name==='review') {
         request=(await db.query('SELECT * FROM requests WHERE id=$1 FOR UPDATE',[request.id])).rows[0];
         if (request.status!=='pending') throw new Error('Request already reviewed.');
@@ -129,10 +130,27 @@ client.on('interactionCreate', async i => {
       } else throw new Error('Unknown command.');
       await audit(db,uid,name,{subject,framework:target,request:request?.id}); return reply;
     });
-    await i.editReply(result); await log(uid,name,{subject,framework:target,request:request?.id});
     if (name==='request') {
-      const ch=await guild.channels.fetch(await resource('channel','access-review')); await ch.send({content:`New access request from ${uid} for ${target}. Use /pending and /review.`,allowedMentions:{parse:[]}});
+      // Storage is committed. Delivery failure must not imply the request failed.
+      // Each explicit resubmission reuses the pending ID and retries once; no
+      // automatic retry, since a rejected send can have delivered a message.
+      let reply=result;
+      try {
+        const ch=await guild.channels.fetch(await resource('channel','access-review'));
+        await ch.send({content:`New access request from ${uid} for ${target}. Request #${request.id}. Use /pending and /review.`,allowedMentions:{parse:[]}});
+      } catch {
+        console.error(`Staff notification unconfirmed for saved request #${request.id}; recover with /pending.`);
+        reply=`${result} Your request is saved, but staff notification could not be confirmed. Retry the same community through the request menu or /request to attempt notification again using this pending request ID. An allowlisted human reviewer can find it with /pending even without a notification.`;
+      }
+      // An expired interaction must not prevent staff notification or produce
+      // a misleading generic failure after the request was saved.
+      await i.editReply({content:reply,allowedMentions:{parse:[]}}).catch(() => {
+        console.error(`Private reply unavailable for saved request #${request.id}; recover with /pending.`);
+      });
+      await log(uid,name,{subject,framework:target,request:request.id});
+      return;
     }
+    await i.editReply(result); await log(uid,name,{subject,framework:target,request:request?.id});
   } catch (e) { console.error('Command failed:',e.message); await i.editReply({content:`Unable to complete: ${e.message}`.slice(0,1900),allowedMentions:{parse:[]}}).catch(()=>{}); }
 });
 const queueNative = member => {

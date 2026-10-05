@@ -20,7 +20,7 @@ export async function botFixture() {
   const cfg = { guildId: 'test-guild', owners: ['owner'], approvers: ['reviewer'] };
   const faults = [];
   function failNext(point, { match = () => true, message = `Injected ${point} failure` } = {}) {
-    assert.ok(['roleAdd', 'query', 'audit', 'commit', 'channelFetch', 'channelSend'].includes(point));
+    assert.ok(['roleAdd', 'query', 'audit', 'commit', 'channelFetch', 'channelSend', 'editReply'].includes(point));
     const fault = { point, match, message, used: false };
     faults.push(fault);
     return fault;
@@ -179,7 +179,7 @@ export async function botFixture() {
       isButton: () => kind === 'button',
       options: { getString: key => ({ framework, id })[key] ?? null, getBoolean: () => approve },
       deferReply: async payload => { deferred.push(payload); },
-      editReply: async payload => { replies.push(payload); },
+      editReply: async payload => { trip('editReply', { payload }); replies.push(payload); },
       deferred, replies, ...overrides
     };
   }

@@ -4,7 +4,6 @@ import { botFixture, replyText, assertPrivate } from './helpers/bot-fixture.js';
 
 const reviewOptions = kind => ({ kind, command: 'review', user: 'reviewer' });
 const roleChange = { user: 'member', role: 'role:Tech' };
-const text = payload => typeof payload === 'string' ? payload : payload.content;
 
 function assertPending(state, original) {
   assert.deepEqual(state.requests, original.requests);
@@ -111,7 +110,7 @@ test('known database rollback after Discord grants access leaves an unrecorded r
   }
 });
 
-test('review notification failure cannot undo a committed request but replaces its private success reply', async t => {
+test('review notification failure truthfully identifies the saved request and explicit retry recovers', async t => {
   for (const kind of ['menu', 'command']) {
     for (const point of ['channelFetch', 'channelSend']) {
       await t.test(`${kind}: ${point}`, async () => {
@@ -121,24 +120,26 @@ test('review notification failure cannot undo a committed request but replaces i
           message: 'Review notification unavailable' });
         const i = await dispatch({ kind, command: 'request' });
         assert.equal(fault.used, true);
-        assertPrivate(i, 2);
-        assert.equal(text(i.replies[0]), 'Request 1 is pending human review. No access was granted.');
-        assert.equal(replyText(i), `Unable to complete: ${fault.message}`);
-        assert.deepEqual(Array.from(i.replies[1].allowedMentions.parse), []);
+        assertPrivate(i);
+        assert.match(replyText(i), /^Request 1 is pending human review\. No access was granted\./);
+        assert.match(replyText(i), /request is saved, but staff notification could not be confirmed/);
+        assert.match(replyText(i), /Retry.*request menu or \/request.*this pending request ID/);
+        assert.match(replyText(i), /human reviewer.*\/pending/);
+        assert.doesNotMatch(replyText(i), /Unable to complete/);
+        assert.deepEqual(Array.from(i.replies[0].allowedMentions.parse), []);
         assert.deepEqual(state.requests, [{
           id: '1', guild_id: 'test-guild', user_id: 'member', framework: 'Tech', status: 'pending', reviewer: null
         }]);
         assert.equal(state.audits.length, 1);
         assert.equal(state.audits[0].action, 'request');
+        assert.equal(state.audits[0].detail.request, '1');
         assert.deepEqual(state.grants, []);
         assert.deepEqual(state.roleAdds, []);
         assert.deepEqual(state.roleRemoves, []);
         assert.deepEqual(state.members.get('member'), original);
         assert.equal(state.messages.filter(m => m.channel === 'channel:access-review').length, 0);
         assert.equal(state.messages.filter(m => m.channel === 'channel:audit-log').length, 1);
-        assert.deepEqual(state.errors.at(-1), ['Command failed:', fault.message]);
-        // Current final reply inaccurately implies the whole operation failed.
-        assert.doesNotMatch(replyText(i), /pending|saved|committed|retry/i);
+        assert.deepEqual(state.errors.at(-1), ['Staff notification unconfirmed for saved request #1; recover with /pending.']);
         const pending = await dispatch({ kind: 'command', command: 'pending', user: 'reviewer' });
         assertPrivate(pending);
         assert.match(replyText(pending), /Request #1/);
@@ -149,8 +150,74 @@ test('review notification failure cannot undo a committed request but replaces i
         assert.equal(state.requests.length, 1);
         assert.equal(state.audits.filter(a => a.action === 'request').length, 2);
         assert.equal(state.messages.filter(m => m.channel === 'channel:access-review').length, 1);
+        const notification=state.messages.find(m => m.channel === 'channel:access-review').payload;
+        assert.match(notification.content, /Request #1/);
+        assert.deepEqual(Array.from(notification.allowedMentions.parse), []);
+        assert.deepEqual(state.audits.map(a => a.detail.request), ['1', '1']);
         assert.deepEqual(state.members.get('member'), original);
         assert.deepEqual(state.grants, []);
+      });
+    }
+  }
+});
+
+test('repeated notification failures across menu and slash keep one pending request with no automatic retries', async () => {
+  const { state, dispatch, failNext } = await botFixture();
+  for (const kind of ['menu', 'command', 'menu']) {
+    const fault=failNext('channelSend', { match: ({ channel }) => channel === 'channel:access-review' });
+    const i=await dispatch({ kind, command:'request' });
+    assert.equal(fault.used, true);
+    assertPrivate(i);
+    assert.match(replyText(i), /^Request 1 is pending.*staff notification could not be confirmed/);
+  }
+  assert.equal(state.requests.length, 1);
+  assert.equal(state.requests[0].status, 'pending');
+  assert.deepEqual(state.audits.map(a => a.detail.request), ['1','1','1']);
+  assert.equal(state.messages.filter(m => m.channel === 'channel:access-review').length, 0);
+  assert.equal(state.errors.length, 3);
+  assert.deepEqual(state.roleAdds, []);
+  assert.deepEqual(state.grants, []);
+  const review=await dispatch({ kind:'button', command:'review', user:'reviewer' });
+  assert.match(replyText(review), /Request 1 approved by human reviewer/);
+  assert.equal(state.grants.length, 1);
+});
+
+test('request storage failures do not send notifications or claim a saved request', async t => {
+  for (const kind of ['menu','command']) {
+    for (const point of ['audit','commit']) {
+      await t.test(`${kind}: ${point}`, async () => {
+        const { state, dispatch, failNext }=await botFixture();
+        const fault=failNext(point);
+        const i=await dispatch({ kind, command:'request' });
+        assert.equal(fault.used, true);
+        assertFailure(i, fault.message);
+        assert.deepEqual(state.requests, []);
+        assert.deepEqual(state.audits, []);
+        assert.deepEqual(state.messages, []);
+        assert.deepEqual(state.roleAdds, []);
+      });
+    }
+  }
+});
+
+test('private reply failure after saving does not block staff recovery or imply a failed request', async t => {
+  for (const kind of ['menu','command']) {
+    for (const notificationFails of [false,true]) {
+      await t.test(`${kind}: notification fails=${notificationFails}`, async () => {
+        const { state, dispatch, failNext }=await botFixture();
+        failNext('editReply');
+        if (notificationFails) failNext('channelFetch', { match: ({ channel }) => channel === 'channel:access-review' });
+        const i=await dispatch({ kind, command:'request' });
+        assertPrivate(i, 0);
+        assert.equal(state.requests[0].status, 'pending');
+        assert.equal(state.audits[0].detail.request, '1');
+        assert.equal(state.messages.filter(m => m.channel === 'channel:access-review').length, notificationFails ? 0 : 1);
+        assert.equal(state.messages.filter(m => m.channel === 'channel:audit-log').length, 1);
+        assert.deepEqual(state.errors.at(-1), ['Private reply unavailable for saved request #1; recover with /pending.']);
+        const pending=await dispatch({ kind:'command', command:'pending', user:'reviewer' });
+        assert.match(replyText(pending), /Request #1/);
+        assert.deepEqual(state.grants, []);
+        assert.deepEqual(state.roleAdds, []);
       });
     }
   }
