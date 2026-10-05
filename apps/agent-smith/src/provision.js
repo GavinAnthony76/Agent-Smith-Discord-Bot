@@ -1,7 +1,7 @@
 import { ChannelType, PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
 import { connect, overwrites, botPermissions } from './discord.js';
 import { pool, resource, locked } from './db.js';
-import { categories, roleNames, rules, frameworks } from './blueprint.js';
+import { categories, roleNames, rules, frameworks, ARRIVAL_CHANNEL_ID, selectionRoleNames } from './blueprint.js';
 import { onboardingMessage } from './onboarding.js';
 import { communityChannels, starterChannels } from './community.js';
 const mode = process.argv[2];
@@ -40,7 +40,7 @@ try {
         }
       }
       for (const name of categories.flatMap(cat => [cat.name, ...cat.channels.map(([name]) => name)])) {
-        if (name === 'rules' || saved.some(x => x.kind === 'channel' && x.name === name)) continue;
+        if (name === 'rules' || (name === 'arrival-lounge' && guild.channels.cache.get(ARRIVAL_CHANNEL_ID)?.name === name) || saved.some(x => x.kind === 'channel' && x.name === name)) continue;
         if (guild.channels.cache.some(c => c.name === name)) throw new Error(`Untracked channel collision: ${name}`);
       }
       console.log('Adopt existing Community #rules into START HERE with planned read-only permissions; preserve private #moderator-only without changes.');
@@ -69,6 +69,7 @@ try {
       if (!role) { failures.push(`Missing role ${name}`); continue; }
       roles[name] = role.id;
       if (role.permissions.bitfield !== 0n || !role.editable) failures.push(`Role permission/hierarchy drift: ${name}`);
+      if (selectionRoleNames.includes(name) && guild.channels.cache.some(c => c.permissionOverwrites.cache.get(role.id)?.allow.bitfield > 0n)) failures.push(`Selection role channel grant: ${name}`);
     }
     function compare(channel, expected) {
       const norm = arr => arr.map(x => {
@@ -88,6 +89,13 @@ try {
         let channel = row && guild.channels.cache.get(row.discord_id);
         if (cat.gate && cat.gate !== 'staff' && !roles[cat.gate]) continue;
         const expected = overwrites(guild,cfg,client.user.id,cat.gate,roles,readonly);
+        if (!channel && mode === 'bootstrap' && name === 'arrival-lounge') {
+          channel = guild.channels.cache.get(ARRIVAL_CHANNEL_ID);
+          if (!channel || channel.type !== ChannelType.GuildText || channel.name !== name || channel.rateLimitPerUser !== 5
+            || !channel.permissionsFor(guild.roles.everyone).has([P.ViewChannel,P.ReadMessageHistory,P.SendMessages])) throw new Error('Authorized arrival channel must already be public with 5-second slowmode; no replacement is permitted.');
+          await channel.edit({parent,lockPermissions:false,reason:'Adopt authorized public arrival channel without replacing overwrites'});
+          await remember('channel',name,channel.id);
+        }
         if (!channel && mode === 'bootstrap' && name === 'rules') {
           channel = await community.rules.edit({
             parent, permissionOverwrites: expected,
@@ -104,7 +112,9 @@ try {
         }
         if (!channel) { failures.push(`Missing channel ${name}`); continue; }
         if (channel.type !== type || (parent && channel.parentId !== parent)) failures.push(`Structure drift: ${name}`);
-        compare(channel,expected);
+        if (name === 'arrival-lounge') {
+          if (channel.id !== ARRIVAL_CHANNEL_ID || channel.rateLimitPerUser !== 5 || !channel.permissionsFor(guild.roles.everyone).has([P.ViewChannel,P.ReadMessageHistory,P.SendMessages])) failures.push('Arrival identity/slowmode/public permission drift.');
+        } else compare(channel,expected);
         if (type === ChannelType.GuildCategory) parent = channel.id;
       }
     }

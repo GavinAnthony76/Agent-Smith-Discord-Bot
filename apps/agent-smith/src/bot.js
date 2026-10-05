@@ -6,9 +6,12 @@ import { isOnboardingInteraction, onboardingAction } from './onboarding.js';
 import { isReviewInteraction, reviewAction, parseRequestId, pendingMessage } from './review.js';
 import { createModeration, isModerationInteraction } from './moderation.js';
 import { createAntiSpam } from './antispam.js';
+import { createNativeReconciler } from './native-reconcile.js';
+import { legacyAllowed } from './native-policy.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const moderation = createModeration({ guild, cfg, pool, resource, spam });
+const native = await createNativeReconciler({ guild, client });
 const roleIds = Object.fromEntries(await Promise.all([...frameworks,'Member'].map(async f=>[f,await resource('role',f)])));
 const human = id => canReview(id,cfg);
 async function log(actor, action, detail) {
@@ -50,6 +53,11 @@ client.on('interactionCreate', async i => {
     }
     if (name==='revoke') { if (!cfg.owners.includes(uid)) throw new Error('Owner only.'); subject=i.options.getUser('user').id; }
     const result = await locked(`${guild.id}:${subject}`,async db=>{
+      if (['accept','join'].includes(name)) {
+        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`onboarding-mode:${guild.id}`]);
+        const state = (await db.query('SELECT * FROM onboarding_state WHERE guild_id=$1',[guild.id])).rows[0];
+        if (!legacyAllowed(state)) throw new Error('Legacy onboarding is disabled. Complete Discord rules screening and select one community in Channels & Roles. /request still requires human review.');
+      }
       const member=await guild.members.fetch({user:subject,force:true});
       if (member.user.bot) throw new Error('Human members only.');
       if (member.pending) throw new Error('Complete Discord’s server rules screening before continuing.');
@@ -121,10 +129,15 @@ client.on('interactionCreate', async i => {
     }
   } catch (e) { console.error('Command failed:',e.message); await i.editReply({content:`Unable to complete: ${e.message}`.slice(0,1900),allowedMentions:{parse:[]}}).catch(()=>{}); }
 });
-// No automatic roles on join: onboarding commands are the only self-service route.
-client.on('guildMemberAdd', member=> { if(member.guild.id===guild.id) console.log(`Member joined ${member.id}; onboarding required.`); });
+const queueNative = member => {
+  if (member.guild.id !== guild.id || member.user.bot) return;
+  native.enqueue(member.id).then(() => native.drain()).catch(() => console.error('Native event queue unavailable; periodic rescan will recover.'));
+};
+client.on('guildMemberAdd', queueNative);
+client.on('guildMemberUpdate', (_old, member) => queueNative(member));
+native.scan().catch(() => console.error('Native startup scan deferred; periodic recovery remains active.'));
 client.on('messageCreate', message => {
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{client.destroy();await pool.end();process.exit(0);});
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{native.stop();client.destroy();await pool.end();process.exit(0);});
 console.log('Agent Smith ready. No AI access-control path exists.');

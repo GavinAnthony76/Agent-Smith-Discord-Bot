@@ -7,6 +7,6 @@ Provide clickable acceptance and community selection in read-only onboarding; do
 
 **Why:** A real invited member could see the three entry channels and had Use Application Commands permission, but could not type to continue. A passing permission audit did not establish a usable member-facing flow.
 
-The user confirmed the clickable entry flow let the invited member accept rules and select a community. Retain that entry method.
+The user confirmed the clickable entry flow let the invited member accept rules and select a community. Retain that legacy entry method until the owner's explicit native onboarding cutover; after cutover, do not recreate the legacy controls.
 
-**How to apply:** Preserve read-only rules and welcome channels. Test onboarding from a non-staff member's perspective and verify that the controls are present, work before the Member role, and still enforce explicit rules acceptance and human-reviewed extra access.
+**How to apply:** Preserve read-only rules and welcome channels. Before native cutover, verify that the clickable controls work before the Member role. After cutover, use Discord rules screening and inert native selection signals instead. Both routes must keep human-reviewed extra access; permission audits alone cannot verify a real member's UI experience.

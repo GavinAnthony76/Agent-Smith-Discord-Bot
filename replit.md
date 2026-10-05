@@ -12,6 +12,9 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - Adopt only Discord's designated existing #rules channel, preserving messages while applying planned placement and read-only permissions. Preserve the private #moderator-only Community Updates channel unchanged.
 - Preserve the four standard Discord starter channels/categories with staff-only visibility rather than deleting their contents; track and audit them separately from the blueprint.
 - The user approved the full moderation toolkit plus anti-spam, restricted to configured owners only. Framework access reviewers do not gain moderation authority. Anti-spam starts alerts-only; automatic deletion, timeout, or bans require separate approval.
+- Native onboarding migration is authorized only here. Adopt the existing public arrival-lounge channel `1556451709272719451` with 5-second slowmode; preserve its custom overwrites and all existing resource IDs and history. Never edit the owner's concurrent native onboarding/Server Guide drafts.
+- Native Faith/Gaming/Tech answers map ONLY to zero-permission, no-channel-grant `Selection: Faith`, `Selection: Gaming`, `Selection: Tech` roles. They must never map Member or actual framework access roles. Wait for explicit `pending=false` and exactly one selection before reserving a first primary; changes never replace the recorded primary or add extra access. Ambiguity fails closed with durable human staff alerts.
+- Preserve human-approved extras and all moderation/review/interest/trivia behavior. Keep the old accept/join buttons, menus and commands active until the owner confirms native UI publication and explicitly runs the checked cutover command. Never reopen the read-only entry channels, framework/staff gates, or publish paid hosting during this migration.
 
 ## Run & Operate
 
@@ -20,6 +23,7 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - `pnpm --filter @workspace/agent-smith run discord:register` — offline slash-command preview
 - **Agent Smith Bot** workflow: `pnpm --filter @workspace/agent-smith run start` — long-lived gateway process, no web port, kept stopped during preparation
 - Database migration, bootstrap, registration with `--apply`, live audit, and feed polling are documented in `apps/agent-smith/README.md`; they are not offline checks.
+- Native inspection/preparation/cutover and Server Guide tasks are documented in `apps/agent-smith/NATIVE-ONBOARDING.md`. Cutover defaults to read-only checks; apply requires `--confirm-native-published`, an enabled native UI with correct mappings, and passing permission checks.
 - Root workspace `pnpm run typecheck` and `pnpm run build` remain for the template's TypeScript packages; they do not validate this JavaScript bot.
 
 ## Stack and source
