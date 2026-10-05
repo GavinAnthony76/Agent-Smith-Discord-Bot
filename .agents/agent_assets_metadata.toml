@@ -1,0 +1,58 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "t5FMiyUvwBETyR0i-8Aqx"
+uri = "file://attached_assets/generated_images/hallowed-core-welcome-thumbnail.png"
+type = "image"
+title = "Welcome thumbnail"
+description = "Square 1024 × 1024 PNG for Hallowed Core. Download and upload as the matching Discord Server Guide thumbnail."
+logical_id = "eef2f691-7f7b-420f-9e72-0ea267704c19"
+content_hash = "sha256:3b5dfedaa76ac4ea753672a81e5023190300c76f7abf7ba1245c45c5b6284845"
+size = 1006527
+mtime_ms = 1791241812936
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/eef2f691-7f7b-420f-9e72-0ea267704c19/f88205dd-f6e6-4a2e-ac69-cf2f57df67c0"
+storage_version_token = "1791241832353198"
+content_type = "image/png"
+
+[[outputs]]
+id = "wolXzEVQJ5EOP4CnLxR9c"
+uri = "file://attached_assets/generated_images/hallowed-core-onboarding-thumbnail.png"
+type = "image"
+title = "Onboarding thumbnail"
+description = "Square 1024 × 1024 PNG for Hallowed Core. Download and upload as the matching Discord Server Guide thumbnail."
+logical_id = "704a039a-419c-4d5b-94a0-e583be9c0056"
+content_hash = "sha256:e69eb9991987dfada58dab2c41a588f5eb20cdb467b5f082c758b634057b1ba9"
+size = 1294372
+mtime_ms = 1791241812288
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/704a039a-419c-4d5b-94a0-e583be9c0056/c5a2e1e5-ba5d-4347-a4a6-33bac1062b9d"
+storage_version_token = "1791241832892387"
+content_type = "image/png"
+
+[[outputs]]
+id = "YvrA6Uwvu7H4GzcYizm1B"
+uri = "file://attached_assets/generated_images/hallowed-core-arrival-lounge-thumbnail.png"
+type = "image"
+title = "Arrival Lounge thumbnail"
+description = "Square 1024 × 1024 PNG for Hallowed Core. Download and upload as the matching Discord Server Guide thumbnail."
+logical_id = "738af9b4-801d-48ec-926b-1a186fca30e1"
+content_hash = "sha256:4ce872cbf557702c2d4fc3b437c1e7986c421a40970aa54da1210daf7f5fc1c6"
+size = 1057574
+mtime_ms = 1791241812020
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/738af9b4-801d-48ec-926b-1a186fca30e1/20326d1a-cd2a-43be-af02-47c891a3c84d"
+storage_version_token = "1791241833433524"
+content_type = "image/png"
+
+[[outputs]]
+id = "ksFRU5WO849RYz9_j5uru"
+uri = "file://attached_assets/generated_images/hallowed-core-rules-thumbnail.png"
+type = "image"
+title = "Rules thumbnail"
+description = "Square 1024 × 1024 PNG for Hallowed Core. Download and upload as the matching Discord Server Guide thumbnail."
+logical_id = "5bb9a98d-2c7e-47a4-ad70-38c297f3b6de"
+content_hash = "sha256:97907d4aa20da542ed321e9e31804f8936eb94ee05cf135f9bd4b76443ae4976"
+size = 975583
+mtime_ms = 1791241812244
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/5bb9a98d-2c7e-47a4-ad70-38c297f3b6de/33cba14e-36d9-4f9d-8884-98aa80bff5f9"
+storage_version_token = "1791241834131094"
+content_type = "image/png"
