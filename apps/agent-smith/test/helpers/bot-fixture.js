@@ -14,10 +14,21 @@ import * as nativePolicy from '../../src/native-policy.js';
 export async function botFixture() {
   const state = {
     members: new Map(), requests: [], grants: [], audits: [], queries: [],
-    locks: [], roleAdds: [], roleRemoves: [], messages: [], errors: [],
+    locks: [], roleAdds: [], roleAddAttempts: [], roleRemoves: [], messages: [], errors: [],
     onboarding: { legacy_enabled: true, cutover_status: 'legacy' }
   };
   const cfg = { guildId: 'test-guild', owners: ['owner'], approvers: ['reviewer'] };
+  const faults = [];
+  function failNext(point, { match = () => true, message = `Injected ${point} failure` } = {}) {
+    assert.ok(['roleAdd', 'query', 'audit', 'commit', 'channelFetch', 'channelSend'].includes(point));
+    const fault = { point, match, message, used: false };
+    faults.push(fault);
+    return fault;
+  }
+  function trip(point, detail) {
+    const fault = faults.find(f => !f.used && f.point === point && f.match(detail));
+    if (fault) { fault.used = true; throw new Error(fault.message); }
+  }
   const events = new Map();
   const client = { user: { id: 'test-bot' }, on: (name, fn) => events.set(name, fn) };
   const resource = async (kind, name) => `${kind}:${name}`;
@@ -32,6 +43,8 @@ export async function botFixture() {
         roles: {
           cache: { has: id => member.held.has(id) },
           add: async role => {
+            state.roleAddAttempts.push({ user, role: role.id });
+            trip('roleAdd', { user, role: role.id });
             state.roleAdds.push({ user, role: role.id });
             member.held.add(role.id);
           },
@@ -43,12 +56,17 @@ export async function botFixture() {
       };
     } },
     roles: { fetch: async id => ({ id, editable: true, permissions: { bitfield: 0n } }) },
-    channels: { fetch: async id => ({ send: async payload => {
-      state.messages.push({ channel: id, payload });
-    } }) }
+    channels: { fetch: async id => {
+      trip('channelFetch', { channel: id });
+      return { send: async payload => {
+        trip('channelSend', { channel: id, payload });
+        state.messages.push({ channel: id, payload });
+      } };
+    } }
   };
   const query = async (sql, args = []) => {
     state.queries.push({ sql, args });
+    trip('query', { sql, args });
     let rows = [];
     if (sql.startsWith('SELECT pg_advisory_xact_lock')) {
       // Transaction lock is recorded, not sent to PostgreSQL.
@@ -91,15 +109,29 @@ export async function botFixture() {
   };
   const locked = async (key, fn) => {
     state.locks.push(key);
-    const snapshot = structuredClone({ members: state.members, requests: state.requests, grants: state.grants, audits: state.audits });
-    try { return await fn({ query }); }
-    catch (error) { Object.assign(state, snapshot); throw error; }
+    // Only database records roll back. Discord roles and delivery attempts are
+    // external side effects and must survive an aborted transaction.
+    const records = structuredClone(new Map([...state.members].map(([id, member]) => [id, member.record])));
+    const snapshot = structuredClone({ requests: state.requests, grants: state.grants, audits: state.audits });
+    try {
+      const result = await fn({ query });
+      // Models a rejected COMMIT before persistence, not an ambiguous lost ACK.
+      trip('commit', { key });
+      return result;
+    } catch (error) {
+      Object.assign(state, snapshot);
+      for (const [id, record] of records) state.members.get(id).record = record;
+      throw error;
+    }
   };
   const inert = async () => {};
   const dependencies = {
     './discord.js': { connect: async () => ({ client, guild, cfg }) },
     './db.js': { pool: { query, end: inert }, locked, resource,
-      audit: async (_db, actor, action, detail) => state.audits.push({ actor, action, detail }) },
+      audit: async (_db, actor, action, detail) => {
+        trip('audit', { actor, action, detail });
+        state.audits.push({ actor, action, detail });
+      } },
     './blueprint.js': blueprint, './policy.js': policy, './onboarding.js': onboarding,
     './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
     './moderation.js': { isModerationInteraction: () => false, createModeration: () => ({
@@ -157,7 +189,7 @@ export async function botFixture() {
     return i;
   }
   seed();
-  return { state, cfg, seed, dispatch };
+  return { state, cfg, seed, dispatch, failNext };
 }
 
 export function replyText(i) {
@@ -165,8 +197,8 @@ export function replyText(i) {
   return typeof reply === 'string' ? reply : reply?.content;
 }
 
-export function assertPrivate(i) {
+export function assertPrivate(i, replyCount = 1) {
   assert.equal(i.deferred.length, 1);
   assert.equal(i.deferred[0].flags, 64);
-  assert.equal(i.replies.length, 1);
+  assert.equal(i.replies.length, replyCount);
 }
