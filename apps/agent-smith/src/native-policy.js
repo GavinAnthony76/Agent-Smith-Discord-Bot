@@ -49,6 +49,13 @@ export function legacyAllowed(state) {
   return state?.legacy_enabled !== false;
 }
 
+// Discord can accept a saved configuration below its documented defaults.
+// Live publication takes precedence; never broaden privacy to meet stale counts.
+export function nativeDefaultChannelErrors(onboarding, defaults, writable) {
+  if (onboarding?.enabled || onboarding?.mode !== 0 || (defaults >= 7 && writable >= 5)) return [];
+  return [`Discord documents 7 default channels, including 5 everyone-viewable/writable; currently ${defaults} defaults and ${writable} writable. Check actual UI publication validation; do not broaden private channels.`];
+}
+
 export function nativeQuestionErrors(onboarding, roles, cosmeticRoleIds = []) {
   const errors = [];
   if (!onboarding?.enabled) errors.push('Native onboarding is not published/enabled.');

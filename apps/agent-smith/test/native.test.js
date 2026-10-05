@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nativeDecision, reconcileNative, nativeQuestionErrors, legacyAllowed } from '../src/native-policy.js';
+import { nativeDecision, reconcileNative, nativeQuestionErrors, nativeDefaultChannelErrors, legacyAllowed } from '../src/native-policy.js';
 import { selectionRoleNames, categories, ARRIVAL_CHANNEL_ID } from '../src/blueprint.js';
 
 // Transactional fake preserves the important failure boundary: primary intent
@@ -148,6 +148,13 @@ test('bot accounts, invalid selections and incomplete records cannot initialize'
   assert.equal(nativeDecision({ pending: false, selections: ['Gaming'], record: { primary_framework: 'Gaming' } }).status, 'blocked');
 });
 const ids = { Faith: 'faith-selection', Gaming: 'gaming-selection', Tech: 'tech-selection' };
+test('saved published onboarding takes precedence over documented default-channel minimums', () => {
+  assert.deepEqual(nativeDefaultChannelErrors({ enabled: true, mode: 0 }, 4, 1), []);
+  assert.equal(nativeDefaultChannelErrors({ enabled: false, mode: 0 }, 4, 1).length, 1);
+  assert.deepEqual(nativeDefaultChannelErrors({ enabled: false, mode: 0 }, 7, 5), []);
+  assert.equal(nativeDefaultChannelErrors({ enabled: false, mode: 0 }, 7, 4).length, 1);
+  assert.deepEqual(nativeDefaultChannelErrors({ enabled: false, mode: 1 }, 4, 1), []);
+});
 const published = () => ({ enabled: true, prompts: [{ required: true, single_select: true, in_onboarding: true,
   options: Object.entries(ids).map(([title, id]) => ({ title, role_ids: [id], channel_ids: [] })) }] });
 test('optional audited cosmetics are allowed but never substitute for Selection or grant membership', () => {

@@ -2,7 +2,7 @@ import { ChannelType, PermissionsBitField, PermissionFlagsBits as P } from 'disc
 import { categories, frameworks, interests, roleNames, ARRIVAL_CHANNEL_ID } from './blueprint.js';
 import { overwrites } from './discord.js';
 import { pool } from './db.js';
-import { nativeQuestionErrors } from './native-policy.js';
+import { nativeQuestionErrors, nativeDefaultChannelErrors } from './native-policy.js';
 
 export async function nativeSettings({ client, guild, cfg }) {
   await guild.fetch();
@@ -87,7 +87,7 @@ export async function nativeSettings({ client, guild, cfg }) {
   if (onboarding.mode === 0) {
     const defaults = [...new Set(onboarding.default_channel_ids)];
     const writable = defaults.filter(channelId => guild.channels.cache.get(channelId)?.permissionsFor(guild.roles.everyone)?.has([P.ViewChannel, P.SendMessages])).length;
-    if (defaults.length < 7 || writable < 5) publicationErrors.push(`Discord DEFAULT-mode publication requires 7 default channels, including 5 everyone-viewable/writable; currently ${defaults.length} defaults and ${writable} writable. Do not broaden private channels to satisfy this.`);
+    publicationErrors.push(...nativeDefaultChannelErrors(onboarding, defaults.length, writable));
   }
   const guideChannels = ['welcome', 'rules', 'onboarding', 'arrival-lounge'].map(name => {
     const ch = guild.channels.cache.get(id('channel', name) ?? (name === 'arrival-lounge' ? ARRIVAL_CHANNEL_ID : undefined));

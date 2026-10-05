@@ -115,6 +115,11 @@ only one writable. If Discord enforces those criteria, native publication is
 blocked under the owner's privacy rules. Do not open framework/staff channels
 or invent public channels to bypass it. Advanced mode may use different counts,
 but use the actual Discord UI validation; do not promise it removes the blocker.
+Live saved `enabled=true` takes precedence over those documented minimums:
+Discord has accepted this guild with four defaults and one everyone-writable
+channel. The readiness check must not manufacture a publication blocker from
+those counts after publication. This does not waive screening, selection-only
+mappings, private gates, recorded human approvals or owner-confirmed cutover.
 
 References:
 - https://support.discord.com/hc/en-us/articles/13497665141655-Server-Guide-FAQ

@@ -5,7 +5,7 @@ import { config } from './config.js';
 import { pool } from './db.js';
 import { frameworks, interests } from './blueprint.js';
 import { overwrites } from './discord.js';
-import { nativeQuestionErrors } from './native-policy.js';
+import { nativeQuestionErrors, nativeDefaultChannelErrors } from './native-policy.js';
 
 const cfg = config(), gid = cfg.guildId;
 const rest = new REST({ timeout: 15000, retries: 0 }).setToken(cfg.token);
@@ -47,9 +47,10 @@ try {
     return c && new PermissionsBitField(permissions(c)).has([P.ViewChannel, P.SendMessages]);
   }).length;
   report.native.defaultCriteria = { defaults: defaultIds.length, everyoneWritable: writableDefaults,
-    defaultModeSatisfied: defaultIds.length >= 7 && writableDefaults >= 5 };
-  if (onboarding.mode === 0 && !report.native.defaultCriteria.defaultModeSatisfied) {
-    report.native.blockers.push('DEFAULT mode requires 7 default channels, including 5 everyone-viewable/writable. Do not open private channels to satisfy it.');
+    documentedMinimumsMet: defaultIds.length >= 7 && writableDefaults >= 5 };
+  report.native.blockers.push(...nativeDefaultChannelErrors(onboarding, defaultIds.length, writableDefaults));
+  if (onboarding.enabled && onboarding.mode === 0 && !report.native.defaultCriteria.documentedMinimumsMet) {
+    report.native.defaultCriteria.note = 'Discord accepted this saved configuration despite documented default-mode minimums. Live enabled state takes precedence; do not broaden private channels.';
   }
   report.interests = cosmetics.map(role => ({
     name: role.name, zeroGuildPermissions: byRole.get(role.id)?.permissions === '0',

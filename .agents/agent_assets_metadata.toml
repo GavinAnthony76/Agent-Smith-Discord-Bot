@@ -56,3 +56,101 @@ mtime_ms = 1791241812244
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/5bb9a98d-2c7e-47a4-ad70-38c297f3b6de/33cba14e-36d9-4f9d-8884-98aa80bff5f9"
 storage_version_token = "1791241834131094"
 content_type = "image/png"
+
+[[outputs]]
+id = "zSHHAlx6Epa0xcGITIdjn"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-welcome.png"
+type = "image"
+title = "Welcome — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "ad0878c7-9f1c-4658-a0ca-5211687983a0"
+content_hash = "sha256:6193c669af90dc3f8ce2be43c72230e1208482cc716891ac342738da6f936c08"
+size = 1234199
+mtime_ms = 1791242368720
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/ad0878c7-9f1c-4658-a0ca-5211687983a0/a6f9ac13-c46f-4abb-b881-2550c95de732"
+storage_version_token = "1791242691015389"
+content_type = "image/png"
+
+[[outputs]]
+id = "CQRegAGA_yifDw9JUSNY1"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-onboarding.png"
+type = "image"
+title = "Onboarding — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "b5d8ca0c-95c7-496f-a8aa-d7a655f518c5"
+content_hash = "sha256:a861a62b254183e6ea2df3666178d5af2ff73df077e2c29a749190e403d60490"
+size = 1491148
+mtime_ms = 1791242369100
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/b5d8ca0c-95c7-496f-a8aa-d7a655f518c5/0a8c3d07-7206-4022-9d06-0afd3867e2a9"
+storage_version_token = "1791242691644086"
+content_type = "image/png"
+
+[[outputs]]
+id = "Y0sIk56_9z5ywFxNkOHUu"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-arrival-lounge-focused.png"
+type = "image"
+title = "Arrival Lounge — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "503adc4d-29a9-4035-b458-dce63babf9c0"
+content_hash = "sha256:53fc6a920aa830fda0b86e76fc1efc0f811314c60fb0dc651d91039be5744cf3"
+size = 1198382
+mtime_ms = 1791242605492
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/503adc4d-29a9-4035-b458-dce63babf9c0/5ef4e6c1-908a-4fa7-be19-3ec5d5d92797"
+storage_version_token = "1791242692157154"
+content_type = "image/png"
+
+[[outputs]]
+id = "LWG30lCDyOVjS1WDm21Ol"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-rules.png"
+type = "image"
+title = "Rules — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "c9726c09-b166-4804-ad75-a65d0361d9c7"
+content_hash = "sha256:6785b7019210b70ffa3179339f4c2aac03262e9c393a411007b414259ad8a1ea"
+size = 1475592
+mtime_ms = 1791242369616
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/c9726c09-b166-4804-ad75-a65d0361d9c7/9bc11155-af07-48b5-ad91-63f8a657708f"
+storage_version_token = "1791242692684993"
+content_type = "image/png"
+
+[[outputs]]
+id = "F2nzH2BVNGHQ1WxkPOm0V"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-faith-focused.png"
+type = "image"
+title = "Faith — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "3e3a0868-d30c-496f-b178-9731ef6277e9"
+content_hash = "sha256:116e928340f5a8872082ad7939b6bc733c28024006225bf0018825fdec90f7d5"
+size = 1357787
+mtime_ms = 1791242605788
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/3e3a0868-d30c-496f-b178-9731ef6277e9/a5c6143f-da91-4e41-a9a1-9a154bfab9ea"
+storage_version_token = "1791242693264584"
+content_type = "image/png"
+
+[[outputs]]
+id = "Se-qUehMpZQK0U7Rr_emU"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-gaming.png"
+type = "image"
+title = "Gaming — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "bb865fb6-18e7-4c00-9f34-ae975f420676"
+content_hash = "sha256:e63b1ca986272cec30e659810f3569ae850a1d9bfedf70603507cb24405196ad"
+size = 1411433
+mtime_ms = 1791242368732
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/bb865fb6-18e7-4c00-9f34-ae975f420676/bffdae37-7ec9-4105-bdef-929de3e9bb0e"
+storage_version_token = "1791242693782231"
+content_type = "image/png"
+
+[[outputs]]
+id = "K-MVQ_aOlwhkcjbNDmDPq"
+uri = "file://attached_assets/generated_images/hallowed-core-colorful-tech-focused.png"
+type = "image"
+title = "Tech — colorful"
+description = "1024 × 1024 PNG. Colorful Discord artwork matched to your existing Hallowed Core icon: gold, sapphire blue and emerald teal. Download and upload to the matching Guide item or channel artwork."
+logical_id = "5c5dd877-c6a0-4b60-8382-1840e97040a4"
+content_hash = "sha256:8a071c0858bd0b41b800d627d514df481e466dc69a1617a96a8e87e3de8954a9"
+size = 1461548
+mtime_ms = 1791242606552
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/5c5dd877-c6a0-4b60-8382-1840e97040a4/76ce53e7-24bb-459d-9c29-93dec0e2059f"
+storage_version_token = "1791242694339849"
+content_type = "image/png"
