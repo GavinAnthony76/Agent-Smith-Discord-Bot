@@ -23,13 +23,17 @@ enforce the explicitly approved guarded recovery contract. Passing tests do
 
 Both menu/slash request paths and button/slash approval paths are exercised.
 Faults are one-shot and targeted so review notification failures do not also
-disable the audit mirror. Database snapshots include only durable records:
+disable the audit mirror. Transaction-local writes include only durable records:
 rolling back PostgreSQL cannot roll back a Discord role.
 
 The fixture uses the production transaction wrapper with fake database clients
 and models both rejection before persistence and acknowledgement loss after
-successful Discord writes or database COMMIT. Fake roles use a Set. Fresh-record
-guard tests model intervening state, not actual concurrency or PostgreSQL locks.
+successful Discord writes or database COMMIT. Fake roles use a Set. The shared
+fixture models transaction-local writes and advisory, row, and unique-key lock
+waits for the bot's SQL subset; forced-overlap scenarios live in
+`request-pipeline.test.js`. It is not a general PostgreSQL simulator.
+Fresh-record guard tests inject intervening state separately from those
+concurrency scenarios.
 
 Human review eligibility is unchanged: allowlisted human reviewers in staff
 channels, no self-approval, human recipients who completed screening and

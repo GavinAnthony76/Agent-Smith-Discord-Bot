@@ -9,9 +9,11 @@ import * as review from '../../src/review.js';
 import * as nativePolicy from '../../src/native-policy.js';
 import * as recovery from '../../src/access-recovery.js';
 import { runLocked } from '../../src/transaction.js';
+import { transactionStore } from './transaction-store.js';
 
 // Evaluate the actual bot entry point in a closed module graph. Never import
-// discord.js's connection wrapper, db.js, config.js, or any live worker.
+// discord.js's connection wrapper, config.js, or any live worker. The real
+// db.js transaction helper runs with a fake pg Pool, never a network driver.
 // Unknown imports and SQL fail closed rather than falling through to a service.
 export async function botFixture() {
   const state = {
@@ -75,91 +77,29 @@ export async function botFixture() {
       } };
     } }
   };
-  const query = async (sql, args = []) => {
-    state.queries.push({ sql, args });
-    trip('query', { sql, args });
-    let rows = [];
-    if (sql.startsWith('SELECT pg_advisory_xact_lock')) {
-      // Transaction lock is recorded, not sent to PostgreSQL.
-    } else if (sql.startsWith('SELECT * FROM onboarding_state')) {
-      rows = [{ ...state.onboarding }];
-    } else if (sql.startsWith('INSERT INTO members')) {
-      assert.equal(args[0], guild.id);
-      assert.ok(state.members.has(args[1]));
-    } else if (sql.startsWith('SELECT * FROM members')) {
-      assert.equal(args[0], guild.id);
-      rows = [{ ...state.members.get(args[1]).record }];
-    } else if (sql.startsWith('INSERT INTO requests')) {
-      assert.match(sql, /ON CONFLICT \(guild_id,user_id,framework\) WHERE status='pending' DO UPDATE/);
-      assert.match(sql, /RETURNING id/);
-      const [guild_id, user_id, framework] = args;
-      let request = state.requests.find(r => r.guild_id === guild_id && r.user_id === user_id
-        && r.framework === framework && r.status === 'pending');
-      if (!request) {
-        request = { id: String(state.requests.length + 1), guild_id, user_id, framework, status: 'pending', reviewer: null };
-        state.requests.push(request);
-      }
-      rows = [{ id: request.id }];
-    } else if (sql.startsWith('SELECT id,user_id,framework FROM requests')) {
-      assert.equal(sql, "SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3");
-      assert.equal(args.length, 3);
-      rows = state.requests.filter(r => r.guild_id === args[0] && r.status === 'pending' && BigInt(r.id) > BigInt(args[1]))
-        .sort((a, b) => BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0)
-        .slice(0, args[2]);
-    } else if (sql === 'SELECT * FROM requests WHERE guild_id=$1 AND id=$2') {
-      rows = state.requests.filter(r => r.guild_id === args[0] && r.id === args[1]);
-    } else if (sql === 'SELECT * FROM requests WHERE id=$1 FOR UPDATE') {
-      rows = state.requests.filter(r => r.id === args[0]);
-    } else if (sql.startsWith('INSERT INTO grants')) {
-      const [guild_id, user_id, framework, reviewer] = args;
-      if (!state.grants.some(g => g.guild_id === guild_id && g.user_id === user_id && g.framework === framework)) {
-        state.grants.push({ guild_id, user_id, framework, reviewer });
-      }
-    } else if (sql.startsWith('SELECT * FROM grants')) {
-      rows = state.grants.filter(g => g.guild_id === args[0] && g.user_id === args[1] && g.framework === args[2]);
-    } else if (sql === 'UPDATE requests SET status=$2,reviewer=$3 WHERE id=$1') {
-      Object.assign(state.requests.find(r => r.id === args[0]), { status: args[1], reviewer: args[2] });
-    } else {
-      throw new Error(`Unexpected fake database SQL: ${sql}`);
-    }
-    return { rows: structuredClone(rows) };
-  };
-  const locked = async (key, fn) => {
-    state.locks.push(key);
-    const records = structuredClone(new Map([...state.members].map(([id, member]) => [id, member.record])));
-    const snapshot = structuredClone({ requests: state.requests, grants: state.grants, audits: state.audits });
-    let committed = false;
-    return runLocked({ connect: async () => ({
-      query: async (sql, args) => {
-        if (sql === 'BEGIN') return {};
-        if (sql === 'COMMIT') {
-          trip('commit', { key });
-          committed = true;
-          trip('commitAfter', { key });
-          return { command: 'COMMIT' };
-        }
-        if (sql === 'ROLLBACK') {
-          if (!committed) {
-            Object.assign(state, structuredClone(snapshot));
-            for (const [id, record] of records) state.members.get(id).record = structuredClone(record);
-          }
-          trip('rollback', { key });
-          state.afterRollback?.();
-          return {};
-        }
-        return query(sql, args);
-      },
-      release: () => {}
-    }) }, key, fn);
-  };
+  const database = transactionStore(state, cfg.guildId, trip);
+  const context = createContext({
+    console: { log: () => {}, error: (...args) => state.errors.push(args) },
+    process: { on: () => {} }
+  });
+  const dbSource = await readFile(new URL('../../src/db.js', import.meta.url), 'utf8');
+  const dbModule = new SourceTextModule(dbSource, { context, identifier: 'isolated-db.js' });
+  await dbModule.link(specifier => {
+    assert.ok(['pg', './config.js', './transaction.js'].includes(specifier), `Unmocked database import: ${specifier}`);
+    const exports = specifier === 'pg'
+      ? { default: { Pool: class { constructor() { return database.pool; } } } }
+      : specifier === './transaction.js' ? { runLocked }
+      : { config: () => ({ ...cfg, databaseUrl: 'isolated-fake-only' }) };
+    return new SyntheticModule(Object.keys(exports), function () {
+      for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
+    }, { context });
+  });
+  await dbModule.evaluate();
   const inert = async () => {};
   const dependencies = {
     './discord.js': { connect: async () => ({ client, guild, cfg }) },
-    './db.js': { pool: { query, end: inert }, locked, resource,
-      audit: async (_db, actor, action, detail) => {
-        trip('audit', { actor, action, detail });
-        state.audits.push({ actor, action, detail });
-      } },
+    './db.js': { pool: database.pool, locked: dbModule.namespace.locked,
+      audit: dbModule.namespace.audit, resource },
     './blueprint.js': blueprint, './policy.js': policy, './onboarding.js': onboarding,
     './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
     './access-recovery.js': recovery,
@@ -171,10 +111,6 @@ export async function botFixture() {
       enqueue: inert, drain: inert, scan: inert, stop: () => {}
     }) }
   };
-  const context = createContext({
-    console: { log: () => {}, error: (...args) => state.errors.push(args) },
-    process: { on: () => {} }
-  });
   const source = await readFile(new URL('../../src/bot.js', import.meta.url), 'utf8');
   const module = new SourceTextModule(source, { context, identifier: 'isolated-bot.js' });
   await module.link(specifier => {
@@ -218,7 +154,7 @@ export async function botFixture() {
     return i;
   }
   seed();
-  return { state, cfg, seed, dispatch, failNext };
+  return { state, cfg, seed, dispatch, database, failNext };
 }
 
 export function replyText(i) {
