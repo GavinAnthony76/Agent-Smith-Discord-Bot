@@ -32,6 +32,37 @@ Discord administrators and the actual server owner can always bypass channel gat
 
 The bot is installed at `apps/agent-smith` as the independent `@workspace/agent-smith` package. This project uses pnpm and Node 24 (the bot requires Node 22.12 or newer). The bot is not part of the API server and has no public web/admin endpoint.
 
+### Development: no VM or publishing required
+
+Use the **Agent Smith Bot** console workflow / Run button. It starts only the
+Gateway bot, not the template API or canvas service. The equivalent root command
+is `pnpm run bot`; do not launch it while that workflow is already running.
+Keep one bot instance against the live server.
+
+Root shortcuts:
+
+| Command | Behavior |
+|---|---|
+| `pnpm run bot` | Run the bot independently |
+| `pnpm run bootstrap` | Inspect the live target and preview setup; no Discord writes |
+| `pnpm run register-commands` | Offline slash-command preview |
+| `pnpm run bot:test` | Offline unit tests |
+| `pnpm run bot:preflight` | Offline blueprint/permission checks |
+| `pnpm run bot:audit` | Live read-only permission/access audit |
+
+Pass `--apply` only when intentionally performing an authorized setup or
+registration operation, e.g. `pnpm run register-commands -- --apply`.
+Starting the bot does not bootstrap, register commands, migrate the database,
+or publish anything. The existing server is already provisioned: do not repeat
+the first-install steps below just to start or test the bot.
+
+The template API and canvas workflows are optional and can remain stopped.
+Their files are retained for future use; neither is an HTTP keep-alive service
+for the bot. Post-merge setup installs locked dependencies only: it does not run
+the template Drizzle schema push or change the bot's database.
+
+### First-install reference
+
 First run these offline checks from the project root. They need no Discord credentials, make no Discord connection, and do not open PostgreSQL:
 
 ```sh
@@ -73,15 +104,23 @@ Bootstrap tracks created IDs in PostgreSQL and skips them on later runs; it does
 
 Audit verifies the adopted Community rules identity and private Community Updates visibility. Community settings keep #rules and #moderator-only; do not switch updates to the public announcements channel. Bootstrap preserves the standard Text Channels/Voice Channels categories and general/General channels with staff-only permissions and tracks them for audit; their contents are not deleted. Other untracked channels are reported for operator review. Audit never changes permissions or deletes anything. Re-run it until every finding is understood; permission, hierarchy, administrator-bypass, missing-resource, and unrecorded-access findings require operator review.
 
-The separate **Agent Smith Bot** console workflow runs `pnpm --filter @workspace/agent-smith run start`. It is deliberately not started during preparation. Once setup and the live audit are complete, start that workflow. Keep one bot instance initially; feeds are a separate one-shot command, not part of the gateway process.
+The separate **Agent Smith Bot** console workflow runs `pnpm --filter @workspace/agent-smith run start`. It is the normal development startup path after initial setup. Feeds are a separate one-shot command, not part of the gateway process.
 
-For continuous production operation, configure a VM/Reserved VM background-worker deployment rather than a sleeping preview or request-driven autoscaling web deployment. Production hosting is not configured by this import. Any future web dashboard must be a separate process with its own authentication; never expose the bot token to it or a browser.
+### Future production hosting — separate decision
 
-See [HOSTING.md](HOSTING.md) for the approved preparation settings, the current publishing eligibility blocker, database-preservation requirements, and single-instance cutover checklist. Hosting is not yet configured or published.
+Development and testing require no VM, publishing, web server, or uptime-ping
+workaround. Unattended 24/7 production operation needs a continuously running
+Node.js host; Reserved VM background-worker hosting is one Replit option for
+this Gateway design, not a code requirement.
+
+See [HOSTING.md](HOSTING.md) only when the owner explicitly requests production
+hosting. It is a future reference, not a prerequisite or authorization to publish.
+Any future web dashboard must remain a separate authenticated process; never
+expose the bot token to it or a browser.
 
 ## 3. Member and reviewer workflow
 
-- New members initially see only #welcome, #rules, and #onboarding. These stay read-only.
+- Public entry channels are #welcome, #rules, and #onboarding (read-only), plus #arrival-lounge (writable with 5-second slowmode). Framework and staff spaces remain gated.
 - Member reads #rules and clicks **Accept rules** in #onboarding (or uses `/accept`), which grants the shared-hub Member role. Plain text `accept` is not a command.
 - The **Choose your community** menu in #onboarding (or `/join framework:Faith|Gaming|Tech`) selects exactly one initial framework after rules acceptance. Once chosen, a member cannot use it again, even after role removal.
 - Buttons/menu replies are private and use the same database locks, role safety checks, and audit path as slash commands. They only work on the tracked bot-owned onboarding message. Discord rules screening, when enabled, must be completed first.

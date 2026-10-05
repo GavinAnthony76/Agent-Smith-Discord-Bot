@@ -1,20 +1,29 @@
-# Agent Smith continuous hosting
+# Agent Smith — future 24/7 production hosting reference
 
-## Approval and current limit
+## Development does not depend on this document
 
-The user approved preparing Reserved VM background-worker hosting, not publishing,
-stopping the workspace bot, or replacing its database.
+Agent Smith runs directly in the development workspace through the **Agent Smith
+Bot** workflow, or `pnpm run bot` from the root when that workflow is stopped.
+Do not run both. No VM, HTTP server, website, or publishing is required to build
+and test it. Template API/canvas services are independent and optional.
 
-**Hosting is not configured yet.** This pnpm project currently has only API and
-design artifacts and reports that it cannot publish. The available artifact
-creation tools do not expose a worker type. Do not bypass that restriction with
-an invented artifact schema, a dummy web app, or an API-server run-command change.
-Resolve worker publishing eligibility through a supported Replit publishing path
-before proceeding. A separate bot project is an alternative requiring explicit
-user approval and a supported plan to preserve the existing database contents.
-Do not create an empty replacement database.
+This document is a reference for a later, explicitly requested production
+hosting decision. It is not authorization to create a Reserved VM, publish,
+stop the workspace bot, move projects, or replace its database.
 
-## Approved configuration to apply when worker publishing is available
+## Production status and later choices
+
+No bot production deployment has been configured. The existing registered
+artifacts describe a template API and design preview, not the Gateway worker.
+Recheck the supported worker publishing path and actual deployment status when
+the owner asks for 24/7 hosting. Do not turn the API into a bot launcher, add a
+dummy web server, or move projects merely to keep developing.
+
+Any suitable continuously running Node.js worker host can execute the same bot.
+On Replit, Reserved VM background-worker hosting is an option for unattended
+Gateway operation. Development uses the existing workflow instead.
+
+## Candidate production settings — only after explicit approval
 
 | Setting | Value |
 | --- | --- |

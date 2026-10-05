@@ -21,7 +21,8 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - `pnpm --filter @workspace/agent-smith run test` — unit tests, no credentials or network connection
 - `pnpm --filter @workspace/agent-smith run preflight` — offline blueprint/permission checks
 - `pnpm --filter @workspace/agent-smith run discord:register` — offline slash-command preview
-- **Agent Smith Bot** workflow: `pnpm --filter @workspace/agent-smith run start` — long-lived gateway process, no web port, kept stopped during preparation
+- **Agent Smith Bot** workflow / Run button: `pnpm --filter @workspace/agent-smith run start` — independent development Gateway process; no web port, VM, API/canvas process, or publishing required. Never start a second copy with the same token.
+- Root shortcuts: `pnpm run bot`, `pnpm run bootstrap`, `pnpm run register-commands`, `pnpm run bot:test`, `pnpm run bot:preflight`, and `pnpm run bot:audit`. Bootstrap defaults to live inspection; registration defaults to offline preview. Writes still require explicit `--apply`.
 - Database migration, bootstrap, registration with `--apply`, live audit, and feed polling are documented in `apps/agent-smith/README.md`; they are not offline checks.
 - Native inspection/preparation/cutover and Server Guide tasks are documented in `apps/agent-smith/NATIVE-ONBOARDING.md`. Cutover defaults to read-only checks; apply requires `--confirm-native-published`, an enabled native UI with correct mappings, and passing permission checks.
 - Root workspace `pnpm run typecheck` and `pnpm run build` remain for the template's TypeScript packages; they do not validate this JavaScript bot.
@@ -32,6 +33,7 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - `apps/agent-smith`: imported JavaScript ESM bot, discord.js 14, pg, rss-parser
 - Bot PostgreSQL schema remains parameterized SQL in its own migration source; no ORM conversion
 - `artifacts/api-server`, `artifacts/mockup-sandbox`, and `lib/*` are template packages, not the bot runtime. The bot must remain independent of the API server.
+- Keep template API/canvas workflows stopped unless needed for separate web/design work; retain their files. Post-merge setup is dependency installation only, not database schema synchronization.
 
 ## Configuration
 
@@ -44,7 +46,8 @@ Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUIL
 - Member/framework/interest role grants refuse elevated server permissions and unsafe role hierarchy. **Why:** manual permission drift must not turn a self-service role into an escalation path.
 - Permission overwrites must specify Role/Member types explicitly. **Why:** a fresh Discord login may not cache configured humans, and discord.js cannot safely infer their principal types from IDs alone.
 - Continuous production hosting is a later setup step, not a sleeping web preview or autoscaling request server. Read the deployment skill before configuring it.
-- The user approved preparing Reserved VM background-worker hosting, not publishing or cutover. `apps/agent-smith/HOSTING.md` records the publishing eligibility blocker and safe cutover plan. Preserve existing database data as well as schema; an empty production database is unsafe.
+- `apps/agent-smith/HOSTING.md` is future production guidance only, not a development prerequisite or publishing authorization. A 24/7 hosting decision requires a separate explicit request. Preserve database data as well as schema; an empty production database is unsafe.
+- Do not run the template Drizzle schema push against Agent Smith's database. The bot owns its tables through explicit SQL migrations; automatic merge hooks must not change schema or server resources. **Why:** the template schema does not describe the live bot tables and may propose incompatible changes.
 
 ## Pointers
 
