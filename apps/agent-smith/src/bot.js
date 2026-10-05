@@ -4,7 +4,7 @@ import { frameworks, interests } from './blueprint.js';
 import { maySelfJoin, canReview, assertFramework, assertAssignableRole } from './policy.js';
 import { isOnboardingInteraction, onboardingAction } from './onboarding.js';
 import { isAccessRequestInteraction, accessRequestAction } from './access-request.js';
-import { isReviewInteraction, reviewAction, parseRequestId, pendingMessage } from './review.js';
+import { isReviewInteraction, reviewAction, parseRequestId, pendingMessage, isPendingInteraction, pendingAction, PENDING_PAGE_SIZE } from './review.js';
 import { createModeration, isModerationInteraction } from './moderation.js';
 import { createAntiSpam } from './antispam.js';
 import { createNativeReconciler } from './native-reconcile.js';
@@ -23,18 +23,19 @@ async function log(actor, action, detail) {
 }
 client.on('interactionCreate', async i => {
   if (isModerationInteraction(i)) { await moderation.handle(i); return; }
-  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isAccessRequestInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
+  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isPendingInteraction(i) && !isAccessRequestInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
   await i.deferReply({flags:64});
   let approvalAttempt;
   try {
-    const onboarding=onboardingAction(i), review=reviewAction(i), accessRequest=accessRequestAction(i);
-    const action=onboarding ?? review ?? accessRequest;
+    const onboarding=onboardingAction(i), review=reviewAction(i), accessRequest=accessRequestAction(i), pending=pendingAction(i);
+    const action=onboarding ?? review ?? accessRequest ?? pending;
     if (onboarding && (i.channelId !== await resource('channel','onboarding')
       || i.message.id !== await resource('message','onboarding')
       || i.message.author.id !== client.user.id)) {
       throw new Error('Use the official onboarding message in #onboarding.');
     }
     if (review && i.message.author.id !== client.user.id) throw new Error('Use the bot’s review buttons from /pending.');
+    if (pending && i.message.author.id !== client.user.id) throw new Error('Use the bot’s page buttons from /pending.');
     if (accessRequest && (i.channelId !== await resource('channel','access-requests')
       || i.message.id !== await resource('message','access-requests')
       || i.message.author.id !== client.user.id)) {
@@ -48,8 +49,9 @@ client.on('interactionCreate', async i => {
       if (i.channelId !== await resource('channel','access-review') && i.channelId !== await resource('channel','smith-controls')) throw new Error('Use the control room.');
     }
     if (name==='pending') {
-      const r=await pool.query("SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' ORDER BY id LIMIT 20",[guild.id]);
-      await i.editReply(pendingMessage(r.rows)); return;
+      const after=pending?.after ?? null;
+      const r=await pool.query("SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3",[guild.id,after ?? '0',PENDING_PAGE_SIZE+1]);
+      await i.editReply(pendingMessage(r.rows,after)); return;
     }
     let subject=uid, request;
     if (name==='review') {

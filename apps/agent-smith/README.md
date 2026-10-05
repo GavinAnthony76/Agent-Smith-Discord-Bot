@@ -184,6 +184,14 @@ Before inviting members, use a normal test account: confirm it sees only START H
 
 Back up PostgreSQL before changes. In a partial bootstrap failure, keep the database and rerun the plan. If a Discord create succeeded before its resource record was saved, the name-collision guard will stop: verify the object's identity and permissions before manually recording it or deleting that newly created object. Never wipe the resource table to bypass the guard.
 
+### Browsing a pending-request backlog
+
+In #access-review or #smith-controls, allowlisted human reviewers use `/pending` to list 15 pending requests at a time, ordered by request number. **Next page** shows requests after the last listed number; **First page** refreshes from the start. Responses are private and do not ping members. Up to four requests on each page have Approve/Deny buttons; use `/review id:<request number> approve:true|false` for any other listed request. Use the **Request #** number, not the member's Discord ID.
+
+Pages query the current queue on every click, not a saved snapshot. Reviewing earlier requests will not skip later ones during navigation. If a later page becomes empty, use **First page** or rerun `/pending`. Paging alone never changes requests or access, and the same staff/channel restrictions apply to every click. No command re-registration or storage migration is required for these page buttons; the running bot must load the updated code.
+
+The isolated pending-page tests cover queues exceeding 20 requests, page boundaries, large request numbers, changing/empty queues, authorization, message/component limits, and review from later pages. They do not contact Discord or live storage.
+
 The pinned discord.js release supports Node 22; its HTTP dependency is overridden to patched Undici 6.28.1. Recheck `npm audit` during upgrades. No secrets or production credentials are included.
 
 References: [Discord permissions](https://docs.discord.com/developers/topics/permissions), [application commands](https://docs.discord.com/developers/interactions/application-commands), [discord.js documentation](https://discord.js.org/docs/packages/discord.js/14.25.1).

@@ -101,7 +101,11 @@ export async function botFixture() {
       }
       rows = [{ id: request.id }];
     } else if (sql.startsWith('SELECT id,user_id,framework FROM requests')) {
-      rows = state.requests.filter(r => r.guild_id === args[0] && r.status === 'pending').slice(0, 20);
+      assert.equal(sql, "SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3");
+      assert.equal(args.length, 3);
+      rows = state.requests.filter(r => r.guild_id === args[0] && r.status === 'pending' && BigInt(r.id) > BigInt(args[1]))
+        .sort((a, b) => BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0)
+        .slice(0, args[2]);
     } else if (sql === 'SELECT * FROM requests WHERE guild_id=$1 AND id=$2') {
       rows = state.requests.filter(r => r.guild_id === args[0] && r.id === args[1]);
     } else if (sql === 'SELECT * FROM requests WHERE id=$1 FOR UPDATE') {
