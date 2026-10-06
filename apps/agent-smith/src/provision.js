@@ -8,6 +8,7 @@ import { communityChannels, starterChannels } from './community.js';
 import { auditProgressionRoles } from './progression-worker.js';
 import { progressionConfig } from './progression-config.js';
 import { auditSecurity } from './security-audit.js';
+import { isProtectedOwner } from './security-policy.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
 const apply = process.argv.includes('--apply');
@@ -18,7 +19,7 @@ try {
   await locked(`bootstrap:${guild.id}`, async db => {
     const saved = (await db.query('SELECT * FROM resources WHERE guild_id=$1', [guild.id])).rows;
     if (mode === 'audit') {
-      const security = await auditSecurity({ guild, client, cfg, rows: saved });
+      const security = await auditSecurity({ guild, client, cfg, rows: saved, pool });
       console.log('Security audit:', JSON.stringify(security, null, 2));
       failures.push(...security.failures);
     }
@@ -140,7 +141,7 @@ try {
       failures.push(...await auditProgressionRoles({ guild, resource, config: progressionConfig }));
       await guild.members.fetch();
       for (const member of guild.members.cache.values()) {
-        if (member.user.bot) continue;
+        if (member.user.bot || isProtectedOwner(guild,member.id)) continue;
         const held = frameworks.filter(f => member.roles.cache.has(roles[f]));
         const record = (await db.query('SELECT * FROM members WHERE guild_id=$1 AND user_id=$2',[guild.id,member.id])).rows[0];
         const grants = (await db.query('SELECT framework FROM grants WHERE guild_id=$1 AND user_id=$2',[guild.id,member.id])).rows.map(x=>x.framework);

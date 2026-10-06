@@ -1,0 +1,21 @@
+{
+  "allowed": [
+    "CreateInstantInvite", "AddReactions", "Stream", "ViewChannel", "SendMessages",
+    "EmbedLinks", "AttachFiles", "ReadMessageHistory", "UseExternalEmojis",
+    "Connect", "Speak", "UseVAD", "ChangeNickname", "UseApplicationCommands",
+    "RequestToSpeak", "CreatePublicThreads", "CreatePrivateThreads",
+    "UseExternalStickers", "SendMessagesInThreads", "UseEmbeddedActivities",
+    "UseSoundboard", "UseExternalSounds", "SendVoiceMessages",
+    "SetVoiceChannelStatus", "SendPolls", "UseExternalApps",
+    "ManageChannels", "ManageRoles", "ManageThreads", "ManageMessages",
+    "ModerateMembers", "KickMembers", "BanMembers"
+  ],
+  "denied": [
+    "Administrator", "ManageGuild", "ManageWebhooks", "MentionEveryone",
+    "ManageGuildExpressions", "ManageEvents", "CreateGuildExpressions",
+    "CreateEvents", "MuteMembers", "DeafenMembers", "MoveMembers",
+    "PrioritySpeaker", "ViewAuditLog", "ViewGuildInsights", "ManageNicknames"
+  ],
+  "seniorRoleIds": [],
+  "notes": "Normal communication permissions include existing default-member invite and own-nickname permissions. Native channel/role powers remain constrained by the application gate, not by Discord token isolation. Unknown flags fail closed. Owner-designated senior role IDs can be added here; Smith must remain below each one."
+}

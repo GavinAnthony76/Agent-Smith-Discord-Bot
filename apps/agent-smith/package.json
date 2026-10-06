@@ -15,7 +15,8 @@
     "discord:register": "node --env-file-if-exists=.env src/register.js",
     "feeds:run": "node --env-file-if-exists=.env src/feeds.js",
     "test": "node --experimental-vm-modules --test test/*.test.js",
-    "preflight": "node src/preflight.js"
+    "preflight": "node src/preflight.js",
+    "security:source": "node src/security-source-check.js"
   },
   "dependencies": { "discord.js": "14.25.1", "pg": "8.16.3", "rss-parser": "3.13.0" }
 }

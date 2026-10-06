@@ -15,15 +15,18 @@ const member = '100000000000000003', other = '100000000000000004', rid = '200000
 function fixture() {
   const sent = [];
   const role = { id: rid, name: 'Gaming', position: 1, managed: false, editable: true, permissions: new PermissionsBitField() };
-  const bot = { permissions: new PermissionsBitField(), roles: { highest: { id: botId, position: 10 }, cache: new Map([[botId, {}]]) } };
+  const highest = (position, id) => ({ id, position, comparePositionTo: other => position - other.position });
+  const bot = { id: botId, user: { bot: true }, permissions: new PermissionsBitField([P.ManageRoles, P.BanMembers, P.ManageMessages]),
+    roles: { highest: highest(10, botId), cache: new Map([[botId, {}]]) } };
   const cfg = { guildId: gid, clientId: botId, ownerDiscordId: owner, owners: [owner] };
   const rows = [{ kind: 'role', name: role.name, discord_id: rid }];
   const guild = { id: gid, ownerId: owner, fetch: async () => guild,
     roles: { cache: new Map([[rid, role]]), fetch: async () => {} }, members: { fetchMe: async () => bot,
-      fetch: async () => ({ roles: { highest: { position:20 } } }) } };
+      fetch: async ({user}) => ({ id:user, user:{bot:false}, permissions: new PermissionsBitField(user===owner?[P.Administrator]:[]),
+        roles:{highest:highest(user===owner?20:1,user)} }) } };
   const client = { rest: { request: async request => { sent.push(request); return {}; } } };
   registerSecurityConfiguration(guild, cfg);
-  installSecurityGate({ client, guild, cfg, readResources: async () => rows });
+  installSecurityGate({ client, guild, cfg, readResources: async () => rows, writeAudit: async () => {} });
   const request = (method, path, body) => client.rest.request({ method, fullRoute: path, body });
   const changeRole = (uid = member) => request('PUT', `/guilds/${gid}/members/${uid}/roles/${rid}`);
   return { sent, role, bot, cfg, guild, rows, request, changeRole };
@@ -165,7 +168,7 @@ test('one-message SDK purge is permitted only for a confirmed, approved, non-Own
   const f=fixture(), cid='400000000000000001', mid='300000000000000001';
   const row={ kind:'channel',name:'gaming-lounge',discord_id:cid }; f.rows.push(row);
   const message={ author:{id:member},pinned:false,createdTimestamp:Date.now() };
-  f.guild.channels={fetch:async()=>({messages:{fetch:async()=>message}})};
+  f.guild.channels={fetch:async()=>({permissionsFor:()=>new PermissionsBitField([P.ManageMessages]),messages:{fetch:async()=>message}})};
   const action={ operation:'purge',channel:cid,messageIds:[mid] };
   await withModerationWorkflow(action,owner,()=>f.request('DELETE',`/channels/${cid}/messages/${mid}`),true);
   assert.equal(f.sent.length,1);

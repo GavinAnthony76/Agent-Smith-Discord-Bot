@@ -130,7 +130,8 @@ test('review notification failure truthfully identifies the saved request and ex
         assert.doesNotMatch(replyText(i), /Unable to complete/);
         assert.deepEqual(Array.from(i.replies[0].allowedMentions.parse), []);
         assert.deepEqual(state.requests, [{
-          id: '1', guild_id: 'test-guild', user_id: 'member', framework: 'Tech', status: 'pending', reviewer: null
+          id: '1', guild_id: 'test-guild', user_id: 'member', framework: 'Tech', status: 'pending', reviewer: null,
+          expires_at:state.requests[0].expires_at
         }]);
         assert.equal(state.audits.length, 1);
         assert.equal(state.audits[0].action, 'request');

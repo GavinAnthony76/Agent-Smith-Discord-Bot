@@ -14,8 +14,9 @@ export function config(env = process.env) {
     if (!/^\d{17,20}$/.test(id)) throw new Error('Invalid Discord ID in configuration');
   }
   assertWriteTarget({ guildId }, env);
-  return { token: env.DISCORD_TOKEN, clientId: env.DISCORD_CLIENT_ID, guildId,
-    databaseUrl: env.DATABASE_URL, owners, ownerDiscordId: env.OWNER_DISCORD_ID, approvers: ids('APPROVER_IDS') };
+  return Object.freeze({ token: env.DISCORD_TOKEN, clientId: env.DISCORD_CLIENT_ID, guildId,
+    databaseUrl: env.DATABASE_URL, owners: Object.freeze(owners),
+    ownerDiscordId: env.OWNER_DISCORD_ID, approvers: Object.freeze(ids('APPROVER_IDS')) });
 }
 
 export function assertWriteTarget(cfg, env = process.env) {

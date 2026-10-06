@@ -9,6 +9,7 @@ import * as review from '../../src/review.js';
 import * as nativePolicy from '../../src/native-policy.js';
 import * as recovery from '../../src/access-recovery.js';
 import * as securityPolicy from '../../src/security-policy.js';
+import * as requestLifecycle from '../../src/request-lifecycle.js';
 import { runLocked } from '../../src/transaction.js';
 import { transactionStore } from './transaction-store.js';
 
@@ -106,6 +107,8 @@ export async function botFixture() {
     './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
     './access-recovery.js': recovery,
     './security-policy.js': securityPolicy,
+    './request-lifecycle.js': {...requestLifecycle,createRequestLifecycle:()=>({start(){},stop(){}})},
+    './smith-control.js': {createSmithControl:()=>({handle:async()=>{throw new Error('Control settings must use their isolated tests.');}})},
     './progression.js': { createProgression: async () => ({
       enqueue: async () => {}, scan: async () => {}, stop() {},
       earnTx: async () => { throw new Error('Progression earning must use its isolated test fixture.'); }

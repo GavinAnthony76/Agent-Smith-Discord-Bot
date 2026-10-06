@@ -122,13 +122,27 @@ export function transactionStore(state, guildId, trip = () => {}) {
         status: 'pending', reviewer: null };
       tx.requests.set(row.id, structuredClone(row));
       rows = [{ id: row.id }];
-    } else if (sql.startsWith('SELECT id,user_id,framework FROM requests')) {
-      assert.equal(sql, "SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3");
+    } else if (sql.startsWith('UPDATE requests SET expires_at=COALESCE')) {
+      const row=requests(tx).find(r=>r.guild_id===args[0]&&r.id===args[1]);
+      if(row)tx.requests.set(row.id,{...row,expires_at:row.expires_at??new Date(Date.now()+14*86400000).toISOString()});
+    } else if (sql.startsWith('SELECT id,user_id,framework,created_at,expires_at FROM requests')) {
+      assert.equal(sql, "SELECT id,user_id,framework,created_at,expires_at FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3");
       assert.equal(args.length, 3);
       rows = requests(tx).filter(r => r.guild_id === args[0] && r.status === 'pending'
         && BigInt(r.id) > BigInt(args[1]))
         .sort((a, b) => BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0)
         .slice(0, args[2]);
+    } else if (sql === 'SELECT * FROM requests WHERE guild_id=$1 AND user_id=$2 ORDER BY id DESC LIMIT 15') {
+      rows=requests(tx).filter(r=>r.guild_id===args[0]&&r.user_id===args[1]).sort((a,b)=>BigInt(a.id)>BigInt(b.id)?-1:1).slice(0,15);
+    } else if (sql === 'SELECT * FROM requests WHERE guild_id=$1 AND id=$2 FOR UPDATE') {
+      await acquire(tx,`request:${args[1]}`);
+      rows=requests(tx).filter(r=>r.guild_id===args[0]&&r.id===args[1]);
+    } else if (sql === "UPDATE requests SET status=$3 WHERE guild_id=$1 AND id=$2 AND status='pending' RETURNING *") {
+      await acquire(tx,`request:${args[1]}`);
+      const row=requests(tx).find(r=>r.guild_id===args[0]&&r.id===args[1]&&r.status==='pending');
+      if(row){const updated={...row,status:args[2]};tx.requests.set(row.id,updated);rows=[updated];}
+    } else if(sql.startsWith('INSERT INTO request_notifications')) {
+      assert.equal(args.length,4);
     } else if (sql === 'SELECT * FROM requests WHERE guild_id=$1 AND id=$2') {
       rows = requests(tx).filter(r => r.guild_id === args[0] && r.id === args[1]);
     } else if (sql === 'SELECT * FROM requests WHERE id=$1 FOR UPDATE') {

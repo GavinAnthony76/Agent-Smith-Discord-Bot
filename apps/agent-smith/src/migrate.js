@@ -1,4 +1,5 @@
 import { pool } from './db.js';
+import { readFile } from 'node:fs/promises';
 await pool.query(`
 CREATE TABLE IF NOT EXISTS resources(guild_id text NOT NULL, kind text NOT NULL, name text NOT NULL, discord_id text NOT NULL, PRIMARY KEY(guild_id,kind,name));
 CREATE TABLE IF NOT EXISTS members(guild_id text NOT NULL, user_id text NOT NULL, accepted_at timestamptz, primary_framework text, xp integer NOT NULL DEFAULT 0, last_trivia timestamptz, PRIMARY KEY(guild_id,user_id));
@@ -12,4 +13,5 @@ CREATE TABLE IF NOT EXISTS onboarding_state(guild_id text PRIMARY KEY,legacy_ena
 CREATE TABLE IF NOT EXISTS native_jobs(guild_id text NOT NULL,user_id text NOT NULL,revision bigint NOT NULL DEFAULT 1,attempts integer NOT NULL DEFAULT 0,next_try timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(guild_id,user_id));
 CREATE TABLE IF NOT EXISTS native_alerts(id bigserial PRIMARY KEY,guild_id text NOT NULL,user_id text NOT NULL,fingerprint text NOT NULL,reason text NOT NULL,detail jsonb NOT NULL,delivered_at timestamptz,UNIQUE(guild_id,user_id,fingerprint));
 `);
+await pool.query(await readFile(new URL('./security-settings-schema.sql', import.meta.url), 'utf8'));
 await pool.end(); console.log('Database ready');

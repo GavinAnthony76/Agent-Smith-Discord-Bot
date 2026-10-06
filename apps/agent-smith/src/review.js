@@ -1,4 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+export function requestAge(request, now = Date.now()) {
+  if (!request.created_at) return '';
+  const age = Math.max(0,Math.floor((now-new Date(request.created_at).getTime())/86400000));
+  const remaining = request.expires_at ? Math.ceil((new Date(request.expires_at).getTime()-now)/86400000) : null;
+  return ` — ${age}d old${remaining !== null && remaining <= 2 ? ` — **expires in ${Math.max(0,remaining)}d**` : ''}`;
+}
 
 const PREFIX = 'smith:review:';
 const PENDING_PREFIX = 'smith:pending:';
@@ -56,7 +62,7 @@ export function pendingMessage(rows, after = null) {
       ...(after !== null ? [`Showing pending requests after Request #${after}.`] : []),
       'Use the buttons below, or `/review id:<request number> approve:true|false`.',
       '**The request number is NOT the member’s Discord ID.**',
-      ...requests.map(request => `**Request #${request.id}** — ${request.framework} — member <@${request.user_id}>`),
+      ...requests.map(request => `**Request #${request.id}** — ${request.framework} — member <@${request.user_id}>${requestAge(request)}`),
       ...(requests.length > REVIEW_ROWS ? ['Buttons cover the first four requests on this page; use /review for the others.'] : []),
       ...(rows.length > PENDING_PAGE_SIZE ? ['Use Next page for more pending requests.'] : [])
     ].join('\n') : after !== null

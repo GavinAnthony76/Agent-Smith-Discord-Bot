@@ -25,7 +25,8 @@ export function accessRequestMessage() {
       'Submitting again reuses an existing pending request; it does not bypass approval.',
       'This channel is read-only, but the menu works without sending a message.',
       'Slash-command alternative: `/request framework:Faith`, `Gaming`, or `Tech`.',
-      'Staff review requests with `/pending` and `/review` in the control room.'
+      'Staff review requests with `/pending` and `/review` in the control room.',
+      'Use `/requests` to view your request status or withdraw your own pending request. Unreviewed requests expire after the configured window (14 days by default).'
     ].join('\n'),
     allowedMentions: { parse: [] },
     components: [

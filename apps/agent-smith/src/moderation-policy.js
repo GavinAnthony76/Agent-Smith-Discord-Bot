@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { PermissionFlagsBits as P } from 'discord.js';
 import { isOwner } from './security-policy.js';
+import { assertHigherRole, hasPermission } from './permissions.js';
 
 export const moderationPermissions = {
   timeout: P.ModerateMembers, untimeout: P.ModerateMembers,
@@ -12,16 +13,13 @@ export function assertModerator(actorId, cfg) {
 }
 
 export function assertTarget({ actor, target, bot, guildOwnerId, ownerDiscordId, owners, operation }) {
+  if (isOwner(target?.id, { ownerDiscordId, owners }, guildOwnerId)) throw new Error('Protected owner accounts are immune.');
   if (!target || target.user.bot || target.id === actor.id || isOwner(target.id, { ownerDiscordId, owners }, guildOwnerId)) {
     throw new Error('You cannot moderate yourself, bot accounts, or protected owner accounts.');
   }
-  if (actor.id !== guildOwnerId && actor.roles.highest.comparePositionTo(target.roles.highest) <= 0) {
-    throw new Error('Your highest role must be above the member’s highest role.');
-  }
-  if (moderationPermissions[operation] && bot.roles.highest.comparePositionTo(target.roles.highest) <= 0) {
-    throw new Error('Agent Smith’s highest role must be above the member’s highest role.');
-  }
-  if (['timeout', 'untimeout'].includes(operation) && target.permissions.has(P.Administrator)) {
+  assertHigherRole(actor, target, guildOwnerId);
+  if (moderationPermissions[operation]) assertHigherRole(bot, target, guildOwnerId, 'Agent Smith’s highest role must be above the member’s highest role.');
+  if (['timeout', 'untimeout'].includes(operation) && hasPermission(target, P.Administrator)) {
     throw new Error('Discord does not allow timing out administrators.');
   }
 }

@@ -1,4 +1,6 @@
 import { PermissionFlagsBits as P } from 'discord.js';
+import { assertAutomodAction } from './smith-control.js';
+import { assertStaffChannel, hasPermission } from './permissions.js';
 
 export class SpamDetector {
   constructor({ now = Date.now } = {}) { this.now = now; this.entries = new Map(); }
@@ -37,18 +39,34 @@ export async function createAntiSpam({ guild, cfg, pool, resource }) {
       // Count activity and mention metadata, not content. No Message Content intent is needed.
       const alert = detector.observe(message);
       if (!alert) return;
+      const settings=(await pool.query("SELECT key,value FROM bot_settings WHERE guild_id=$1 AND key LIKE 'automod:%'",[guild.id])).rows;
+      const categories=[...(alert.reasons.includes('Mass mention')?['mentions']:[]),
+        ...(alert.burst>=6||alert.thirtySeconds>=12?['burst']:[])];
+      for(const category of categories) {
+        const configured=settings.find(r=>r.key===`automod:${category}`)?.value;
+        if(configured) assertAutomodAction(configured.action);
+      }
+      const policy=categories.map(category=>settings.find(r=>r.key===`automod:${category}`)?.value)
+        .find(value=>value?.action==='escalate')??{action:'log-only'};
+      assertAutomodAction(policy.action);
       const result = await pool.query(
         'INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4) RETURNING id',
         [guild.id, cfg.clientId, 'mod.spam-alert', JSON.stringify({
-          target: message.author.id, channel: message.channelId, message: message.id, mode: 'alerts-only', ...alert
+          target: message.author.id, channel: message.channelId, message: message.id, mode: 'alerts-only', action:policy.action, ...alert
         })]);
-      const channel = await guild.channels.fetch(await resource('channel', 'feed-status'));
-      if (channel.permissionsFor(guild.roles.everyone)?.has(P.ViewChannel)) {
+      const channel = await guild.channels.fetch(policy.action==='escalate'?policy.channelId:await resource('channel', 'feed-status'));
+      if(policy.action==='escalate') {
+        await guild.roles.fetch();
+        const role=guild.roles.cache.get(policy.moderatorRoleId);
+        if(!role || role.id===guild.id || !role.mentionable || channel.name!=='automod-escalations')throw new Error('Escalation destination/role drift; case saved, delivery refused.');
+        assertStaffChannel(channel,guild,cfg,role.id);
+      }
+      if (hasPermission(guild.roles.everyone,P.ViewChannel,channel)) {
         throw new Error('Anti-spam alert channel is public; alert delivery refused. See the database audit record.');
       }
       await channel.send({
-        content: `**Spam alert — case #${result.rows[0].id}**\nMember <@${message.author.id}> in <#${message.channelId}>: ${alert.reasons.join('; ')}.\nhttps://discord.com/channels/${guild.id}/${message.channelId}/${message.id}\nAlerts only: no messages deleted and no access or timeout changed.`,
-        allowedMentions: { parse: [] }
+        content: `${policy.action==='escalate'?`<@&${policy.moderatorRoleId}>\n`:''}**Spam alert — case #${result.rows[0].id}**\nMember <@${message.author.id}> in <#${message.channelId}>: ${alert.reasons.join('; ')}.\nhttps://discord.com/channels/${guild.id}/${message.channelId}/${message.id}\nAlerts only: no messages deleted and no access or timeout changed.`,
+        allowedMentions: policy.action==='escalate'?{parse:[],roles:[policy.moderatorRoleId]}:{ parse: [] }
       });
     }
   };

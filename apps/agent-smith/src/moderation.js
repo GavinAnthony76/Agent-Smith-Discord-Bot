@@ -4,6 +4,7 @@ import { assertModerator, assertTarget, validReason, discordId, moderationPermis
 import { parseRequestId } from './review.js';
 import { assertNotOwner, assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, withModerationWorkflow, securityLimits } from './security-policy.js';
 import { reserveDestructiveOperation } from './security-rate.js';
+import { hasPermission } from './permissions.js';
 
 const PREFIX = 'smith:mod:';
 const confirmedOperations = new Set(['kick', 'ban', 'unban', 'purge']);
@@ -25,7 +26,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
   async function mirror(caseId, actor, description) {
     try {
       const channel = await guild.channels.fetch(await resource('channel', 'audit-log'));
-      if (channel.permissionsFor(guild.roles.everyone)?.has(P.ViewChannel)) throw new Error('Audit channel is public');
+      if (hasPermission(guild.roles.everyone,P.ViewChannel,channel)) throw new Error('Audit channel is public');
       await channel.send({ content: `**Moderation case #${caseId}** | owner <@${actor}>\n${description}`.slice(0, 1900),
         allowedMentions: { parse: [] } });
     } catch {
@@ -37,10 +38,8 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
     const bot = await guild.members.fetchMe();
     const permission = moderationPermissions[operation];
     if (permission) {
-      const actorPermissions = channel ? channel.permissionsFor(actor) : actor.permissions;
-      if (!actorPermissions?.has(permission)) throw new Error(`Your Discord account needs ${operation === 'purge' ? 'Manage Messages in that channel' : permissionName(operation)} permission.`);
-      const botPermissions = channel ? channel.permissionsFor(bot) : bot.permissions;
-      if (!botPermissions?.has(permission)) throw new Error(`Agent Smith needs ${operation === 'purge' ? 'Manage Messages in that channel' : permissionName(operation)}. Ask the server owner to grant that specific permission, not Administrator.`);
+      if (!hasPermission(actor, permission, channel)) throw new Error(`Your Discord account needs ${operation === 'purge' ? 'Manage Messages in that channel' : permissionName(operation)} permission.`);
+      if (!hasPermission(bot, permission, channel)) throw new Error(`Agent Smith needs ${operation === 'purge' ? 'Manage Messages in that channel' : permissionName(operation)}. Ask the server owner to grant that specific permission, not Administrator.`);
     }
     return { actor, bot };
   }
@@ -153,7 +152,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
         const operation = interaction.options.getSubcommand();
         if (operation === 'status') {
           const bot = await guild.members.fetchMe();
-          const missing = [...new Set(Object.keys(moderationPermissions).filter(key => !bot.permissions.has(moderationPermissions[key])).map(permissionName))];
+          const missing = [...new Set(Object.keys(moderationPermissions).filter(key => !hasPermission(bot, moderationPermissions[key])).map(permissionName))];
           const state = spam.status();
           const unresolved = await pool.query(
             "SELECT a.id FROM audit a WHERE a.guild_id=$1 AND a.action='mod.intent' AND NOT EXISTS (SELECT 1 FROM audit r WHERE r.guild_id=a.guild_id AND r.action='mod.result' AND r.detail->>'caseId'=a.id::text) ORDER BY a.id DESC LIMIT 10", [guild.id]);

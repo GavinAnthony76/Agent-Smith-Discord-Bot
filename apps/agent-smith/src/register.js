@@ -1,4 +1,4 @@
-import { REST, Routes } from 'discord.js';
+import { Routes } from 'discord.js';
 import { connect } from './discord.js';
 import { commands } from './commands.js';
 import { legacyAllowed } from './native-policy.js';
@@ -12,7 +12,7 @@ if (!process.argv.includes('--apply')) {
   try {
     await locked(`onboarding-mode:${guild.id}`,async db=>{
       const state = (await db.query('SELECT * FROM onboarding_state WHERE guild_id=$1',[guild.id])).rows[0];
-      await new REST().setToken(cfg.token).put(Routes.applicationGuildCommands(cfg.clientId, guild.id), { body: legacyAllowed(state) ? body : body.filter(c=>!['accept','join'].includes(c.name)) });
+      await client.rest.put(Routes.applicationGuildCommands(cfg.clientId, guild.id), { body: legacyAllowed(state) ? body : body.filter(c=>!['accept','join'].includes(c.name)) });
     });
     console.log('Guild slash commands registered for the confirmed target.');
   } finally {

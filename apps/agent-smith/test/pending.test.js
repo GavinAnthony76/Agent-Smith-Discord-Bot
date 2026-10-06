@@ -60,7 +60,7 @@ test('staff can discover every request in large queues, with no guild/status lea
       assert.deepEqual(fixture.state.audits, []);
       assert.deepEqual(fixture.state.messages, []);
       assert.deepEqual(fixture.state.locks, []);
-      assert.ok(fixture.state.queries.every(q => q.sql.startsWith('SELECT id,user_id,framework FROM requests')));
+      assert.ok(fixture.state.queries.every(q => q.sql.startsWith('SELECT id,user_id,framework,created_at,expires_at FROM requests')));
       if (count > PENDING_PAGE_SIZE) {
         const first = buttons(page).find(b => b.label === 'First page');
         assert.ok(first);

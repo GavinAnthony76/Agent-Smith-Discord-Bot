@@ -1,15 +1,27 @@
 import { PROTECTED_CHANNEL_NAMES, assertNotOwner, assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, assertSafeRole,
   assertCommandTree, mutationScope, securityLimits } from './security-policy.js';
+import { withPrivilegedPipeline } from './privileged-pipeline.js';
+import { protectedResources, assertUnprotected } from './protected-resources.js';
+import { assertPermission, assertHigherRole, assertRoleChannelGrants } from './permissions.js';
+import { PermissionFlagsBits as P } from 'discord.js';
+import { moderationPermissions, assertTarget } from './moderation-policy.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
-export function installSecurityGate({ client, guild, cfg, readResources }) {
+export function installSecurityGate({ client, guild, cfg, readResources, writeAudit }) {
   const original = client.rest.request.bind(client.rest);
   const limits = securityLimits();
   client.rest.request = async request => {
     const method = request.method.toUpperCase(), route = request.fullRoute, body = request.body ?? {};
     if (['GET', 'HEAD'].includes(method)) return original(request);
     const context = mutationScope();
+    const privileged = (validate = async () => {}) => withPrivilegedPipeline({
+      action: { operation: context?.operation ?? method.toLowerCase(), source: context?.source ?? context?.kind,
+        target: context?.subject, channel: context?.channel,
+        role: /^\/guilds\/\d+\/members\/\d+\/roles\/(\d+)$/.exec(route)?.[1],
+        messageIds: context?.messageIds },
+      validate, record: writeAudit && ((action, detail) => writeAudit(context?.actorId ?? cfg.clientId, action, detail))
+    }, () => original(request));
     if (route.startsWith('/guilds/')) {
       if (!route.startsWith(`/guilds/${guild.id}/`)) throw new Error('Server-level reconfiguration and foreign guild writes are disabled.');
       await guild.fetch();
@@ -24,10 +36,20 @@ export function installSecurityGate({ client, guild, cfg, readResources }) {
         assertNotOwner(guild, uid, cfg);
         if (uid === cfg.clientId || context?.kind !== 'roles' || context.subject !== uid) throw new Error('Role changes require an approved static workflow; bot self-management is disabled.');
         const rows = await readResources();
+        if(guild.channels?.fetch) await guild.channels.fetch();
         const trackedNames = new Map(rows.filter(r => r.kind === 'role').map(r => [r.discord_id, r.name]));
         assertSafeRole({ role: guild.roles.cache.get(rid), bot, trackedNames,
           botRoleIds: [...bot.roles.cache.keys()] });
-        return original(request);
+        assertRoleChannelGrants(guild.roles.cache.get(rid),guild);
+        return privileged(async () => {
+          assertPermission(bot,P.ManageRoles);
+          const target=await guild.members.fetch({user:uid,force:true});
+          assertHigherRole(bot,target,guild.ownerId,'Smith must be above the member receiving role changes.');
+          if(context.actorId && context.actorId!==uid) {
+            if(![...cfg.owners,...(cfg.approvers??[])].includes(context.actorId))throw new Error('Role approval/revocation requires an allowlisted human.');
+            assertHigherRole(await guild.members.fetch({user:context.actorId,force:true}),target,guild.ownerId);
+          }
+        });
       }
       const member = /^\/guilds\/\d+\/members\/(\d+)$/.exec(route);
       const ban = /^\/guilds\/\d+\/bans\/(\d+)$/.exec(route);
@@ -41,7 +63,13 @@ export function installSecurityGate({ client, guild, cfg, readResources }) {
           || context.operation !== op || context.subject !== uid || !cfg.owners.includes(context.actorId)) {
           throw new Error('Moderation requires the authenticated, validated interactive workflow; role replacement and nickname management are disabled.');
         }
-        return original(request);
+        return privileged(async () => {
+          const actor = await guild.members.fetch({ user: context.actorId, force: true });
+          assertPermission(actor, moderationPermissions[op]);
+          assertPermission(bot, moderationPermissions[op]);
+          if (op !== 'unban') assertTarget({ actor, bot, target: await guild.members.fetch({ user: uid, force: true }),
+            guildOwnerId: guild.ownerId, ownerDiscordId: cfg.ownerDiscordId, owners: cfg.owners, operation: op });
+        });
       }
       // No role/channel creation, deletion, positions, permission edits, bulk
       // bans, ownership transfer, guild reset, onboarding or Guide writes.
@@ -58,12 +86,22 @@ export function installSecurityGate({ client, guild, cfg, readResources }) {
             || body.messages.some(id => !context.messageIds.includes(id))
             || body.messages.length < 1 || body.messages.length > limits.purge) throw new Error('Bulk message cleanup lacks a validated, bounded confirmation.');
           const rows = await readResources();
-          assertSafeBot(await guild.members.fetchMe({ force: true }));
-          if (rows.some(r => r.discord_id === channelId && (r.kind !== 'channel'
-            || PROTECTED_CHANNEL_NAMES.has(r.name)))) {
-            throw new Error('Protected channel cleanup is disabled.');
-          }
-          return original(request);
+          const bot = await guild.members.fetchMe({ force: true });
+          assertSafeBot(bot);
+          const owner = await guild.members.fetch({ user: guild.ownerId, force: true });
+          assertSafeHierarchy(bot, owner);
+          assertUnprotected(protectedResources({ guild, bot, owner, rows }), channelId, 'channel cleanup');
+          return privileged(async () => {
+            const target = await guild.channels.fetch(channelId);
+            assertPermission(await guild.members.fetch({ user: context.actorId, force: true }), moderationPermissions.purge, target);
+            assertPermission(bot, moderationPermissions.purge, target);
+            const messages = await target.messages.fetch({ limit: 100 });
+            for (const id of body.messages) {
+              const message = messages.get(id);
+              if (!message || message.pinned || Date.now() - message.createdTimestamp >= 14 * 86400000 - 60000) throw new Error('Protected, missing or expired purge target.');
+              assertNotOwner(guild, message.author.id, cfg);
+            }
+          });
         }
         if (method === 'PATCH') {
           throw new Error('No authenticated channel-management command is implemented; use manual Owner action.');
@@ -80,29 +118,39 @@ export function installSecurityGate({ client, guild, cfg, readResources }) {
           || !context.messageIds.includes(messageId)) throw new Error('Individual message deletion requires confirmed bounded purge.');
         await guild.fetch(); assertOwnerConfiguration(cfg, guild.ownerId);
         const rows = await readResources();
-        if (rows.some(r => r.discord_id === channelId && (r.kind !== 'channel' || PROTECTED_CHANNEL_NAMES.has(r.name)))) throw new Error('Protected channel cleanup is disabled.');
+        const bot = await guild.members.fetchMe({ force: true });
+        const owner = await guild.members.fetch({ user: guild.ownerId, force: true });
+        assertSafeBot(bot); assertSafeHierarchy(bot, owner);
+        assertUnprotected(protectedResources({ guild, bot, owner, rows }), channelId, 'channel cleanup');
         const target = await guild.channels.fetch(channelId);
         const message = await target.messages.fetch({ message: messageId, force: true });
         assertNotOwner(guild, message.author.id, cfg);
         if (message.pinned || Date.now() - message.createdTimestamp >= 14 * 86400000 - 60000) throw new Error('Protected or expired purge target.');
-        return original(request);
+        return privileged(async () => {
+          assertPermission(await guild.members.fetch({ user: context.actorId, force: true }), moderationPermissions.purge, target);
+          assertPermission(bot, moderationPermissions.purge, target);
+        });
       }
       if (!/^\/messages(?:\/|$)|^\/threads(?:\/|$)|^\/typing$/.test(suffix)) throw new Error('Unknown channel write disabled.');
       const target = await client.channels.fetch(channelId);
       if (target.guildId && target.guildId !== guild.id) throw new Error('Foreign channel write.');
       if (!target.guildId) {
         const recipientId = target.recipientId ?? target.recipient?.id;
+        if (context?.kind === 'notification' && context.source === 'request-expiry' && recipientId === context.subject
+          && method === 'POST' && suffix === '/messages') return original(request);
         if (context?.kind !== 'moderation' || context.operation !== 'warn'
           || !cfg.owners.includes(context.actorId) || recipientId !== context.subject) {
           throw new Error('Direct messages require the exact authenticated warning recipient.');
         }
         assertNotOwner(guild, recipientId, cfg);
       }
-      return original(request);
+      return !target.guildId ? privileged() : original(request);
     }
+    if (route === '/users/@me/channels' && method === 'POST'
+      && context?.kind === 'notification' && context.source === 'request-expiry' && body.recipient_id === context.subject) return original(request);
     if (/^\/users\/@me\/channels$/.test(route) && method === 'POST'
       && context?.kind === 'moderation' && context.operation === 'warn' && body.recipient_id === context.subject) {
-      assertNotOwner(guild, body.recipient_id, cfg); return original(request);
+      assertNotOwner(guild, body.recipient_id, cfg); return privileged();
     }
     if (/^\/applications\/\d+\/guilds\/\d+\/commands(?:\/\d+)?$/.test(route)) {
       if (!route.startsWith(`/applications/${cfg.clientId}/guilds/${guild.id}/`)) throw new Error('Foreign command management.');

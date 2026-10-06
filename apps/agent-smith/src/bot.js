@@ -13,7 +13,11 @@ import { recoverApproval } from './access-recovery.js';
 import { createProgression } from './progression.js';
 import { createProgressionInteractions } from './progression-interactions.js';
 import { assertNotOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
+import { createRequestLifecycle, withdrawalAction, myRequestsMessage, assignRequestExpiry, requestExpired, transitionRequest } from './request-lifecycle.js';
+import { createSmithControl } from './smith-control.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
+const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
+const control = createSmithControl({guild,cfg,pool,resource});
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const moderation = createModeration({ guild, cfg, pool, resource, spam });
 const native = await createNativeReconciler({ guild, client });
@@ -27,16 +31,32 @@ async function log(actor, action, detail) {
   catch { console.error('Discord audit mirror unavailable; see database audit table.'); }
 }
 client.on('interactionCreate', async i => {
+  if (i.isChatInputCommand() && i.commandName === 'smith-control') { await control.handle(i); return; }
   if (await handleProgression(i)) return;
   if (isModerationInteraction(i)) {
     try { await moderation.handle(i); } catch (error) { console.error('Moderation interaction failed:', error.code ?? error.message); }
     return;
   }
-  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isPendingInteraction(i) && !isAccessRequestInteraction(i)) || i.guildId !== cfg.guildId || i.user.bot) return;
+  if ((!i.isChatInputCommand() && !isOnboardingInteraction(i) && !isReviewInteraction(i) && !isPendingInteraction(i) && !isAccessRequestInteraction(i)
+    && !(i.isButton() && i.customId.startsWith('smith:request:withdraw:'))) || i.guildId !== cfg.guildId || i.user.bot) return;
   try { await i.deferReply({flags:64}); }
   catch (error) { console.error('Interaction acknowledgement failed:', error.code ?? error.message); return; }
   let approvalAttempt;
   try {
+    const withdrawal = withdrawalAction(i);
+    if (withdrawal) {
+      await refreshOwnerProtection(guild);
+      assertNotOwner(guild,i.user.id,cfg);
+      if (i.message.author.id !== client.user.id) throw new Error('Use the bot’s withdrawal buttons from /requests.');
+      const result=await locked(`${guild.id}:${i.user.id}`,async db=>{
+        const request=(await db.query('SELECT * FROM requests WHERE guild_id=$1 AND id=$2 FOR UPDATE',[guild.id,withdrawal.id])).rows[0];
+        if(!request || request.user_id!==i.user.id) throw new Error('You may withdraw only your own pending requests.');
+        const status=requestExpired(request)?'expired':'withdrawn';
+        await transitionRequest(db,{guildId:guild.id,request,status,actor:i.user.id});
+        return `Request #${request.id} ${status}. No access was changed.`;
+      });
+      await i.editReply({content:result,components:[],allowedMentions:{parse:[]}});return;
+    }
     const onboarding=onboardingAction(i), review=reviewAction(i), accessRequest=accessRequestAction(i), pending=pendingAction(i);
     const action=onboarding ?? review ?? accessRequest ?? pending;
     if (onboarding && (i.channelId !== await resource('channel','onboarding')
@@ -53,6 +73,10 @@ client.on('interactionCreate', async i => {
     }
     const name=action?.name ?? i.commandName, uid=i.user.id,
       target=action ? action.framework : i.options.getString('framework');
+    if (name==='requests') {
+      const rows=(await pool.query('SELECT * FROM requests WHERE guild_id=$1 AND user_id=$2 ORDER BY id DESC LIMIT 15',[guild.id,uid])).rows;
+      await i.editReply(myRequestsMessage(rows));return;
+    }
     if (['join','request','revoke'].includes(name)) assertFramework(target);
     if (['pending','review','revoke'].includes(name)) {
       if (!human(uid)) throw new Error('Only allowlisted human reviewers may use this command.');
@@ -60,7 +84,7 @@ client.on('interactionCreate', async i => {
     }
     if (name==='pending') {
       const after=pending?.after ?? null;
-      const r=await pool.query("SELECT id,user_id,framework FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3",[guild.id,after ?? '0',PENDING_PAGE_SIZE+1]);
+      const r=await pool.query("SELECT id,user_id,framework,created_at,expires_at FROM requests WHERE guild_id=$1 AND status='pending' AND id>$2 ORDER BY id LIMIT $3",[guild.id,after ?? '0',PENDING_PAGE_SIZE+1]);
       await i.editReply(pendingMessage(r.rows,after)); return;
     }
     let subject=uid, request;
@@ -103,10 +127,15 @@ client.on('interactionCreate', async i => {
         if (held.includes(target)) throw new Error('You already have this framework.');
         const r=await db.query("INSERT INTO requests(guild_id,user_id,framework) VALUES($1,$2,$3) ON CONFLICT (guild_id,user_id,framework) WHERE status='pending' DO UPDATE SET framework=EXCLUDED.framework RETURNING id",[guild.id,subject,target]);
         request=r.rows[0];
+        await assignRequestExpiry(db,guild.id,request.id);
         reply=`Request ${request.id} is pending human review. No access was granted.`;
       } else if (name==='review') {
         request=(await db.query('SELECT * FROM requests WHERE id=$1 FOR UPDATE',[request.id])).rows[0];
         if (request.status!=='pending') throw new Error('Request already reviewed.');
+        if (requestExpired(request)) {
+          await transitionRequest(db,{guildId:guild.id,request,status:'expired',actor:uid});
+          return `Request #${request.id} expired. No access was granted; the member can resubmit.`;
+        }
         const approved=review ? review.approve : i.options.getBoolean('approve');
         if (approved) {
            assertFramework(request.framework);
@@ -121,6 +150,7 @@ client.on('interactionCreate', async i => {
           await db.query('INSERT INTO grants(guild_id,user_id,framework,reviewer) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',[guild.id,subject,request.framework,uid]);
         }
         await db.query('UPDATE requests SET status=$2,reviewer=$3 WHERE id=$1',[request.id,approved?'approved':'denied',uid]);
+        request.status=approved?'approved':'denied';
         reply=`Request ${request.id} ${approved?'approved':'denied'} by human ${uid}.`;
       } else if (name==='revoke') {
         if (m.primary_framework===target) throw new Error('This command revokes additional access only.');
@@ -154,7 +184,8 @@ client.on('interactionCreate', async i => {
           } else reply='Incorrect or expired. Try another question after the cooldown.';
         }
       } else throw new Error('Unknown command.');
-      await audit(db,uid,name,{subject,framework:target,request:request?.id}); return reply;
+      await audit(db,uid,name,{subject,framework:target,request:request?.id,
+        ...(name==='review'?{from:'pending',to:request.status}:{})}); return reply;
     }), uid);
     // Subsequent reply/mirror failures cannot undo an acknowledged commit.
     approvalAttempt = undefined;
@@ -195,11 +226,12 @@ const queueNative = member => {
 };
 client.on('guildMemberAdd', queueNative);
 client.on('guildMemberUpdate', (_old, member) => queueNative(member));
+requests.start();
 native.scan().catch(() => console.error('Native startup scan deferred; periodic recovery remains active.'));
 progression.scan().catch(() => console.error('Progression startup scan deferred; recovery remains active.'));
 client.on('error', error => console.error('Discord client error:', error.code ?? error.name));
 client.on('messageCreate', message => {
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{native.stop();progression.stop();client.destroy();await pool.end();process.exit(0);});
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{requests.stop();native.stop();progression.stop();client.destroy();await pool.end();process.exit(0);});
 console.log('Agent Smith ready. No AI access-control path exists.');

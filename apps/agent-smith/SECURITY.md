@@ -84,10 +84,55 @@ credentials are used outside Smith. Manage Channels likewise retains native
 channel powers. Protect the token and remove unnecessary native permissions
 manually. Do not claim these guards neutralize stolen credentials.
 
+## Checklist scope and operational controls
+
+The Owner chose to retain existing safeguards when the expanded checklist
+conflicted with them: all configured protected owner accounts remain immune,
+not just the one actual Server Owner. Automatic deletion, warnings, timeouts,
+kicks and bans remain disabled. Structural settings remain manual Owner work.
+There is no `/smith ask` or other LLM integration; no paid AI service was added.
+Source checks reject privileged imports in future AI modules. Text-only AI
+rate limits and prompt retention would be required before an AI feature is added,
+not fictitious controls on a nonexistent endpoint.
+
+The shared capability data includes ordinary existing default-member permissions
+(including invitation creation and changing the bot's own nickname), bounded
+moderation permissions, and application-guarded channel/role/thread powers.
+Unknown raw permission bits fail closed, even when discord.js omits them from its
+named permission list. Never silently mask a legacy/reserved bit to make startup pass.
+Owner-designated senior role IDs belong in the shared capability data; startup
+and live audit require Smith to remain below each one.
+
+All allowed privileged SDK writes pass the shared pipeline and persist
+`security.intent` before the API call and `security.result` afterward. Missing
+or uncertain results require reconciliation, not blind retry. The source audit
+is a lexical regression check, not a formal proof of arbitrary JavaScript safety.
+
+- `/requests`: private recent request states and buttons to withdraw one's own
+  pending requests. Expired/withdrawn requests do not revoke existing access.
+- New requests expire after **14 days** by default. The worker checks every
+  minute; approval rechecks the deadline inside the existing member/request locks.
+  Existing protected-account request history is not expired automatically.
+- `/smith-control request-expiry days:1..90` in `#smith-controls`: changes
+  deadlines for new requests only, with a transactional settings/audit write.
+- `/smith-control automod`: per-signal `log-only` or `escalate` only. Escalation
+  requires an Owner-created private `#automod-escalations` channel and a
+  mentionable, explicitly designated on-duty moderator role. Only that role is
+  pinged; no blanket staff/@everyone ping. Smith creates neither resource.
+- `/smith-control status`: persistent operational settings.
+- Expiry notifications have durable delivery state. Unconfirmed DMs are not
+  automatically resent; `/requests` remains the member's reliable inbox.
+
+Use the additive `db:migrate` migration before starting this version. Register
+new commands and refresh the existing request message only after security
+preflight passes. Never replace the bot's database or reset access/progression.
+
 ## Verification
 
 `pnpm run bot:test` runs offline pipeline/policy/REST-gate tests.
 `pnpm run bot:preflight` checks command and permission definitions offline.
+`pnpm --filter @workspace/agent-smith run security:source` performs the
+credential-free privileged-transport, resolver and AI-import regression checks.
 `pnpm run bot:audit` (or `npm run discord:audit` in this package) performs the
 live read-only audit, including Owner identity, hierarchy, unsafe native powers,
 role grant boundaries, protected resources, destructive limits, command

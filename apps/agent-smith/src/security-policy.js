@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { PermissionFlagsBits as P } from 'discord.js';
 import { categories, roleNames } from './blueprint.js';
+import { assertBotCapabilities, capabilities } from './permissions.js';
 
 const scope = new AsyncLocalStorage();
 const configurations = new WeakMap();
@@ -8,7 +9,7 @@ export const PROTECTED_CHANNEL_NAMES = new Set([
   ...categories.map(c => c.name),
   ...categories.flatMap(c => c.channels.filter(([, , readonly]) => readonly || c.gate === 'staff' || !c.gate).map(([name]) => name)),
   'moderation-log', 'audit-log', 'smith-control',
-  'smith-controls', 'access-review', 'rules', 'onboarding', 'welcome', 'access-requests'
+  'smith-controls', 'access-review', 'rules', 'onboarding', 'welcome', 'access-requests', 'automod-escalations'
 ]);
 export const PROTECTED_ROLE_NAMES = new Set([
   'Server Owner', 'SERVER OWNER', 'Owner', 'Agent Smith', 'AGENT SMITH',
@@ -63,14 +64,20 @@ export function withModerationWorkflow(action, actorId, fn, confirmed = false) {
     channel: action.channel, actorId, confirmed, messageIds: Object.freeze([...(action.messageIds ?? [])]) }), fn);
 }
 export function mutationScope() { return scope.getStore(); }
+export function withRequestNotification(subject, fn) {
+  if (!/^\d{17,20}$/.test(subject ?? '')) throw new Error('Invalid notification recipient.');
+  return scope.run(Object.freeze({kind:'notification',source:'request-expiry',subject}),fn);
+}
 export function assertSafeBot(bot) {
-  if (bot.permissions.has(P.Administrator) || bot.permissions.has(P.ManageGuild) || bot.permissions.has(P.ManageWebhooks)) {
-    throw new Error('UNSAFE: Smith has Administrator, Manage Server, or Manage Webhooks. The Owner must remove these broad powers manually.');
-  }
+  assertBotCapabilities(bot);
 }
 export function assertSafeHierarchy(bot, owner) {
   if (owner.roles.highest.position <= bot.roles.highest.position) {
     throw new Error('UNSAFE: the Server Owner security role must be above Smith. The Owner must correct the hierarchy manually.');
+  }
+  for(const id of capabilities.seniorRoleIds) {
+    const role=bot.guild?.roles.cache.get(id);
+    if(!role || role.position<=bot.roles.highest.position)throw new Error('UNSAFE: missing or below-Smith designated senior role.');
   }
 }
 export function assertSafeRole({ role, bot, botRoleIds = [], trackedNames }) {

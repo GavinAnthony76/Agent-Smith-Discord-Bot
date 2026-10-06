@@ -172,7 +172,7 @@ test('two overlapping human reviews produce one decision and no duplicate or con
           assert.match(replyText(loser), /Unable to complete: Request already reviewed/);
           assert.deepEqual(state.requests, [{
             id: '1', guild_id: 'test-guild', user_id: 'member', framework: 'Tech',
-            status, reviewer: 'owner'
+            status, reviewer: 'owner', expires_at:state.requests[0].expires_at
           }]);
           const rereads = state.queries.filter(q => q.sql === lockRequest);
           assert.deepEqual(rereads.map(q => q.rows[0].status), ['pending', status]);
@@ -206,7 +206,8 @@ test('tracked menu privately creates a pending request, never grants access, and
     assert.deepEqual(state.members.get('member'), original);
   }
   assert.deepEqual(state.requests[0], {
-    id: '1', guild_id: 'test-guild', user_id: 'member', framework: 'Tech', status: 'pending', reviewer: null
+    id: '1', guild_id: 'test-guild', user_id: 'member', framework: 'Tech', status: 'pending', reviewer: null,
+    expires_at:state.requests[0].expires_at
   });
   assert.deepEqual(state.locks, Array(3).fill('test-guild:member'));
   assert.equal(state.audits.length, 3);

@@ -21,7 +21,11 @@ export async function connect({ allowWrites = false } = {}) {
       assertSafeHierarchy(bot, await guild.members.fetch({ user: guild.ownerId, force: true }));
       const { pool } = await import('./db.js');
       installSecurityGate({ client, guild, cfg, readResources: async () =>
-        (await pool.query('SELECT kind,name,discord_id FROM resources WHERE guild_id=$1', [guild.id])).rows });
+         (await pool.query('SELECT kind,name,discord_id FROM resources WHERE guild_id=$1', [guild.id])).rows,
+         writeAudit: async (actor, action, detail) => {
+           await pool.query('INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4)',
+             [guild.id, actor, action, JSON.stringify(detail)]);
+         } });
     }
     return { client, guild, cfg };
   } catch (error) {
