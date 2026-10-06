@@ -12,3 +12,9 @@ The same usability failure later affected additional community requests: a membe
 The user confirmed the clickable entry flow let the invited member accept rules and select a community. Retain that legacy entry method until the owner's explicit native onboarding cutover; after cutover, do not recreate the legacy controls.
 
 **How to apply:** Preserve read-only rules and welcome channels. Before native cutover, verify that the clickable controls work before the Member role. After cutover, use Discord rules screening and inert native selection signals instead. Both routes must keep human-reviewed extra access; permission audits alone cannot verify a real member's UI experience.
+
+Distinguish effective channel access from the member's personal channel list before changing permissions.
+
+**Why:** The Owner's sidebar showed framework voice rooms but omitted text/forum channels, while a live read-only check confirmed the Owner could view and read every existing channel. Assigned roles alone did not explain the sidebar.
+
+**How to apply:** Check effective permissions first, then guide the user to Show All Channels or Browse Channels when access already exists. Personal channel-list preferences are not established by the bot's permission audit; do not broaden private permissions to repair a display filter.
