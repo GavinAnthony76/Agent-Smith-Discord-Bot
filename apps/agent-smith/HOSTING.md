@@ -1,4 +1,27 @@
-# Agent Smith — future 24/7 production hosting reference
+# Agent Smith — Reserved VM hosting preparation
+
+## Current Owner request
+
+The Owner requested that Smith remain online unattended and selected preparation
+for Replit Reserved VM hosting. This authorizes preparation, not spending on or
+performing a publish, changing Discord permissions, or stopping the current bot
+before an approved cutover.
+
+Readiness checks on 2026-10-06: 295 offline tests passed, one existing test skipped;
+permission preflight and source-boundary checks passed. The development Gateway
+was running, and no active production deployment existed.
+
+**Publishing configuration still needs approval:** this pnpm project currently
+registers an unused API artifact and the design canvas, not a bot worker. The
+API artifact's production command launches the template API. Changing only
+`.replit`'s run command will not publish Smith: artifact production commands take
+precedence. Do not click Publish with that unchanged configuration.
+
+The existing unused API production configuration can be changed to launch only
+the standalone Smith worker if the Owner approves that specific change. Keep
+the API's source/development workflow separate and unchanged; do not add an HTTP
+server, use its server code as a bot launcher, or start a second development
+Gateway. Otherwise arrange a separate supported bot-worker publishing path.
 
 ## Development does not depend on this document
 
@@ -7,8 +30,8 @@ Bot** workflow, or `pnpm run bot` from the root when that workflow is stopped.
 Do not run both. No VM, HTTP server, website, or publishing is required to build
 and test it. Template API/canvas services are independent and optional.
 
-This document is a reference for a later, explicitly requested production
-hosting decision. It is not authorization to create a Reserved VM, publish,
+This document records the approved hosting preparation and cutover safeguards.
+It is not authorization to create a paid Reserved VM, publish,
 stop the workspace bot, move projects, or replace its database.
 
 ## Production status and later choices
@@ -60,6 +83,7 @@ Publishing settings without copying values into chat, source, logs, or endpoints
 - `DISCORD_GUILD_ID`
 - `BOOTSTRAP_CONFIRM_GUILD_ID`
 - `OWNER_IDS`
+- `OWNER_DISCORD_ID`
 - `APPROVER_IDS`, only if already configured and intended
 - Replit-managed `DATABASE_URL`
 
@@ -81,8 +105,9 @@ at cutover because the workspace may have served new interactions.
    setting is **Set up your production database with your current development
    data**. Current infrastructure may present a different flow; if there is no
    supported data-copy path, stop and resolve it before publishing.
-3. Never choose an empty production database. Preserve all records in `resources`,
-   `members`, `requests`, `grants`, `audit`, `feed_items`, and `trivia_sessions`,
+3. Never choose an empty production database. Preserve all bot tables, including
+   resources, membership, requests/grants, audits/settings, native onboarding
+   jobs/alerts/state, progression tables, delivery queues, feeds and trivia,
    including IDs, timestamps, and sequences. Do not delete records or rerun
    bootstrap as a substitute for transferring them.
 4. Let Publish handle managed production schema differences. Review rename and
@@ -138,3 +163,34 @@ an approved recovery/reconciliation plan. Never run both bots simultaneously.
 
 No publishing, secret changes, database writes, bootstrap, or workflow changes
 were performed as part of preparation.
+
+## Read-only preparation baseline
+
+Snapshot at `2026-10-06T23:48:21.615Z`, taken in a repeatable-read, read-only
+transaction. This is a comparison baseline, **not a backup or final cutover
+snapshot**; the running bot may change counts. Recheck after pausing it.
+
+| Table | Rows |
+| --- | ---: |
+| audit | 59 |
+| bot_settings | 0 |
+| feed_items | 0 |
+| grants | 2 |
+| members | 8 |
+| native_alerts | 11 |
+| native_jobs | 6 |
+| onboarding_state | 1 |
+| progression_announcements | 0 |
+| progression_balances | 7 |
+| progression_events | 0 |
+| progression_faith_reviews | 0 |
+| progression_jobs | 24 |
+| progression_legacy_review | 0 |
+| request_notifications | 0 |
+| requests | 2 |
+| resources | 88 |
+| trivia_sessions | 0 |
+
+Resource identity fingerprint (SHA-256 of rows ordered by guild, kind, name):
+`27e38941668838cbdddee847a9266ea1d9fe6531aef8e1726a651429a8c7eb32`.
+No credentials or member-level records are included in this document.
