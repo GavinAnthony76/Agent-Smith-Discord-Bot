@@ -9,3 +9,4 @@
 - [Unnamed Discord permission bits](discord-unknown-permission-bits.md) — SDK named flags can omit inherited raw bits; do not silently exempt them to pass startup.
 - [Notification destination](discord-notification-channel-intent.md) — preserve the Owner's move of system notices from #general to #bot-spam when reconciling audits.
 - [Community help restriction](discord-community-help-intent.md) — Owner approved retaining the extra everyone Send Messages denial; recognize only the reviewed restriction.
+- [Unrecorded framework review](unrecorded-framework-review.md) — Owner chose manual case-by-case review; later native choices do not establish older role provenance.

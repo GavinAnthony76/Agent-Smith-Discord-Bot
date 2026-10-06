@@ -63,10 +63,11 @@ never visible. No members, Discord settings, modes or database records change.
 - A partial role API success followed by a database failure is safe to retry:
   the authorized primary intent is already durable. Existing XP/trivia,
   acceptance, grants, requests and resource identities are not reset.
-- A pre-existing held framework matching the member's first single native
-  choice may become their recorded primary without reassigning that role.
-  Other unrecorded held frameworks block initialization and require human
-  review; they are not silently recorded as approved extra grants.
+- Any pre-existing framework without an accepted primary or saved extra grant
+  blocks initialization and requires Owner review, even with a matching
+  Selection or no Selection. Existing roles remain untouched. A later native
+  answer cannot establish the origin of an older role or serve as a historical
+  approval. Recovery of an already committed native primary remains supported.
 - Multiple selections and unrecorded framework access stop all new bot grants
   and create deduplicated database alerts delivered to private access-review.
   Alerts survive restarts and delivery failures. Delivery is at least once;

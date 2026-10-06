@@ -102,10 +102,33 @@ test('unrecorded existing access is not silently legitimized or expanded', async
   assert.deepEqual(h.state.writes, []); assert.equal(h.state.record, undefined);
   assert.ok(h.state.alerts.has('unrecorded-access')); assert.ok(h.state.roles.has('Faith'));
 });
-test('existing matching framework can initialize its first explicit native choice without extra access', async () => {
+test('existing matching framework requires Owner review rather than a new native choice legitimizing it', async () => {
   const h = harness({ roles: ['Gaming'], selections: ['Gaming'] }); await h.run();
-  assert.equal(h.state.record.primary_framework, 'Gaming');
-  assert.deepEqual(h.state.writes, ['Member']); assert.deepEqual([...h.state.roles].sort(), ['Gaming', 'Member']);
+  assert.equal(h.state.record, undefined);
+  assert.deepEqual(h.state.writes, []); assert.deepEqual([...h.state.roles], ['Gaming']);
+  assert.ok(h.state.alerts.has('unrecorded-access'));
+});
+test('absent choice, acceptance-only record and grants without acceptance never justify held access', async () => {
+  for (const options of [
+    { selections: [] },
+    { record: { accepted_at: 'old', xp: 30 } },
+    { grants: ['Gaming'] }
+  ]) {
+    const h = harness({ roles: ['Member', 'Gaming'], ...options });
+    const before = structuredClone(h.state.record);
+    assert.equal((await h.run()).reason, 'unrecorded-access');
+    assert.deepEqual(h.state.record, before);
+    assert.deepEqual(h.state.writes, []);
+    assert.deepEqual([...h.state.roles], ['Member', 'Gaming']);
+  }
+});
+test('approved extra access is retained while a missing recorded primary is recovered', async () => {
+  const record = { accepted_at: 'old', primary_framework: 'Gaming', xp: 30 };
+  const h = harness({ record, roles: ['Member', 'Faith'], grants: ['Faith'], selections: ['Tech'] });
+  assert.equal((await h.run()).status, 'ready');
+  assert.deepEqual(h.state.record, record);
+  assert.deepEqual(h.state.writes, ['Gaming']);
+  assert.ok(h.state.roles.has('Faith')); assert.ok(!h.state.roles.has('Tech'));
 });
 test('restart/retry after external role success and database rollback uses durable original primary', async () => {
   const h = harness(); h.state.failRole = 'Member';

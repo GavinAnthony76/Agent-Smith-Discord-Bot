@@ -133,6 +133,22 @@ test('startup scan waits for screening and later update initializes safely', asy
   f.state.pending = false; await f.worker.enqueue(f.uid); await f.worker.drain();
   assert.deepEqual(f.state.writes, ['Member', 'Gaming']);
 });
+test('production worker preserves unexplained roles and alerts without reserving an approval', async t => {
+  const f = await fixture(t);
+  f.state.held.delete('Selection: Gaming');
+  f.state.held.add('Member'); f.state.held.add('Gaming');
+  await f.worker.enqueue(f.uid); await f.worker.drain();
+  assert.equal(f.state.record, undefined);
+  assert.deepEqual(f.state.writes, []);
+  assert.equal(f.state.alerts[0].reason, 'unrecorded-access');
+  assert.equal(f.state.delivered.length, 1);
+  f.state.held.add('Selection: Gaming');
+  await f.worker.enqueue(f.uid); await f.worker.drain();
+  assert.equal(f.state.record, undefined);
+  assert.deepEqual(f.state.writes, []);
+  assert.ok(f.state.held.has('Gaming'));
+  assert.ok(!f.state.audits.includes('native-primary-recorded'));
+});
 test('production refuses selection permission/channel drift and arbitrary guilds', async t => {
   const f = await fixture(t); f.roles.get('Selection: Gaming').permissions.bitfield = 8n;
   await assert.rejects(f.worker.reconcile(f.uid)); assert.deepEqual(f.state.writes, []);

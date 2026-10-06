@@ -5,7 +5,8 @@ import { config } from './config.js';
 import { pool } from './db.js';
 import { frameworks, interests } from './blueprint.js';
 import { overwrites } from './discord.js';
-import { nativeQuestionErrors, nativeDefaultChannelErrors } from './native-policy.js';
+import { nativeQuestionErrors, nativeDefaultChannelErrors, nativeDecision } from './native-policy.js';
+import { isOwner } from './security-policy.js';
 
 const cfg = config(), gid = cfg.guildId;
 const rest = new REST({ timeout: 15000, retries: 0 }).setToken(cfg.token);
@@ -93,13 +94,16 @@ try {
     if (page.length < 1000) break;
     after = page.at(-1).user.id;
   } while (true);
-  report.unrecorded = members.filter(m => !m.user.bot).flatMap(m => {
+  report.unrecorded = members.filter(m => !m.user.bot && !isOwner(m.user.id, cfg, guild.owner_id)).flatMap(m => {
     const record = records.find(r => r.user_id === m.user.id), held = frameworks.filter(f => m.roles.includes(id('role', f)));
     const approved = grants.filter(g => g.user_id === m.user.id).map(g => g.framework);
     const unmatched = held.filter(f => !record?.accepted_at || (record.primary_framework !== f && !approved.includes(f)));
+    const selected = frameworks.filter(f => m.roles.includes(selections[f]));
     return unmatched.length ? [{ id: m.user.id, held, unmatched, memberRole: m.roles.includes(id('role', 'Member')),
       recordExists: !!record, accepted: !!record?.accepted_at, primary: record?.primary_framework ?? null,
-      grants: approved, selections: frameworks.filter(f => m.roles.includes(selections[f])), pending: m.pending ?? null }] : [];
+      grants: approved, selections: selected, pending: m.pending ?? null,
+      nativeDecision: nativeDecision({ pending: m.pending, bot: false, selections: selected, record, held, grants: approved }),
+      resolution: 'Preserve roles. Owner review required; manual role assignment does not create bot approval records.' }] : [];
   });
   const caseIds = report.unrecorded.map(m => m.id);
   report.caseBotHistory = (await pool.query(`SELECT action,count(*)::int n FROM audit WHERE guild_id=$1 AND

@@ -5,19 +5,19 @@ export function nativeDecision({ pending, bot, selections, record, held = [], gr
   if (bot) return { status: 'ignore' };
   if (pending !== false) return { status: 'waiting-screening' };
   if (selections.length > 1) return { status: 'blocked', reason: 'multiple-selections' };
-  if (selections.length !== 1) return { status: 'waiting-selection' };
-  if (!frameworks.includes(selections[0])) return { status: 'blocked', reason: 'invalid-selection' };
+  if (selections.length === 1 && !frameworks.includes(selections[0])) return { status: 'blocked', reason: 'invalid-selection' };
   const primary = record?.primary_framework;
   if (primary && (!frameworks.includes(primary) || !record.accepted_at)) {
     return { status: 'blocked', reason: 'incomplete-record' };
   }
-  // An existing held role matching the first explicit native choice is safe
-  // to initialize as primary. Any OTHER unexplained held framework blocks
-  // expansion; never silently turn it into a human-approved extra grant.
-  const candidate = primary ?? selections[0];
-  if (held.some(f => f !== candidate && !grants.includes(f))) {
+  // A later Selection cannot establish the provenance of an older access role.
+  // Preserve it for Owner review, including when there is no Selection yet.
+  // Committed native intent still authorizes recovery after a partial role write.
+  if (held.some(f => !record?.accepted_at || (f !== primary && !grants.includes(f)))) {
     return { status: 'blocked', reason: 'unrecorded-access' };
   }
+  if (selections.length !== 1) return { status: 'waiting-selection' };
+  const candidate = primary ?? selections[0];
   return { status: primary ? 'ready' : 'initialize', primary: candidate };
 }
 
