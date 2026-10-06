@@ -8,5 +8,6 @@
 - [Discord SDK mutation boundaries](discord-sdk-mutation-boundaries.md) — one-message purge and batch role changes use different endpoints; keep narrow, equivalent guards.
 - [Unnamed Discord permission bits](discord-unknown-permission-bits.md) — SDK named flags can omit inherited raw bits; do not silently exempt them to pass startup.
 - [Notification destination](discord-notification-channel-intent.md) — preserve the Owner's move of system notices from #general to #bot-spam when reconciling audits.
+- [Continuous uptime](discord-continuous-uptime.md) — Smith must stay online without an active workspace session; workflow restarts alone do not meet the Owner's requirement.
 - [Community help restriction](discord-community-help-intent.md) — Owner approved retaining the extra everyone Send Messages denial; recognize only the reviewed restriction.
 - [Unrecorded framework review](unrecorded-framework-review.md) — Owner chose manual case-by-case review; later native choices do not establish older role provenance.
