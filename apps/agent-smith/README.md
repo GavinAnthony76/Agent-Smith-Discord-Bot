@@ -112,6 +112,8 @@ Bootstrap tracks created IDs in PostgreSQL and skips them on later runs; it does
 
 Audit verifies the adopted Community rules identity and private Community Updates visibility. Community settings keep #rules and #moderator-only; do not switch updates to the public announcements channel. Bootstrap preserves the standard Text Channels/Voice Channels categories and general/General channels with staff-only permissions and tracks them for audit; their contents are not deleted. Other untracked channels are reported for operator review. Audit never changes permissions or deletes anything. Re-run it until every finding is understood; permission, hierarchy, administrator-bypass, missing-resource, and unrecorded-access findings require operator review.
 
+The Owner approved preserving community-help's extra `@everyone` denial of Send Messages. The audit reports this restriction separately only for the reviewed guild/channel/category/Member-role identities; every other overwrite must still match the blueprint. Members retain their explicit posting/reply grants, which override the `@everyone` denial. This read-only policy does not authorize any Discord changes or exceptions on other channels.
+
 The separate **Agent Smith Bot** console workflow runs `pnpm --filter @workspace/agent-smith run start`. It is the normal development startup path after initial setup. Feeds are a separate one-shot command, not part of the gateway process.
 
 ### Future production hosting — separate decision

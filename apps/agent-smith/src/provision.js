@@ -1,4 +1,4 @@
-import { ChannelType, PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
+import { ChannelType, PermissionFlagsBits as P } from 'discord.js';
 import { connect, overwrites, botPermissions } from './discord.js';
 import { pool, resource, locked } from './db.js';
 import { categories, roleNames, rules, frameworks, ARRIVAL_CHANNEL_ID, selectionRoleNames } from './blueprint.js';
@@ -10,6 +10,7 @@ import { progressionConfig } from './progression-config.js';
 import { auditSecurity } from './security-audit.js';
 import { isProtectedOwner } from './security-policy.js';
 import { manualChannelPolicy } from './manual-channels.js';
+import { compareBlueprintPermissions } from './blueprint-permission-audit.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
 const apply = process.argv.includes('--apply');
@@ -83,14 +84,9 @@ try {
       if (selectionRoleNames.includes(name) && guild.channels.cache.some(c => c.permissionOverwrites.cache.get(role.id)?.allow.bitfield > 0n)) failures.push(`Selection role channel grant: ${name}`);
     }
     function compare(channel, expected) {
-      const norm = arr => arr.map(x => {
-        let allow = new PermissionsBitField(x.allow).bitfield;
-        // Preserve owner-installed Manage Permissions on the bot itself in
-        // existing starter channels; it is already required on the guild role.
-        if (x.id === client.user.id) allow &= ~P.ManageRoles;
-        return `${x.id}:${x.type}:${allow}:${new PermissionsBitField(x.deny).bitfield}`;
-      }).sort().join('|');
-      if (norm([...channel.permissionOverwrites.cache.values()]) !== norm(expected)) failures.push(`Permission drift: ${channel.name}`);
+      const result = compareBlueprintPermissions({ guild, channel, expected, botId: client.user.id, rows: saved });
+      if (!result.matches) failures.push(`Permission drift: ${channel.name}`);
+      if (result.reviewed) console.log(result.reviewed);
     }
     for (const cat of categories) {
       const definitions = [[cat.name, ChannelType.GuildCategory, false], ...cat.channels.map(([n,t,ro]) => [n,types[t],ro])];
