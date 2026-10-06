@@ -17,5 +17,6 @@
     "PrioritySpeaker", "ViewAuditLog", "ViewGuildInsights", "ManageNicknames"
   ],
   "seniorRoleIds": [],
-  "notes": "Normal communication permissions include existing default-member invite and own-nickname permissions. Native channel/role powers remain constrained by the application gate, not by Discord token isolation. Unknown flags fail closed. Owner-designated senior role IDs can be added here; Smith must remain below each one."
+  "inheritedLegacyBits": ["0x800000000000"],
+  "notes": "Normal communication permissions include existing default-member invite and own-nickname permissions. Native channel/role powers remain constrained by the application gate, not by Discord token isolation. Owner approved a compatibility exception for unnamed bit 47 only when inherited exclusively from @everyone and still unknown to the SDK. All other unapproved bits fail closed. Owner-designated senior role IDs can be added here; Smith must remain below each one."
 }

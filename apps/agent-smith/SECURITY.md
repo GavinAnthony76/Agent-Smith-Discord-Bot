@@ -99,7 +99,11 @@ The shared capability data includes ordinary existing default-member permissions
 (including invitation creation and changing the bot's own nickname), bounded
 moderation permissions, and application-guarded channel/role/thread powers.
 Unknown raw permission bits fail closed, even when discord.js omits them from its
-named permission list. Never silently mask a legacy/reserved bit to make startup pass.
+named permission list, except for the Owner-approved compatibility exception:
+unnamed bit 47 may be inherited exclusively from `@everyone`. It is reported in
+the audit and does not change Discord permissions. It stops being exempt if an
+SDK upgrade names it, or if another Smith role separately holds it. Administrator,
+every other unapproved bit, Owner immunity and hierarchy remain enforced.
 Owner-designated senior role IDs belong in the shared capability data; startup
 and live audit require Smith to remain below each one.
 

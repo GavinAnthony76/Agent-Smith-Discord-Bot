@@ -9,11 +9,14 @@ and bots inherit them even when their own role looks safe.
 
 **Why:** A live audit revealed inherited raw bit 47 while the SDK's named
 permission list omitted it. Current official Discord permission documentation
-skips that bit, but no exemption from the strict startup rule was approved.
+skips that bit. After initially selecting strict blocking, the user said to
+leave Smith's permissions alone and that they do not care about this bit as
+long as Smith cannot overpower them.
 
 **How to apply:** Compare raw bitfields against the explicit capability data.
-The user explicitly chose to keep the strict block and prepare an Owner-controlled
-one-bit repair rather than authorize an exception. Do not silently mask unknown
-bits, loosen the allowlist, or apply live role changes through Smith.
+Honor the approved narrow exception for unnamed bit 47 inherited exclusively
+from `@everyone`; do not treat it as approval for other unknown or forbidden
+powers. Keep Administrator blocked, Owner immunity, and the Owner-above-Smith
+hierarchy. No live role-permission edit or general reset was authorized.
 Native onboarding SDK prompts/options/
 roles are Collections, so use values/size rather than array length when auditing.

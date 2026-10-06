@@ -6,6 +6,24 @@ const data=JSON.parse(readFileSync(new URL('./permission-capabilities.json', imp
 for(const value of Object.values(data))if(Array.isArray(value))Object.freeze(value);
 export const capabilities = Object.freeze(data);
 const allowed = new PermissionsBitField(capabilities.allowed.map(name => P[name]));
+const known = Object.values(P).reduce((bits, flag) => bits | flag, 0n);
+const legacyBit47 = 1n << 47n;
+const configuredLegacy = (capabilities.inheritedLegacyBits ?? []).reduce((bits, value) => {
+  const bit = BigInt(value);
+  if (bit !== legacyBit47) throw new Error('Only the Owner-approved legacy bit 47 exception is supported.');
+  return bits | bit;
+}, 0n);
+
+export function inheritedLegacyPermissionBits(bot) {
+  const everyone = bot.guild?.roles?.everyone;
+  if (!everyone || !bot.roles?.cache) return 0n;
+  // Do not exempt a newly named permission after an SDK upgrade, or a bit
+  // separately assigned to Smith's own roles. No live permission is changed.
+  const inherited = configuredLegacy & ~known & everyone.permissions.bitfield;
+  const separatelyAssigned = [...bot.roles.cache.values()].some(role =>
+    role.id !== everyone.id && (role.permissions.bitfield & inherited) !== 0n);
+  return separatelyAssigned ? 0n : inherited;
+}
 
 // Use discord.js's Discord-compatible resolver: owner/admin override, aggregate
 // role overwrites, then member overwrites. Role position is NOT a channel grant.
@@ -19,9 +37,8 @@ export function assertPermission(member, permission, channel = null, description
   if (!hasPermission(member, permission, channel)) throw new Error(description);
 }
 export function unsafeBotPermissions(bot) {
-  const extra = bot.permissions.bitfield & ~allowed.bitfield;
+  const extra = bot.permissions.bitfield & ~(allowed.bitfield | inheritedLegacyPermissionBits(bot));
   const names = Object.entries(P).filter(([, flag]) => (extra & flag) !== 0n).map(([name]) => name);
-  const known = Object.values(P).reduce((bits, flag) => bits | flag, 0n);
   if (extra & ~known) names.push(`unknown bits 0x${(extra & ~known).toString(16)}`);
   return names;
 }

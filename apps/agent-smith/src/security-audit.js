@@ -3,7 +3,7 @@ import { commands } from './commands.js';
 import { roleNames } from './blueprint.js';
 import { assertOwnerConfiguration, assertSafeBot, assertCommandTree, ROLE_WORKFLOWS,
   PROTECTED_CHANNEL_NAMES, securityLimits, assertNotOwner, assertSafeHierarchy } from './security-policy.js';
-import { assertRoleChannelGrants, assertStaffChannel } from './permissions.js';
+import { assertRoleChannelGrants, assertStaffChannel, inheritedLegacyPermissionBits } from './permissions.js';
 import { protectedResources } from './protected-resources.js';
 import { auditProtectedLocks, nativePrimaryIsSafe } from './security-lock-audit.js';
 import { auditSecuritySource } from './security-source-audit.js';
@@ -23,6 +23,7 @@ export async function auditSecurity({ guild, client, cfg, rows, pool }) {
   catch { check('Secure owner identity matches actual Server Owner', false); }
   try { assertSafeBot(bot); check('Live bot permissions match the shared capability allowlist', true); }
   catch(error) { check('Live bot permissions match the shared capability allowlist', false,[error.message]); }
+  if(inheritedLegacyPermissionBits(bot))warnings.push('Owner-approved compatibility exception: unnamed bit 47 inherited only from @everyone is non-blocking. No live permissions changed; Administrator and all other unapproved bits remain blocked.');
   try {assertSafeHierarchy(bot,owner);check('Smith is below Owner and designated senior roles',true);}
   catch(error){check('Smith is below Owner and designated senior roles',false,[error.message]);}
   check('Secure identity and protected-account allowlist are immutable at runtime',Object.isFrozen(cfg)&&Object.isFrozen(cfg.owners));
