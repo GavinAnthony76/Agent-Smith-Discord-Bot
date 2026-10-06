@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { PermissionFlagsBits as P } from 'discord.js';
+import { isOwner } from './security-policy.js';
 
 export const moderationPermissions = {
   timeout: P.ModerateMembers, untimeout: P.ModerateMembers,
@@ -10,8 +11,8 @@ export function assertModerator(actorId, cfg) {
   if (!cfg.owners.includes(actorId)) throw new Error('Moderation is restricted to configured owners. Access reviewers are not moderators.');
 }
 
-export function assertTarget({ actor, target, bot, guildOwnerId, owners, operation }) {
-  if (!target || target.user.bot || target.id === actor.id || target.id === guildOwnerId || owners.includes(target.id)) {
+export function assertTarget({ actor, target, bot, guildOwnerId, ownerDiscordId, owners, operation }) {
+  if (!target || target.user.bot || target.id === actor.id || isOwner(target.id, { ownerDiscordId, owners }, guildOwnerId)) {
     throw new Error('You cannot moderate yourself, bot accounts, or protected owner accounts.');
   }
   if (actor.id !== guildOwnerId && actor.roles.highest.comparePositionTo(target.roles.highest) <= 0) {
@@ -36,10 +37,10 @@ export function discordId(value) {
   return value;
 }
 
-export function purgeCandidates(messages, now = Date.now()) {
+export function purgeCandidates(messages, now = Date.now(), protectedAuthors = []) {
   // A small margin avoids crossing Discord's 14-day bulk-delete cutoff.
   return [...messages.values()].filter(message =>
-    !message.pinned && now - message.createdTimestamp < 14 * 86400000 - 60000
+    !message.pinned && !protectedAuthors.includes(message.author?.id) && now - message.createdTimestamp < 14 * 86400000 - 60000
   );
 }
 

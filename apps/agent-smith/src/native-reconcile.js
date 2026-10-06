@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { frameworks } from './blueprint.js';
 import { TARGET_GUILD_ID } from './config.js';
 import { assertAssignableRole } from './policy.js';
+import { assertNotOwner, isProtectedOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
 import { nativeDecision, reconcileNative } from './native-policy.js';
 
 export async function createNativeReconciler({ guild, client }, dependencies) {
@@ -37,8 +38,11 @@ export async function createNativeReconciler({ guild, client }, dependencies) {
     }
   }
   async function reconcile(uid) {
+    await refreshOwnerProtection(guild);
+    if (isProtectedOwner(guild, uid)) return { status: 'owner-immune' };
+    assertNotOwner(guild, uid);
     await selectionSafety();
-    return reconcileNative(fn => locked(`${guild.id}:${uid}`, async db => {
+    return withRoleWorkflow('native-reconciliation', uid, () => reconcileNative(fn => locked(`${guild.id}:${uid}`, async db => {
       const state = await snapshot(db, uid);
       return fn({
         snapshot: state,
@@ -62,7 +66,7 @@ export async function createNativeReconciler({ guild, client }, dependencies) {
         },
         recordGrant: added => audit(db, client.user.id, 'native-primary-reconciled', { subject: uid, framework: state.record.primary_framework, added })
       });
-    }));
+    })));
   }
   const enqueue = uid => pool.query(`INSERT INTO native_jobs(guild_id,user_id) VALUES($1,$2)
     ON CONFLICT(guild_id,user_id) DO UPDATE SET revision=native_jobs.revision+1,next_try=now()`, [guild.id, uid]);

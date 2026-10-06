@@ -1,5 +1,13 @@
 # Agent Smith — Hallowed Core
 
+**Mandatory security policy:** [SECURITY.md](SECURITY.md) takes precedence over
+the historical first-install/provisioning instructions below. Configure
+`OWNER_DISCORD_ID` securely and place an Owner security role above Smith before
+starting. Smith refuses unsafe configuration and cannot perform structural
+server administration, role/channel creation or deletion, or bulk destructive
+operations. Perform structural setup manually as Owner. This change does not
+run native cutover or alter existing member data.
+
 Hallowed Core is the NEW target server. Keep your old server unchanged and invite this newly created bot only to Hallowed Core. Nothing in this project deletes a server, channel, or role. Configure owners through Replit Secrets; owner/reviewer IDs are USER IDs, not guild IDs.
 
 ## What is included

@@ -1,6 +1,7 @@
 import { PermissionFlagsBits as P } from 'discord.js';
 import { rankDefinitions, rankName, titles } from './progression-config.js';
 import { currentLevel } from './progression-policy.js';
+import { assertNotOwner, isProtectedOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
 
 export async function auditProgressionRoles({ guild, resource, config, readOnboarding = () => guild.fetchOnboarding() }) {
   await guild.roles.fetch();
@@ -71,8 +72,11 @@ export async function createProgressionWorker(context) {
     if (errors.length) throw new Error(errors.join('; '));
   };
   async function reconcile(uid, framework) {
+    await refreshOwnerProtection(guild);
+    if (isProtectedOwner(guild, uid)) return;
+    assertNotOwner(guild, uid);
     await roleSafety();
-    return locked(`${guild.id}:${uid}`, async db => {
+    return withRoleWorkflow('progression-reconciliation', uid, () => locked(`${guild.id}:${uid}`, async db => {
       await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`xp:${guild.id}:${uid}:${framework}`]);
       const { member, allowed } = await approved(db, uid, framework);
       let balance = (await db.query('SELECT * FROM progression_balances WHERE guild_id=$1 AND user_id=$2 AND framework=$3', [guild.id, uid, framework])).rows[0];
@@ -97,7 +101,7 @@ export async function createProgressionWorker(context) {
         await db.query(`INSERT INTO progression_announcements(guild_id,user_id,framework,level) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, [guild.id, uid, framework, level]);
         await db.query('UPDATE progression_balances SET announced_level=$4 WHERE guild_id=$1 AND user_id=$2 AND framework=$3', [guild.id, uid, framework, level]);
       }
-    });
+    }));
   }
   async function announce(entry) {
     // An independently committed claim survives even a later lost COMMIT

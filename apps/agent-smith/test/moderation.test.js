@@ -113,6 +113,8 @@ test('destructive command makes no change until its requesting owner confirms; a
     if (sql.startsWith('INSERT')) order.push(params[2]);
     return { rows: [{ id: order.length }] };
   } };
+  pool.connect = async () => ({ release() {}, query: async (sql, params) =>
+    sql.startsWith('SELECT id FROM audit') ? { rows: [] } : pool.query(sql, params) });
   const mod = createModeration({ guild, cfg: { owners: ['owner'], clientId: 'bot' }, pool,
     resource: async (kind, name) => name, spam: { status: () => ({ enabled: true }) } });
   const base = { guildId: 'guild', channelId: 'smith-controls', user: { id: 'owner', bot: false },
@@ -126,7 +128,7 @@ test('destructive command makes no change until its requesting owner confirms; a
   const button = { ...base, isButton: () => true, customId: confirmation, message: { author: { id: 'bot' } },
     deferUpdate: async function () { this.deferred = true; } };
   await mod.handle(button);
-  assert.deepEqual(order, ['mod.intent', 'kick', 'mod.result']);
+  assert.deepEqual(order, ['mod.rate-reserved', 'mod.intent', 'kick', 'mod.result']);
   await mod.handle(button);
   assert.equal(order.filter(value => value === 'kick').length, 1);
 });

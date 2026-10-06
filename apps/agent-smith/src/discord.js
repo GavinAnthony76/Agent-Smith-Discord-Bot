@@ -1,5 +1,7 @@
 import { Client, GatewayIntentBits, PermissionFlagsBits as P, OverwriteType } from 'discord.js';
 import { config, assertWriteTarget } from './config.js';
+import { assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, registerSecurityConfiguration } from './security-policy.js';
+import { installSecurityGate } from './security-gate.js';
 export async function connect({ allowWrites = false } = {}) {
   const cfg = config();
   if (allowWrites) assertWriteTarget(cfg);
@@ -11,6 +13,16 @@ export async function connect({ allowWrites = false } = {}) {
     const guild = await client.guilds.fetch(cfg.guildId);
     if (!cfg.owners.includes(guild.ownerId)) throw new Error('Target guild owner must be in OWNER_IDS');
     await guild.roles.fetch(); await guild.channels.fetch();
+    registerSecurityConfiguration(guild, cfg);
+    if (allowWrites) {
+      assertOwnerConfiguration(cfg, guild.ownerId);
+      const bot = await guild.members.fetchMe({ force: true });
+      assertSafeBot(bot);
+      assertSafeHierarchy(bot, await guild.members.fetch({ user: guild.ownerId, force: true }));
+      const { pool } = await import('./db.js');
+      installSecurityGate({ client, guild, cfg, readResources: async () =>
+        (await pool.query('SELECT kind,name,discord_id FROM resources WHERE guild_id=$1', [guild.id])).rows });
+    }
     return { client, guild, cfg };
   } catch (error) {
     client.destroy();

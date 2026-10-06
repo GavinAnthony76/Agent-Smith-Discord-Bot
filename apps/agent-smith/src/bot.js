@@ -12,6 +12,7 @@ import { legacyAllowed } from './native-policy.js';
 import { recoverApproval } from './access-recovery.js';
 import { createProgression } from './progression.js';
 import { createProgressionInteractions } from './progression-interactions.js';
+import { assertNotOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const moderation = createModeration({ guild, cfg, pool, resource, spam });
@@ -71,7 +72,11 @@ client.on('interactionCreate', async i => {
       if (subject===uid) throw new Error('Another allowlisted human must review your request.');
     }
     if (name==='revoke') { if (!cfg.owners.includes(uid)) throw new Error('Owner only.'); subject=i.options.getUser('user').id; }
-    const result = await locked(`${guild.id}:${subject}`,async db=>{
+    if (['accept','join','review','revoke','interest'].includes(name)) {
+      await refreshOwnerProtection(guild);
+      assertNotOwner(guild, subject, cfg);
+    }
+    const result = await withRoleWorkflow('member-command', subject, () => locked(`${guild.id}:${subject}`,async db=>{
       if (['accept','join'].includes(name)) {
         await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`onboarding-mode:${guild.id}`]);
         const state = (await db.query('SELECT * FROM onboarding_state WHERE guild_id=$1',[guild.id])).rows[0];
@@ -150,7 +155,7 @@ client.on('interactionCreate', async i => {
         }
       } else throw new Error('Unknown command.');
       await audit(db,uid,name,{subject,framework:target,request:request?.id}); return reply;
-    });
+    }), uid);
     // Subsequent reply/mirror failures cannot undo an acknowledged commit.
     approvalAttempt = undefined;
     if (name==='request') {

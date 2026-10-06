@@ -2,6 +2,8 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFl
 import { categories } from './blueprint.js';
 import { assertModerator, assertTarget, validReason, discordId, moderationPermissions, purgeCandidates, Confirmations } from './moderation-policy.js';
 import { parseRequestId } from './review.js';
+import { assertNotOwner, assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, withModerationWorkflow, securityLimits } from './security-policy.js';
+import { reserveDestructiveOperation } from './security-rate.js';
 
 const PREFIX = 'smith:mod:';
 const confirmedOperations = new Set(['kick', 'ban', 'unban', 'purge']);
@@ -53,7 +55,16 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
     return channel;
   }
   async function validate(action, actorId) {
+    if (guild.fetch) {
+      await guild.fetch();
+      assertOwnerConfiguration(cfg, guild.ownerId);
+      await guild.roles.fetch();
+      const bot = await guild.members.fetchMe({ force: true });
+      assertSafeBot(bot);
+      assertSafeHierarchy(bot, await guild.members.fetch({ user: guild.ownerId, force: true }));
+    }
     assertModerator(actorId, cfg);
+    if (action.target) assertNotOwner(guild, action.target, cfg);
     if (action.operation === 'unban') {
       discordId(action.target);
       if (action.target === guild.ownerId || cfg.owners.includes(action.target) || action.target === cfg.clientId) {
@@ -70,11 +81,13 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
     }
     const { actor, bot } = await actors(actorId, action.operation);
     const target = await guild.members.fetch({ user: action.target, force: true });
-    assertTarget({ actor, bot, target, guildOwnerId: guild.ownerId, owners: cfg.owners, operation: action.operation });
+    assertTarget({ actor, bot, target, guildOwnerId: guild.ownerId, ownerDiscordId: cfg.ownerDiscordId, owners: cfg.owners, operation: action.operation });
     return { target };
   }
-  async function execute(action, actorId) {
+  async function execute(action, actorId, confirmed = false) {
     const context = await validate(action, actorId); // Recheck hierarchy and permissions at confirmation time.
+    await reserveDestructiveOperation(pool, guild.id, actorId, action);
+    return withModerationWorkflow(action, actorId, async () => {
     if (action.operation === 'warn') {
       const caseId = await record(actorId, 'mod.warn', action);
       let notified = true;
@@ -96,7 +109,9 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
       else if (action.operation === 'purge') {
         const latest = await context.channel.messages.fetch({ limit: 100 });
         const ids = new Set(action.messageIds);
-        const eligible = purgeCandidates(latest).filter(message => ids.has(message.id)).map(message => message.id);
+        const eligible = purgeCandidates(latest, Date.now(), [guild.ownerId,cfg.ownerDiscordId,...cfg.owners].filter(Boolean))
+          .filter(message => ids.has(message.id)).map(message => message.id);
+        if (eligible.length > securityLimits().purge) throw new Error('Purge exceeds the configured hard limit.');
         count = eligible.length ? (await context.channel.bulkDelete(eligible, true)).size : 0;
       } else throw new Error('Unknown moderation operation.');
     } catch (error) {
@@ -110,6 +125,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
     }
     await mirror(caseId, actorId, `${action.operation}${action.target ? ` for <@${action.target}>` : ` in <#${action.channel}>`}: ${action.reason}${count !== undefined ? ` (${count} messages deleted)` : ''}`);
     return `Case #${caseId}: ${action.operation} completed.${count !== undefined ? ` Deleted ${count} of the approved messages; pinned, old, missing, or newer messages were skipped.` : ''}`;
+    }, confirmed);
   }
   function context(interaction) {
     return { actorId: interaction.user.id, guildId: interaction.guildId, channelId: interaction.channelId };
@@ -130,7 +146,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
           if (match[1] === 'cancel') {
             await interaction.editReply({ content: 'Cancelled. No moderation action was taken.', components: [] }); return;
           }
-          const result = await execute(action, interaction.user.id);
+          const result = await execute(action, interaction.user.id, true);
           await interaction.editReply({ content: result, components: [], allowedMentions: { parse: [] } }); return;
         }
         await interaction.deferReply({ flags: 64 });
@@ -171,6 +187,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
             await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`warning:${guild.id}:${warningCase}`]);
             const warning = (await db.query("SELECT detail FROM audit WHERE guild_id=$1 AND id=$2 AND action='mod.warn'", [guild.id, warningCase])).rows[0];
             if (!warning) throw new Error('Warning case not found. Use /mod history to find its case number.');
+            assertNotOwner(guild, warning.detail.target, cfg);
             const prior = await db.query("SELECT id FROM audit WHERE guild_id=$1 AND action='mod.unwarn' AND detail->>'warningCase'=$2", [guild.id, warningCase]);
             if (prior.rows.length) throw new Error('This warning was already withdrawn.');
             const saved = await db.query('INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4) RETURNING id',
@@ -184,9 +201,10 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
         if (operation === 'purge') {
           action.channel = interaction.options.getChannel('channel', true).id;
           const amount = interaction.options.getInteger('amount', true);
-          if (!Number.isInteger(amount) || amount < 1 || amount > 100) throw new Error('Choose 1–100 messages.');
+          if (!Number.isInteger(amount) || amount < 1 || amount > securityLimits().purge) throw new Error(`Choose 1–${securityLimits().purge} messages.`);
           const { channel } = await validate(action, interaction.user.id);
-          action.messageIds = purgeCandidates(await channel.messages.fetch({ limit: amount })).map(message => message.id);
+          action.messageIds = purgeCandidates(await channel.messages.fetch({ limit: amount }), Date.now(),
+            [guild.ownerId,cfg.ownerDiscordId,...cfg.owners].filter(Boolean)).map(message => message.id);
           if (!action.messageIds.length) throw new Error('No eligible unpinned messages younger than 14 days were found.');
         } else {
           action.target = operation === 'unban' ? discordId(interaction.options.getString('user_id', true))

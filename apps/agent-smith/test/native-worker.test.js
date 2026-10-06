@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Collection } from 'discord.js';
 import { createNativeReconciler } from '../src/native-reconcile.js';
 import { TARGET_GUILD_ID } from '../src/config.js';
+import { registerSecurityConfiguration } from '../src/security-policy.js';
 
 // Exercise the production coordinator/SQL boundaries and queue, not just its
 // pure policy. All storage and Discord calls are injected; no live credentials.
@@ -78,6 +79,8 @@ async function fixture(t) {
       tail = operation.catch(() => {}); return operation;
     }
   };
+  guild.ownerId = 'test-owner'; guild.fetch = async () => guild;
+  registerSecurityConfiguration(guild, { ownerDiscordId: 'test-owner', owners: ['test-owner'] });
   const worker = await createNativeReconciler({ guild, client: { user: { id: 'test-bot' } } }, dependencies);
   t.after(() => worker.stop());
   return { worker, state, uid, guild, roles, lockKeys };
@@ -87,6 +90,17 @@ test('production coordinator persists primary before external roles and shares l
   assert.deepEqual(f.state.writes, ['Member', 'Gaming']);
   assert.ok(f.lockKeys.every(k => k === `${TARGET_GUILD_ID}:${f.uid}`));
   assert.equal(f.state.audits.filter(a => a === 'native-primary-recorded').length, 1);
+});
+test('production Owner reconciliation stops before reserving primary or changing access', async t => {
+  const f = await fixture(t);
+  f.guild.ownerId = f.uid;
+  registerSecurityConfiguration(f.guild, { ownerDiscordId:f.uid, owners:[f.uid] });
+  const before=structuredClone(f.state.record);
+  assert.deepEqual(await f.worker.reconcile(f.uid),{status:'owner-immune'});
+  assert.deepEqual(f.state.record,before);
+  assert.deepEqual(f.state.writes,[]);
+  assert.deepEqual(f.state.audits,[]);
+  assert.equal(f.lockKeys.length,0);
 });
 test('production retries interrupted grants after restart without changing primary to new choice', async t => {
   const f = await fixture(t); f.state.failRole = true;

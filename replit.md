@@ -41,7 +41,10 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 
 ## Configuration
 
-Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `OWNER_IDS`, `DATABASE_URL`, and `BOOTSTRAP_CONFIRM_GUILD_ID`. `APPROVER_IDS` is optional. Replit currently supplies the runtime-managed `DATABASE_URL`; do not request or print it, and do not replace the database without the user's instruction.
+- Mandatory security policy: `apps/agent-smith/SECURITY.md`. `OWNER_DISCORD_ID` must be a secure secret matching the actual Server Owner. Smith must remain below the Owner security role and never have Administrator.
+- Server reconfiguration, channel/role deletion, role creation/reordering and bulk administration are disabled through Smith, including old operator scripts. Perform these manually as Owner. Preserve existing member data and onboarding mode.
+
+Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `OWNER_IDS`, `OWNER_DISCORD_ID`, `DATABASE_URL`, and `BOOTSTRAP_CONFIRM_GUILD_ID`. `APPROVER_IDS` is optional. Replit currently supplies the runtime-managed `DATABASE_URL`; do not request or print it, and do not replace the database without the user's instruction.
 
 ## Architecture decisions
 

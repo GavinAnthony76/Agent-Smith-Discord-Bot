@@ -7,6 +7,7 @@ import { accessRequestMessage } from './access-request.js';
 import { communityChannels, starterChannels } from './community.js';
 import { auditProgressionRoles } from './progression-worker.js';
 import { progressionConfig } from './progression-config.js';
+import { auditSecurity } from './security-audit.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
 const apply = process.argv.includes('--apply');
@@ -16,6 +17,11 @@ let failures = [];
 try {
   await locked(`bootstrap:${guild.id}`, async db => {
     const saved = (await db.query('SELECT * FROM resources WHERE guild_id=$1', [guild.id])).rows;
+    if (mode === 'audit') {
+      const security = await auditSecurity({ guild, client, cfg, rows: saved });
+      console.log('Security audit:', JSON.stringify(security, null, 2));
+      failures.push(...security.failures);
+    }
     const roles = {};
     // Persist each resource separately: successful Discord creates survive partial runs.
     const remember = (kind,name,id) => pool.query('INSERT INTO resources VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', [guild.id,kind,name,id]);

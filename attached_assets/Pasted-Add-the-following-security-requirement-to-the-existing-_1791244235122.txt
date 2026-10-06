@@ -1,0 +1,233 @@
+Add the following security requirement to the existing Agent Smith implementation and treat it as non-negotiable.
+
+## AGENT SMITH MUST NEVER HAVE OWNER-EQUIVALENT POWER
+
+Agent Smith may be the highest operational role below the Server Owner, but it must never have the ability to destroy, seize, or fully reconfigure the Discord server.
+
+Required hierarchy:
+
+SERVER OWNER
+↓
+AGENT SMITH
+↓
+ADMINISTRATORS
+↓
+MODERATORS
+↓
+FRAMEWORK LEADS
+↓
+MEMBERS
+
+Agent Smith's Discord role should sit directly below the Server Owner role where practical, but the bot must NOT receive the Discord `Administrator` permission.
+
+Agent Smith should only receive explicit permissions required for its functions.
+
+Allowed permissions may include:
+
+- View Channels
+- Send Messages
+- Embed Links
+- Attach Files
+- Read Message History
+- Manage Messages
+- Manage Threads
+- Create Public Threads
+- Create Private Threads
+- Manage Roles
+- Moderate Members
+- Kick Members
+- Ban Members
+- Manage Nicknames
+- View Audit Log
+- Manage Events
+
+`Manage Channels` should only be granted if necessary, and all channel-management actions must still be restricted by application-level protections.
+
+Agent Smith must NOT be able to:
+
+- delete the server
+- transfer server ownership
+- grant itself Administrator
+- grant another user Administrator unless explicitly allowed by a hard-coded owner-only workflow
+- edit or remove the Server Owner's roles
+- manage the Server Owner
+- create a role above itself
+- move its own role above the Server Owner
+- modify protected owner/admin security roles
+- mass-delete all channels
+- mass-delete all roles
+- mass-ban the server
+- run an unrestricted server reset
+- execute destructive actions based on natural-language AI responses
+
+## OWNER IMMUNITY
+
+Store the Server Owner Discord user ID in a secure environment variable:
+
+OWNER_DISCORD_ID
+
+All moderation and management functions must check this ID.
+
+Agent Smith must never be allowed to:
+
+- warn the Owner
+- timeout the Owner
+- kick the Owner
+- ban the Owner
+- change the Owner's nickname
+- remove the Owner's roles
+- modify the Owner's framework access
+- restrict the Owner's channel access
+
+Owner checks should happen before every moderation action.
+
+Create a helper such as:
+
+isOwner(userId)
+
+and require moderation functions to reject operations where the target is the Server Owner.
+
+## PROTECTED RESOURCES
+
+Create a protected-resources configuration.
+
+At minimum protect:
+
+- Server Owner role
+- Agent Smith role
+- Administrator role
+- core framework roles
+- moderation-log
+- audit-log
+- smith-control
+- onboarding
+- rules
+- framework permission categories
+
+Agent Smith must not delete protected resources through normal commands.
+
+## DESTRUCTIVE ACTION LIMITS
+
+Do not give Agent Smith unrestricted destructive commands.
+
+For channel deletion:
+
+- require Admin or Owner
+- require confirmation
+- deny deletion of protected channels
+- log the request
+- log the result
+
+For role deletion:
+
+- require Admin or Owner
+- deny deletion of protected roles
+- deny deletion of roles equal to or above the actor
+- deny deletion of Agent Smith or Owner roles
+
+Do not implement bulk commands such as:
+
+/delete-all-channels
+/delete-all-roles
+/reset-server
+/nuke-server
+/mass-ban
+
+If such code already exists, remove or disable it.
+
+## MASS-ACTION SAFETY
+
+Add hard limits.
+
+Examples:
+
+- maximum channels deletable through Agent Smith in a short period: 1
+- maximum roles deletable through Agent Smith in a short period: 1
+- maximum bans through one interactive operation: 1
+- maximum purge size: configure a reasonable limit
+- rate-limit destructive commands
+
+Any bulk administrative change should require manual Server Owner action outside the bot.
+
+## ROLE MANAGEMENT LIMIT
+
+Agent Smith may only assign roles below its own role.
+
+It must never be able to:
+
+- assign its own role
+- assign Server Owner roles
+- assign roles above itself
+- modify its own Discord role permissions
+- modify the Owner role
+- create an Administrator-equivalent role
+
+Before role assignment, verify:
+
+targetRole.position < agentSmithRole.position
+
+Also maintain an explicit allowlist of roles Agent Smith is authorized to grant.
+
+## CHANNEL MANAGEMENT LIMIT
+
+If Agent Smith receives Manage Channels, restrict it internally.
+
+Agent Smith may:
+
+- create approved community channels
+- rename approved channels
+- change topics
+- manage threads
+- apply slowmode
+- lock/unlock approved channels
+
+Agent Smith may not:
+
+- delete protected categories
+- overwrite Owner access
+- remove Owner visibility
+- alter core permission architecture without an Owner-authorized command
+- recursively destroy categories and child channels
+
+## AI SAFETY BOUNDARY
+
+Natural-language AI functionality has zero privileged authority.
+
+The LLM may recommend:
+
+"Consider timing this member out."
+
+It may NOT directly call the timeout function.
+
+All privileged actions must pass through:
+
+explicit command/button
+→ authenticated Discord user
+→ static permission check
+→ protected-resource check
+→ target hierarchy check
+→ confirmation if destructive
+→ action
+→ audit log
+
+The AI layer must never bypass this pipeline.
+
+## AUDIT TESTS
+
+Expand `npm run discord:audit` to specifically verify:
+
+✓ Agent Smith does not have Administrator permission  
+✓ Agent Smith is below the Server Owner  
+✓ Agent Smith cannot manage the Server Owner  
+✓ Agent Smith cannot assign its own role  
+✓ Agent Smith cannot assign roles above itself  
+✓ Owner role is protected  
+✓ protected channels cannot be deleted through Smith  
+✓ protected roles cannot be deleted through Smith  
+✓ no nuke/reset command exists  
+✓ bulk destructive actions are disabled  
+✓ AI cannot invoke privileged actions directly
+
+If any of these checks fail, the audit should clearly mark the server configuration as unsafe.
+
+Treat these protections as security requirements, not optional recommendations.

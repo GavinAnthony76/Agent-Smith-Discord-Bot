@@ -8,6 +8,7 @@ import * as accessRequest from '../../src/access-request.js';
 import * as review from '../../src/review.js';
 import * as nativePolicy from '../../src/native-policy.js';
 import * as recovery from '../../src/access-recovery.js';
+import * as securityPolicy from '../../src/security-policy.js';
 import { runLocked } from '../../src/transaction.js';
 import { transactionStore } from './transaction-store.js';
 
@@ -21,7 +22,7 @@ export async function botFixture() {
     locks: [], roleAdds: [], roleAddAttempts: [], roleRemoves: [], messages: [], errors: [],
     onboarding: { legacy_enabled: true, cutover_status: 'legacy' }
   };
-  const cfg = { guildId: 'test-guild', owners: ['owner'], approvers: ['reviewer'] };
+  const cfg = { guildId: 'test-guild', owners: ['owner'], ownerDiscordId: 'owner', approvers: ['reviewer'] };
   const faults = [];
   function failNext(point, { match = () => true, message = `Injected ${point} failure`, code, effect } = {}) {
     assert.ok(['roleAdd', 'roleAddAfter', 'roleRemove', 'memberFetch', 'query', 'audit', 'commit', 'commitAfter', 'rollback', 'channelFetch', 'channelSend', 'editReply'].includes(point));
@@ -44,6 +45,7 @@ export async function botFixture() {
   const resource = async (kind, name) => `${kind}:${name}`;
   const guild = {
     id: cfg.guildId,
+    ownerId: 'owner', fetch: async () => guild,
     members: { fetch: async ({ user, force }) => {
       assert.equal(force, true);
       trip('memberFetch', { user });
@@ -103,6 +105,7 @@ export async function botFixture() {
     './blueprint.js': blueprint, './policy.js': policy, './onboarding.js': onboarding,
     './access-request.js': accessRequest, './review.js': review, './native-policy.js': nativePolicy,
     './access-recovery.js': recovery,
+    './security-policy.js': securityPolicy,
     './progression.js': { createProgression: async () => ({
       enqueue: async () => {}, scan: async () => {}, stop() {},
       earnTx: async () => { throw new Error('Progression earning must use its isolated test fixture.'); }
@@ -118,6 +121,7 @@ export async function botFixture() {
   };
   const source = await readFile(new URL('../../src/bot.js', import.meta.url), 'utf8');
   const module = new SourceTextModule(source, { context, identifier: 'isolated-bot.js' });
+  securityPolicy.registerSecurityConfiguration(guild, cfg);
   await module.link(specifier => {
     assert.ok(Object.hasOwn(dependencies, specifier), `Unmocked bot import: ${specifier}`);
     const exports = dependencies[specifier];

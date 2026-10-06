@@ -1,5 +1,6 @@
 // Recovery must not infer ownership of a pre-existing role or an unacknowledged
 // Discord write. All destructive recovery is guarded by fresh locked reads.
+import { assertNotOwner, withRoleWorkflow } from './security-policy.js';
 export async function recoverApproval({ attempt, error, locked, guild }) {
   const { subject, framework, roleId, requestId, preExisting, added } = attempt;
   const prefix = `Request ${requestId}: `;
@@ -23,7 +24,9 @@ export async function recoverApproval({ attempt, error, locked, guild }) {
       }
       const member = await guild.members.fetch({ user: subject, force: true });
       if (member.roles.cache.has(roleId)) {
-        await member.roles.remove(roleId, `Approval ${requestId} rolled back; remove only this attempt’s new role`);
+        assertNotOwner(guild, subject);
+        await withRoleWorkflow('approval-recovery', subject, () =>
+          member.roles.remove(roleId, `Approval ${requestId} rolled back; remove only this attempt’s new role`));
       }
       return prefix + 'approval was not saved. The new role is absent after recovery; the request remains pending. An allowlisted human can retry the review.';
     });
