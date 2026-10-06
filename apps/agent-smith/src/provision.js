@@ -9,6 +9,7 @@ import { auditProgressionRoles } from './progression-worker.js';
 import { progressionConfig } from './progression-config.js';
 import { auditSecurity } from './security-audit.js';
 import { isProtectedOwner } from './security-policy.js';
+import { manualChannelPolicy } from './manual-channels.js';
 const mode = process.argv[2];
 if (!['bootstrap','audit'].includes(mode)) throw new Error('Invalid mode');
 const apply = process.argv.includes('--apply');
@@ -155,7 +156,10 @@ try {
         else compare(channel, overwrites(guild, cfg, client.user.id, 'staff', {}));
       }
       const known = new Set(saved.filter(x=>['channel','community-channel','starter-channel'].includes(x.kind)).map(x=>x.discord_id));
-      for (const channel of guild.channels.cache.values()) if (!known.has(channel.id)) failures.push(`Unmanaged channel (review visibility manually): ${channel.name}`);
+      for (const channel of guild.channels.cache.values()) {
+        if (known.has(channel.id) || manualChannelPolicy(guild, channel)) continue;
+        failures.push(`Unreviewed manual channel (review visibility manually): ${channel.name}`);
+      }
     }
   });
   console.log(failures.length ? failures.join('\n') : 'Checks passed.');

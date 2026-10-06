@@ -8,6 +8,7 @@ import { protectedResources } from './protected-resources.js';
 import { auditProtectedLocks, nativePrimaryIsSafe } from './security-lock-audit.js';
 import { auditSecuritySource } from './security-source-audit.js';
 import { assertAutomodAction } from './smith-control.js';
+import { auditManualChannels } from './manual-channels.js';
 
 export async function auditSecurity({ guild, client, cfg, rows, pool }) {
   await guild.fetch(); await guild.roles.fetch();await guild.channels.fetch();
@@ -51,6 +52,9 @@ export async function auditSecurity({ guild, client, cfg, rows, pool }) {
       rows.some(row=>row.name===name&&registry.has(row.discord_id))));
   const lockFailures=auditProtectedLocks({guild,cfg,client,rows});
   check('Protected channels/categories retain expected permission locks and placement',lockFailures.length===0,lockFailures);
+  const manual = auditManualChannels(guild, cfg);
+  check('Owner-approved manual channels retain reviewed identity and bounded Member access',
+    manual.failures.length === 0, [...manual.reviewed, ...manual.failures]);
   const grantFailures=[];
   for(const row of rows.filter(row=>row.kind==='role')) {
     try {assertRoleChannelGrants(guild.roles.cache.get(row.discord_id),guild);}

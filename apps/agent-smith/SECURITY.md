@@ -1,3 +1,21 @@
+# Owner-approved manual channels
+
+The private `bot-spam` channel is an Owner-reviewed manual resource, tracked by
+guild, channel and Member role IDs in `src/manual-channels.js`. The Owner approved
+keeping its current ordinary Member communication access. This is a maximum
+permission boundary, not a provisioning template: removed grants and stricter
+communication denies are accepted. Management permissions, grants to framework,
+selection or cosmetic roles, and same-name replacement channels are not approved.
+Every overwrite is audited: only the reviewed Member role, deny-only everyone,
+and Smith's existing bounded communication/Manage Channels/Manage Threads
+overwrite are recognized. Other principals or added powers fail the audit.
+Recognizing existing Smith permissions does not authorize changing them or
+bypass the structural-write denial.
+
+Read-only security audits report this approval separately from the fixed
+blueprint and continue flagging unreviewed manual resources. No command creates,
+rewrites or deletes the channel or changes Discord system-message routing.
+
 # Agent Smith security policy
 
 This policy is mandatory, not a permission-granting recommendation.

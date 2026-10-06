@@ -9,28 +9,47 @@ import { reserveDestructiveOperation } from '../src/security-rate.js';
 import { purgeCandidates } from '../src/moderation-policy.js';
 import { createProgressionWorker } from '../src/progression-worker.js';
 import { progressionConfig } from '../src/progression-config.js';
+import { approvedManualChannels } from '../src/manual-channels.js';
 
 const gid = '1556423230590423042', owner = '100000000000000001', botId = '100000000000000002';
 const member = '100000000000000003', other = '100000000000000004', rid = '200000000000000001';
-function fixture() {
+function fixture(roleId = rid, roleName = 'Gaming') {
   const sent = [];
-  const role = { id: rid, name: 'Gaming', position: 1, managed: false, editable: true, permissions: new PermissionsBitField() };
+  const role = { id: roleId, name: roleName, position: 1, managed: false, editable: true, permissions: new PermissionsBitField() };
   const highest = (position, id) => ({ id, position, comparePositionTo: other => position - other.position });
   const bot = { id: botId, user: { bot: true }, permissions: new PermissionsBitField([P.ManageRoles, P.BanMembers, P.ManageMessages]),
     roles: { highest: highest(10, botId), cache: new Map([[botId, {}]]) } };
   const cfg = { guildId: gid, clientId: botId, ownerDiscordId: owner, owners: [owner] };
-  const rows = [{ kind: 'role', name: role.name, discord_id: rid }];
+  const rows = [{ kind: 'role', name: role.name, discord_id: roleId }];
   const guild = { id: gid, ownerId: owner, fetch: async () => guild,
-    roles: { cache: new Map([[rid, role]]), fetch: async () => {} }, members: { fetchMe: async () => bot,
+    roles: { cache: new Map([[roleId, role]]), fetch: async () => {} }, members: { fetchMe: async () => bot,
       fetch: async ({user}) => ({ id:user, user:{bot:false}, permissions: new PermissionsBitField(user===owner?[P.Administrator]:[]),
         roles:{highest:highest(user===owner?20:1,user)} }) } };
   const client = { rest: { request: async request => { sent.push(request); return {}; } } };
   registerSecurityConfiguration(guild, cfg);
   installSecurityGate({ client, guild, cfg, readResources: async () => rows, writeAudit: async () => {} });
   const request = (method, path, body) => client.rest.request({ method, fullRoute: path, body });
-  const changeRole = (uid = member) => request('PUT', `/guilds/${gid}/members/${uid}/roles/${rid}`);
+  const changeRole = (uid = member) => request('PUT', `/guilds/${gid}/members/${uid}/roles/${roleId}`);
   return { sent, role, bot, cfg, guild, rows, request, changeRole };
 }
+test('native onboarding Member assignment crosses the gate with approved manual access only', async () => {
+  const policy = approvedManualChannels[0];
+  const f = fixture(policy.roleId, policy.roleName);
+  const overwrite = {type:0,allow:new PermissionsBitField(policy.allow),deny:new PermissionsBitField()};
+  const channel = {id:policy.channelId,name:policy.label,type:policy.type,
+    permissionOverwrites:{cache:new Map([[policy.roleId,overwrite]])}};
+  f.guild.channels = {cache:new Map([[channel.id,channel]]),fetch:async()=>{}};
+  await withRoleWorkflow('native-reconciliation',member,f.changeRole);
+  assert.equal(f.sent.length,1);
+  overwrite.allow.add(P.ManageChannels);
+  await assert.rejects(withRoleWorkflow('native-reconciliation',member,f.changeRole),/unexpected channel/);
+  assert.equal(f.sent.length,1);
+  overwrite.allow = new PermissionsBitField(policy.allow);
+  f.guild.channels.cache.set('control',{id:'control',name:'smith-controls',
+    permissionOverwrites:{cache:new Map([[policy.roleId,overwrite]])}});
+  await assert.rejects(withRoleWorkflow('native-reconciliation',member,f.changeRole),/unexpected channel/);
+  assert.equal(f.sent.length,1);
+});
 test('owner identity is required and must match the actual guild owner', async () => {
   const f = fixture();
   assert.throws(() => assertOwnerConfiguration({ owners: [owner] }, owner), /OWNER_DISCORD_ID/);

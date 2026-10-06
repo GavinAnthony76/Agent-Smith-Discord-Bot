@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { PermissionFlagsBits as P, PermissionsBitField } from 'discord.js';
 import { categories } from './blueprint.js';
+import { manualChannelPolicy, permitsManualRoleOverwrite } from './manual-channels.js';
 
 const data=JSON.parse(readFileSync(new URL('./permission-capabilities.json', import.meta.url), 'utf8'));
 for(const value of Object.values(data))if(Array.isArray(value))Object.freeze(value);
@@ -73,6 +74,11 @@ export function assertRoleChannelGrants(role, guild) {
   for(const channel of guild.channels?.cache?.values()??[]) {
     const overwrite=channel.permissionOverwrites.cache.get(role.id);
     if(!overwrite || (overwrite.allow.bitfield===0n && overwrite.deny.bitfield===0n))continue;
+    const manual = manualChannelPolicy(guild, channel);
+    if (manual) {
+      if (permitsManualRoleOverwrite(manual, channel, role, overwrite)) continue;
+      throw new Error('Role has unexpected channel permission grants/denials on an approved manual channel; Owner reconciliation required.');
+    }
     if(!permitted.has(channel.name) || (overwrite.allow.bitfield & ~allow)!==0n || (overwrite.deny.bitfield & ~deny)!==0n) {
       throw new Error('Role has unexpected channel permission grants/denials; Owner reconciliation required.');
     }
