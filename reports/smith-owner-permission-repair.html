@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smith: Owner-controlled one-bit permission repair</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:850px;margin:40px auto;padding:0 24px;color:#172033;line-height:1.6;background:#fafbfc}
+h1,h2{line-height:1.2}h2{margin-top:32px;font-size:21px}
+.notice{padding:16px 20px;border:1px solid #d5dce7;border-left:4px solid #9a6700;background:#fff8e8}
+table{border-collapse:collapse;width:100%;background:white}th,td{padding:10px 12px;border:1px solid #d5dce7;text-align:left;overflow-wrap:anywhere}
+pre{padding:16px;border:1px solid #d5dce7;background:white;white-space:pre-wrap;overflow-wrap:anywhere}
+code{font-family:ui-monospace,monospace}small{color:#526078}a{color:#1754ad}
+@media print{body{background:white;margin:0}.notice,pre,table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<h1>Smith: Owner-controlled permission repair</h1>
+<p><strong>Target:</strong> The Hallowed Core · <strong>Role:</strong> @everyone</p>
+<div class="notice"><strong>Plan only — NOT APPLIED.</strong> Smith remains blocked. The Owner selected strict protection, not an exception for bit 47. No roles, channel permissions, access records, or message destinations were changed to produce this document.</div>
+<h2>What the repair changes</h2>
+<p>Remove only raw permission bit 47, hexadecimal <code>0x800000000000</code>, from the server's @everyone role. This stops Smith inheriting that unrecognized bit. Preserve every other raw permission bit, every role assignment, and every channel overwrite.</p>
+<table>
+<tr><th>Field</th><th>Read-only snapshot, 2026-10-06 UTC</th></tr>
+<tr><td>Server and @everyone role ID</td><td><code>1556423230590423042</code></td></tr>
+<tr><td>Permissions before repair</td><td><code>2222085186637377</code></td></tr>
+<tr><td>Permissions after repair</td><td><code>2081347698282049</code></td></tr>
+<tr><td>Difference</td><td>Exactly bit 47; all SDK-named permissions preserved</td></tr>
+</table>
+<h2>How an authorized administrator can apply it</h2>
+<p>This is a technical handoff, not a normal Discord checkbox procedure. Bit 47 has no name in the installed library or current official permission table. Do not try to find an invented “bit 47” checkbox, reset @everyone, use your personal Discord login token, or paste scripts into Discord's browser console.</p>
+<ol>
+<li>Use an <strong>Owner-controlled, already authorized bot administration tool</strong> capable of Discord's Modify Guild Role API. It must already have Manage Roles and permission to edit @everyone. Do not grant Smith new permissions or bypass Smith's management gate.</li>
+<li>Immediately re-read @everyone's permission value. It must still be <code>2222085186637377</code> for the payload below to be valid. Stop if it differs. Recompute from the fresh value by clearing only bit 47; do not overwrite intervening Owner edits. Avoid concurrent permission editing during this operation.</li>
+<li>Send the single-field request below. Include an audit-log reason such as “Owner-approved cleanup: remove only unnamed bit 47; preserve other permissions.”</li>
+<li>Re-read the role after the update. Confirm its raw value matches the planned result and the XOR of before/after equals exactly <code>0x800000000000</code>.</li>
+</ol>
+<pre>PATCH https://discord.com/api/v10/guilds/1556423230590423042/roles/1556423230590423042
+
+JSON body:
+{
+  "permissions": "2081347698282049"
+}</pre>
+<p><strong>If you do not have such an authorized administration tool:</strong> ask Discord support whether it can remove the unnamed bit from @everyone. Do not provide anyone with your account or bot token. This plan does not provide an automatic repair or claim that Discord support is guaranteed to perform it.</p>
+<h2>Verification and activation</h2>
+<p>After the Owner-controlled repair, ask Agent to verify the live permission allowlist and Owner hierarchy. The existing read-only audit command is:</p>
+<pre>pnpm --filter @workspace/agent-smith run discord:audit</pre>
+<p>The older audit also reports other findings. Removing bit 47 resolves only this permission blocker; it does not resolve or approve those findings. Keep Smith stopped until the required checks and activation review are complete. Then register the pending commands, refresh the tracked request message, and restart the configured bot workflow.</p>
+<h2>Keep these separate</h2>
+<ul>
+<li><strong>#bot-spam:</strong> the Owner intentionally moved Discord system messages here. Preserve this private channel and the message destination; do not revert to #general.</li>
+<li><strong>#community-help:</strong> the observed difference is an extra @everyone Send Messages denial, not an extra access grant. Owner confirmation is needed before accepting it as an approved audit baseline.</li>
+<li><strong>Ten member access alerts:</strong> nine lack Smith member records; all ten lack a recorded primary framework. Review intended access separately. Do not remove their roles or invent historical approvals.</li>
+</ul>
+<h2>Official reference</h2>
+<p><a href="https://docs.discord.com/developers/resources/guild#modify-guild-role">Discord: Modify Guild Role</a> documents the PATCH endpoint, Manage Roles requirement, optional permissions field, and audit-log reason support.</p>
+<p><small>This document contains no credentials and sends no requests. Its permission payload is a snapshot, not a reusable configuration template.</small></p>
+</body>
+</html>

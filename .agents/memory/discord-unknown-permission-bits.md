@@ -12,6 +12,8 @@ permission list omitted it. Current official Discord permission documentation
 skips that bit, but no exemption from the strict startup rule was approved.
 
 **How to apply:** Compare raw bitfields against the explicit capability data.
-Report unknown bits as a blocker and obtain an Owner decision; do not silently
-mask them or change live role permissions. Native onboarding SDK prompts/options/
+The user explicitly chose to keep the strict block and prepare an Owner-controlled
+one-bit repair rather than authorize an exception. Do not silently mask unknown
+bits, loosen the allowlist, or apply live role changes through Smith.
+Native onboarding SDK prompts/options/
 roles are Collections, so use values/size rather than array length when auditing.

@@ -154,3 +154,17 @@ mtime_ms = 1791242606552
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/5c5dd877-c6a0-4b60-8382-1840e97040a4/76ce53e7-24bb-459d-9c29-93dec0e2059f"
 storage_version_token = "1791242694339849"
 content_type = "image/png"
+
+[[outputs]]
+id = "PdqyrGg8ekX3981YjTEZi"
+uri = "file://reports/smith-owner-permission-repair.html"
+type = "html"
+title = "Smith: Owner permission repair plan"
+description = "Verified one-bit permission change, snapshot safeguards, authorized administration requirements, and post-repair checks. Plan only—not applied."
+logical_id = "6c1e0455-026f-4011-ac89-e1087f14306f"
+content_hash = "sha256:4788461727387f44497f206a7d8d726fd5eef2dd1733d58a791e2665a594c2f8"
+size = 5539
+mtime_ms = 1791290848494
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/6c1e0455-026f-4011-ac89-e1087f14306f/38aa4ac1-0cd6-4206-bd33-d0f33fccdc4f"
+storage_version_token = "1791290869760874"
+content_type = "text/html"
