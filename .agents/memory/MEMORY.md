@@ -7,3 +7,4 @@
 - [Native draft boundaries](discord-native-draft-boundaries.md) — distinguish saved API settings from concurrent owner drafts; bot inspection failures do not establish UI permission defects.
 - [Discord SDK mutation boundaries](discord-sdk-mutation-boundaries.md) — one-message purge and batch role changes use different endpoints; keep narrow, equivalent guards.
 - [Unnamed Discord permission bits](discord-unknown-permission-bits.md) — SDK named flags can omit inherited raw bits; do not silently exempt them to pass startup.
+- [Notification destination](discord-notification-channel-intent.md) — preserve the Owner's move of system notices from #general to #bot-spam when reconciling audits.
