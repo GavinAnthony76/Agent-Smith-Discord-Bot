@@ -66,8 +66,9 @@ Gateway operation. Development uses the existing workflow instead.
 
 The JavaScript bot needs no compilation. Do not use the root workspace build as
 the bot's build, run the API server alongside it, or include `db:migrate`,
-bootstrap, command registration, audits, or feed polling in its startup command.
-Feeds remain a separately approved scheduled job.
+bootstrap, command registration, audits, or standalone feed polling in its startup
+command. Approved feeds run inside Smith's existing Gateway; never launch a second
+feed bot or Gateway.
 
 Reserved VM has a fixed hosting charge even when Discord is quiet. Production
 database usage is billed separately. Review the actual machine price in
@@ -156,6 +157,60 @@ stopped before restoring the workspace instance against its original database.
 If production has taken interactions, the development database is now stale:
 do not resume the workspace against it. Stop, preserve production state, and use
 an approved recovery/reconciliation plan. Never run both bots simultaneously.
+
+## Missing feed-schema recovery
+
+The published worker was observed crash-looping on 2026-10-07 because
+`feed_sources` did not exist. Read-only schema checks found both `feed_sources`
+and `feed_deliveries` absent in development and managed production. The existing
+`feeds:migrate` command had not been applied to development; neither the
+dependency-only merge hook nor offline publishing preflight caught the omission.
+
+The Owner approved applying the existing additive feed migration to development,
+preparing a republish, and then staging the repair for application to main before
+live verification. They explicitly requested “Apply the repair to the main.”
+The approved development-only merge exception runs `feeds:migrate` so main gets
+the task-local schema before Publish computes its production diff.
+It creates the missing tables and due-source index,
+without modifying member, consent, access, case, or delivery history. This is
+not authorization to overwrite production data or run DDL against production.
+
+Recovery and future releases:
+
+1. Apply this task's changes to **main** first. Publishing while a task is still
+   isolated uses main, not the task's code or development schema. The approved
+   merge setup runs only `pnpm --filter @workspace/agent-smith run feeds:migrate`
+   in development. Other migrations still require explicit approval.
+   Never run the empty template schema push against Smith's database.
+2. Run `pnpm --filter @workspace/agent-smith run feeds:schema-check`.
+   This is a read-only zero-row check of required feed columns, with no Gateway
+   login. Merge setup runs it after the additive migration and fails visibly if
+   feed schema remains incomplete. No Gateway starts during setup.
+3. Keep the workspace bot stopped. Review the development-to-production schema
+   diff in Publishing, then republish the single Reserved VM worker with
+   `ignorePorts = true`. Do not select an overwrite/copy-development-data option.
+   Stop if the review proposes dropping or recreating existing state.
+4. Let Publish apply managed production schema changes. No migration runs in the
+   build command or bot startup. Startup checks schema read-only **before**
+   connecting to Discord and fails with recovery guidance if it is incomplete.
+5. Verify production has both feed tables, the log reaches “Agent Smith ready,”
+   and there are no new missing-schema errors or restart loops. Check worker
+   health checks too: the broken release logged HTTP `/api` probes despite the
+   saved non-HTTP worker configuration. Do not add a dummy HTTP server to hide
+   a configuration issue.
+6. Confirm production history is preserved and the workspace Gateway remains
+   stopped. Republishing is incomplete until these live checks succeed.
+
+The Owner approved staged completion because task isolation prevents live
+verification before these changes are applied to main. This repair delivers
+tested code and development setup; a separate live-recovery follow-up must
+confirm successful published startup. A successful publish/build status alone
+is not evidence that the bot is running.
+
+Pre-repair production read-only counts: members 19, requests 2, grants 2,
+audit 59, moderation cases/notes 0, request notifications 0, legacy feed items 0.
+These are observations, not a backup or fixed acceptance thresholds; production
+may legitimately gain records.
 
 ## Official references
 

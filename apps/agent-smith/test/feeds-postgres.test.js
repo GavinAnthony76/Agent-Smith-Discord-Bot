@@ -6,6 +6,7 @@ import pg from 'pg';
 import { ChannelType, PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
 import { createFeeds } from '../src/feeds.js';
 import { createFeedStore, feedLock } from '../src/feed-store.js';
+import { assertFeedSchema } from '../src/feed-schema-check.js';
 
 test('PostgreSQL feed approval, restart and lost-acknowledgment recovery', {skip:process.env.SMITH_PG_TESTS!=='1'},async t=>{
   const schema=`smith_feeds_${randomUUID().replaceAll('-','')}`;
@@ -13,12 +14,16 @@ test('PostgreSQL feed approval, restart and lost-acknowledgment recovery', {skip
   let pool,worker;
   try {
     await admin.query(`CREATE SCHEMA "${schema}"`);
-    pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema},public`,max:8});
+    // No public fallback: otherwise existing live tables can hide a missing
+    // migration in this disposable schema (or receive an unintended test write).
+    pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`,max:8});
     await pool.query(`CREATE TABLE feed_items(guild_id text,feed_id text,item_id text,sent_at timestamptz DEFAULT now(),PRIMARY KEY(guild_id,feed_id,item_id));
       CREATE TABLE worker_health(guild_id text,worker text,last_seen_at timestamptz,detail jsonb,PRIMARY KEY(guild_id,worker));
       CREATE TABLE audit(guild_id text,actor text,action text,detail jsonb);`);
     const sql=await readFile(new URL('../src/feed-schema.sql',import.meta.url),'utf8');
+    await assert.rejects(assertFeedSchema(pool),{code:'SMITH_FEED_SCHEMA_MISSING'});
     await pool.query(sql);await pool.query(sql);
+    await assertFeedSchema(pool);
     const guildId='guild',botId='smith',owner='owner';
     const audit=(db,actor,action,detail)=>db.query('INSERT INTO audit VALUES($1,$2,$3,$4)',[guildId,actor,action,JSON.stringify(detail)]);
     const validateURL=async()=>{};

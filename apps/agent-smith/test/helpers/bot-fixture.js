@@ -110,6 +110,9 @@ export async function botFixture() {
     './request-lifecycle.js': {...requestLifecycle,createRequestLifecycle:()=>({start(){},stop(){}})},
     './smith-control.js': {createSmithControl:()=>({handle:async()=>{throw new Error('Control settings must use their isolated tests.');}})},
     './feeds.js': {createFeeds:()=>({start:inert,stop:inert})},
+    // Readiness has independent unit/PostgreSQL coverage; this closed fixture
+    // exercises access workflows without a real schema or network connection.
+    './feed-schema-check.js': {assertFeedSchema:inert},
     './maintenance-cases.js': {createCases:()=>({record:inert,restricted:async()=>false})},
     './maintenance.js': {createMaintenance:()=>({handle:async()=>false,scan:inert,join:inert,leave:inert,event(){},handleMessage:inert,ensureMember:inert,enqueue(){},stop(){}})},
     './authorization.js': {canGrantFramework:()=>false},

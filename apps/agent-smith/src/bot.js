@@ -19,6 +19,14 @@ import { createCases } from './maintenance-cases.js';
 import { createMaintenance } from './maintenance.js';
 import { canGrantFramework } from './authorization.js';
 import { createFeeds } from './feeds.js';
+import { assertFeedSchema } from './feed-schema-check.js';
+// Fail before Gateway login rather than entering a Discord-connected crash loop.
+try {
+  await assertFeedSchema(pool);
+} catch (error) {
+  await pool.end();
+  throw error;
+}
 const { client,guild,cfg } = await connect({ allowWrites: true });
 const feeds=createFeeds({guild,client,pool,resource,audit});
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
