@@ -43,3 +43,13 @@ required the process to wait without claiming to be connected.
 status surface is approved; no broader API/dashboard is. Distinguish process
 liveness from actual Discord readiness, and never report online based only on
 a successful build or hosting check. Publishing remains user-controlled.
+
+The approved status-check approach was verified to permit live VM promotion
+while Discord readiness remained false during a login-allowance wait.
+
+**Why:** After the Owner confirmed publishing completed, the published liveness
+route returned 200 with a waiting status while the readiness route returned 503.
+
+**How to apply:** Keep these checks distinct. A waiting worker can be correctly
+hosted without the bot yet being online; never turn waiting into readiness merely
+to satisfy hosting.
