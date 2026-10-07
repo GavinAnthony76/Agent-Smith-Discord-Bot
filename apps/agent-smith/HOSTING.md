@@ -11,17 +11,18 @@ Readiness checks on 2026-10-06: 295 offline tests passed, one existing test skip
 permission preflight and source-boundary checks passed. The development Gateway
 was running, and no active production deployment existed.
 
-**Publishing configuration still needs approval:** this pnpm project currently
-registers an unused API artifact and the design canvas, not a bot worker. The
-API artifact's production command launches the template API. Changing only
-`.replit`'s run command will not publish Smith: artifact production commands take
-precedence. Do not click Publish with that unchanged configuration.
+**Worker configuration approved:** the Owner approved repurposing only the unused
+API artifact's production configuration for Smith. Its production build now runs
+Smith's offline preflight, and its run command launches the standalone bot worker.
+API source, development command, local port and preview paths remain unchanged.
+The obsolete production API health probe and explicit HTTP port were removed.
 
-The existing unused API production configuration can be changed to launch only
-the standalone Smith worker if the Owner approves that specific change. Keep
-the API's source/development workflow separate and unchanged; do not add an HTTP
-server, use its server code as a bot launcher, or start a second development
-Gateway. Otherwise arrange a separate supported bot-worker publishing path.
+The global deployment target is Reserved VM (`vm`) with `ignorePorts = true`,
+through schema-validated configuration. This is preparation only: it does not
+purchase a VM or publish. Review Publishing's actual Reserved VM/background-worker
+selection, price, production secrets and database-copy settings before proceeding.
+Changing only `.replit`'s run command is insufficient: artifact production
+commands take precedence. Do not add an HTTP server or a second development Gateway.
 
 ## Development does not depend on this document
 
@@ -36,17 +37,17 @@ stop the workspace bot, move projects, or replace its database.
 
 ## Production status and later choices
 
-No bot production deployment has been configured. The existing registered
-artifacts describe a template API and design preview, not the Gateway worker.
-Recheck the supported worker publishing path and actual deployment status when
-the owner asks for 24/7 hosting. Do not turn the API into a bot launcher, add a
-dummy web server, or move projects merely to keep developing.
+The worker's production configuration is prepared, but no production deployment
+was started by this configuration change. The registered artifact remains labeled
+API Server for development; only its production commands now run Smith.
+Recheck actual deployment status at cutover. The API server code is not the bot
+launcher; no dummy web server was added and the bot was not moved.
 
 Any suitable continuously running Node.js worker host can execute the same bot.
 On Replit, Reserved VM background-worker hosting is an option for unattended
 Gateway operation. Development uses the existing workflow instead.
 
-## Candidate production settings — only after explicit approval
+## Prepared production settings — publishing still requires Owner action
 
 | Setting | Value |
 | --- | --- |
@@ -56,7 +57,8 @@ Gateway operation. Development uses the existing workflow instead.
 | Runtime | Node.js 24; minimum 22.12 |
 | Command working directory | Repository root |
 | Dependency installation | `pnpm install --frozen-lockfile` if the publishing build does not already install dependencies |
-| Offline verification | `pnpm --filter @workspace/agent-smith run test && pnpm --filter @workspace/agent-smith run preflight` |
+| Production build | `pnpm --filter @workspace/agent-smith run preflight` (offline, no database or Discord connection) |
+| Additional readiness verification | `pnpm --filter @workspace/agent-smith run test` |
 | Run command | `pnpm --filter @workspace/agent-smith run start` |
 | Public ports / routes | None for the bot |
 | HTTP health endpoint | None; this is a non-HTTP worker |
