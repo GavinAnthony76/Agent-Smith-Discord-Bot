@@ -19,3 +19,7 @@ export function canPerformDangerousAction(member,cfg,guild,operation) {
 export function assertStaff(member,cfg,guild) {
  if(!canModerate(member,cfg,guild))throw new Error('Owner, Admin or Moderator authority required.');
 }
+export function assertHistoricalReviewer(member,cfg,guild) {
+ if(member?.user?.bot||member?.guild?.id!==guild.id||!isOwner(member,cfg,guild))
+  throw new Error('Only a configured human Owner may record historical framework access.');
+}

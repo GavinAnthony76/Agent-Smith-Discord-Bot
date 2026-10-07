@@ -1,8 +1,19 @@
 import { SlashCommandBuilder,PermissionFlagsBits as P } from 'discord.js';
+import { frameworks } from './blueprint.js';
 const c=(n,d)=>new SlashCommandBuilder().setName(n).setDescription(d).setDMPermission(false);
 const staff=c=>c.setDefaultMemberPermissions(P.ModerateMembers);
 const caseId=c=>c.addStringOption(o=>o.setName('id').setDescription('Case number').setRequired(true).setMaxLength(19));
 export const maintenanceCommands=[
+ c('framework-consent','Confirm current rules and intended primary for individual Owner review')
+  .addStringOption(o=>o.setName('primary').setDescription('Your intended primary, not an additional approval').setRequired(true)
+   .addChoices(...frameworks.map(f=>({name:f,value:f})))),
+ c('framework-review','Owner: preview and record one member’s existing historical access')
+  .setDefaultMemberPermissions(P.Administrator)
+  .addUserOption(o=>o.setName('user').setDescription('Individual member to review').setRequired(true))
+  .addStringOption(o=>o.setName('primary').setDescription('Keep established primary; otherwise member-confirmed primary').setRequired(true)
+   .addChoices(...frameworks.map(f=>({name:f,value:f}))))
+  .addStringOption(o=>o.setName('extra').setDescription('One held additional framework to approve now (optional)')
+   .addChoices(...frameworks.map(f=>({name:f,value:f})))),
  c('onboarding','Privately inspect or recover your durable onboarding state'),
  c('interests','Manage saved interests in your approved frameworks'),
  c('onboarding-recover','Admin: reconcile failed onboarding without erasing security history')

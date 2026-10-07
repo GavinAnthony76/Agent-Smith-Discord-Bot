@@ -54,9 +54,9 @@ export function createMaintenanceUI(ctx) {
  async function handle(i) {
   const cmd=i.isChatInputCommand?.()?i.commandName:null;
   const custom=i.customId??'';
-  const supported=['onboarding','interests','onboarding-recover','smith','report','cases','case','case-note','case-close','member-info','mod-history'];
+  const supported=['framework-consent','framework-review','onboarding','interests','onboarding-recover','smith','report','cases','case','case-note','case-close','member-info','mod-history'];
   const panel=cmd==='smith-control'&&i.options.getSubcommand()==='panel';
-  if(!supported.includes(cmd)&&!panel&&!/^(smith:life:|smith:report:|smith:maintenance:)/.test(custom))return false;
+  if(!supported.includes(cmd)&&!panel&&!/^(smith:history:|smith:life:|smith:report:|smith:maintenance:)/.test(custom))return false;
   if(i.guildId!==guild.id)throw new Error('This interaction belongs to another server.');
   if((i.isButton?.()||i.isStringSelectMenu?.())&&i.message?.author?.id!==client.user.id)throw new Error('Use Smith’s own interface.');
   if(custom.startsWith('smith:maintenance:moreinfo:')&&i.isButton?.()) {
@@ -84,7 +84,27 @@ export function createMaintenanceUI(ctx) {
   }
   await i.deferReply({flags:64});
   let result;
-  if(custom.startsWith('smith:maintenance:ask:')) {
+  if(cmd==='framework-consent') {
+   const primary=i.options.getString('primary',true);
+   const p=await members.historical.consentPreview(i.user.id,primary);
+   const rules=await ctx.resource('channel','rules');
+   result={content:`Read <#${rules}> (current version ${p.version}). Confirm that you accept these rules now and intend **${primary}** as your primary. This is current consent, not a claim about past consent. An established primary cannot change. Owner review is still required; no roles change.`,
+    components:[row(button(`smith:history:consent:${i.user.id}:${primary}:${p.token}`,'I agree now and confirm primary'))]};
+  } else if(cmd==='framework-review') {
+   const uid=i.options.getUser('user',true).id,primary=i.options.getString('primary',true),extra=i.options.getString('extra');
+   const p=await members.historical.preview(uid,i.user.id,primary,extra);
+   result={content:`**Individual Owner review: ${uid}**\nHeld access: ${p.held.join(', ')}\nEstablished primary: ${p.primary??'none'}\nSaved additional approvals: ${p.grants.join(', ')||'none'}\nSaved rules acceptance: ${p.accepted?'yes':'none'}; current member confirmation: ${p.consentAt??'none'}\nRecord primary **${primary}**${extra?` and a NEW additional approval for **${extra}**`:''}.\nNo role changes, historical approval claims, or primary replacement. Earlier approvals remain unchanged; any other unrecorded roles remain pending review.`,
+    components:[row(button(`smith:history:record:${uid}:${primary}:${extra??'none'}:${p.token}`,'Confirm individual Owner review'))]};
+  } else if(custom.startsWith('smith:history:')) {
+   if(!i.isButton?.())throw new Error('Use the review confirmation buttons.');
+   const parts=custom.split(':'),op=parts[2],uid=parts[3],primary=parts[4];
+   if(op==='consent'&&parts.length===6) {
+    if(uid!==i.user.id)throw new Error('Only the member may give their own consent.');
+    result=await members.historical.consent(uid,primary,parts[5]);
+   } else if(op==='record'&&parts.length===7) {
+    result=await members.historical.record(uid,i.user.id,primary,parts[5]==='none'?null:parts[5],parts[6]);
+   } else throw new Error('Invalid historical review action.');
+  } else if(custom.startsWith('smith:maintenance:ask:')) {
    const actor=await guild.members.fetch({user:i.user.id,force:true});
    if(!canGrantFramework(actor,cfg,guild))throw new Error('Configured crossover approver or Admin required.');
    const id=custom.split(':')[3];if(!/^[1-9]\d{0,18}$/.test(id))throw new Error('Invalid request.');
@@ -142,7 +162,7 @@ export function createMaintenanceUI(ctx) {
     result={content:`${await ctx.feeds.status()}\nOwner controls: /smith-control feed-save, feed-enable, feed-status id, feed-resolve.`,
      components:[row(new StringSelectMenuBuilder().setCustomId('smith:maintenance:panel').addOptions(sections.map(s=>({label:s,value:s}))))]};
    } else {
-   result={content:`**Smith control panel${i.values?.[0]?` — ${i.values[0]}`:''}**\n${await status(await staff(i))}\nMembers/onboarding: /member-info, /onboarding-recover\nModeration: /mod, /cases, /case, /report\nFrameworks: /pending, /review, /revoke\nInterests: /interests\nChannels: protected; Owner manages structural changes manually\nFeeds: integrated polling; select FEEDS for Owner status/controls\nXP: /xp, /ranks, /faith-review; economy not enabled\nSettings: /smith-control status, request-expiry, automod`,
+   result={content:`**Smith control panel${i.values?.[0]?` — ${i.values[0]}`:''}**\n${await status(await staff(i))}\nMembers/onboarding: /member-info, /onboarding-recover\nModeration: /mod, /cases, /case, /report\nFrameworks: /pending, /review, /revoke; Owner historical review: /framework-review; member consent: /framework-consent\nInterests: /interests\nChannels: protected; Owner manages structural changes manually\nFeeds: integrated polling; select FEEDS for Owner status/controls\nXP: /xp, /ranks, /faith-review; economy not enabled\nSettings: /smith-control status, request-expiry, automod`,
     components:[row(new StringSelectMenuBuilder().setCustomId('smith:maintenance:panel').addOptions(sections.map(s=>({label:s,value:s}))))]};
    }
   } else {

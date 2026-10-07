@@ -47,12 +47,46 @@ drafts are not observable. Legacy onboarding remained enabled.
 
 ## Owner-approved resolution boundary
 
+### Individual recording workflow
+
+Use `/framework-review user:<member> primary:<framework> extra:<optional framework>`
+as a configured human Owner. The private preview requires a separate confirmation
+button. It records only roles the member currently holds, one member and at most
+one additional approval at a time. Repeat for another extra if needed.
+
+If either genuine saved rules acceptance or a primary is missing, the member must
+first run `/framework-consent primary:<framework>` and press the button explicitly
+accepting the current rules and confirming their intended primary. Existing roles
+and later native Selection choices are not consent. The self-confirmation is
+stored separately; it does not itself adopt a primary or grant access.
+
+The Owner confirmation rechecks the member, screening, Owner authority, rules,
+held roles, saved records and consent under the existing member transaction lock.
+Changed previews must be reopened. An established primary cannot be replaced.
+Existing acceptance and earlier human approvals retain their timestamps and
+reviewers. Missing acceptance uses the actual member-confirmation time; new
+Owner decisions and additional grants use current event times, even after lock
+waits. A pending request for the extra must be handled through `/review` instead.
+
+All Owner accounts are protected as subjects. Administrators and crossover
+approvers cannot use this recording authority. No Discord role mutation is made
+by recording. Other held, unrecorded extras remain pending, and authoritative
+cleanup is disabled for those pending historical roles. Use the existing
+explicit `/revoke` workflow separately for an intentional role removal; its SDK
+security gate remains unchanged.
+
+Offline coverage: `test/historical-review.test.js`. Real transaction coverage:
+`test/historical-postgres.test.js`, enabled with `SMITH_HISTORY_PG_URL` pointing
+to a disposable local database named `smith_history_test...`. The latter refuses
+non-loopback hosts and never reads the workspace `DATABASE_URL`.
+
 The Owner selected case-by-case human review and said: “i will manually right
 click their names and assign them the appropriate roles”.
 
-Smith must leave the existing access and persistent records unchanged. The
+Until an explicit individual confirmation, Smith must leave existing access and
+persistent decisions unchanged. The
 Owner did not identify confirmed primaries or approve individual extra grants,
-so this investigation writes no reconciliation records. Manual Discord role
+so the original investigation wrote no reconciliation records. Manual Discord role
 assignment changes access, not Smith's approval ledger; warnings can remain.
 No new automatic adoption, blanket exemption, or historical approval is allowed.
 

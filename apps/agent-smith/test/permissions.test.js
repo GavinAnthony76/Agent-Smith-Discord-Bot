@@ -29,7 +29,7 @@ test('all slash command definitions serialize',()=>{
   const required=['accept','join','request','requests','interest','pending','review','revoke','trivia','answer','profile','mod','ranks','xp','faith-review','smith-control',
    'onboarding','interests','onboarding-recover','smith','report','cases','case','case-note','case-close','member-info','mod-history',
    'warn','warnings','clear-warning','timeout','untimeout','kick','ban','unban','purge','access-request','access-approve','access-deny','access-revoke',
-   'balance','daily','shop','buy','inventory'];
+   'balance','daily','shop','buy','inventory','framework-consent','framework-review'];
   assert.deepEqual(json.map(x=>x.name).sort(),required.sort());
   assert.equal(new Set(json.map(x=>x.name)).size,json.length);
 });

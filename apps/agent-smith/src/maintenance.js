@@ -5,6 +5,7 @@ import { isProtectedOwner } from './security-policy.js';
 import { createEconomy } from './community-economy.js';
 import { createContentAutomod } from './content-automod.js';
 import { createTextParticipation } from './text-participation.js';
+import { HistoricalReviewError } from './historical-review.js';
 export function createMaintenance(ctx) {
  const {guild,client,pool,audit,cases}=ctx;
  const members=createMemberMaintenance(ctx),reports=createReports(ctx);
@@ -93,7 +94,8 @@ export function createMaintenance(ctx) {
   return await ui.handle(i);
   }catch(error){
    safeLog(error);
-   const response={content:'Unable to complete maintenance action. No security reset was performed; saved intents remain recoverable. Staff should check the audit and permissions.',allowedMentions:{parse:[]}};
+   const response={content:error instanceof HistoricalReviewError?error.message:
+    'Unable to complete maintenance action. No security reset was performed; saved intents remain recoverable. Staff should check the audit and permissions.',allowedMentions:{parse:[]}};
    try{if(i.deferred||i.replied)await i.editReply(response);else await i.reply({...response,flags:64});}catch{safeLog({name:'InteractionReplyUnavailable'});}
    return true;
   }

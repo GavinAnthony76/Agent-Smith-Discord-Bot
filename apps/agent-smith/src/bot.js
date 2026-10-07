@@ -42,6 +42,8 @@ async function log(actor, action, detail) {
 }
 client.on('interactionCreate', async i => {
   if (i.isChatInputCommand() && i.commandName === 'smith-control' && i.options.getSubcommand()!=='panel') { await control.handle(i); return; }
+    // Includes current-member consent and fresh, Owner-only historical recording.
+    // These actions deliberately do not enter a Discord role mutation scope.
     if (await maintenance.handle(i)) return;
     if (await handleProgression(i)) return;
   if (isModerationInteraction(i)) {

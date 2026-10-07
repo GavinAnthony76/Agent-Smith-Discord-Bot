@@ -10,6 +10,9 @@ export async function resource(kind, name, db = pool) {
   if (!r.rows[0]) throw new Error(`Missing ${kind} ${name}; run bootstrap`);
   return r.rows[0].discord_id;
 }
-export async function audit(db, actor, action, detail) {
-  await db.query('INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4)', [config().guildId, actor, action, JSON.stringify(detail)]);
+export async function audit(db, actor, action, detail, currentTime = false) {
+  const sql=currentTime
+    ? 'INSERT INTO audit(guild_id,actor,action,detail,created_at) VALUES($1,$2,$3,$4,clock_timestamp())'
+    : 'INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4)';
+  await db.query(sql, [config().guildId, actor, action, JSON.stringify(detail)]);
 }

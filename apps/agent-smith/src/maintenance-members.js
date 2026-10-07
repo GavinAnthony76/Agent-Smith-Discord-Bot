@@ -5,6 +5,7 @@ import { frameworks,interests } from './blueprint.js';
 import { memberLifecycle,authorizedFrameworks,validateInterest } from './lifecycle-policy.js';
 import { assertAssignableRole } from './policy.js';
 import { assertNotOwner,isProtectedOwner,refreshOwnerProtection,withRoleWorkflow } from './security-policy.js';
+import { createHistoricalReview } from './historical-review.js';
 
 export function createMemberMaintenance({guild,client,cfg,pool,locked,resource,audit,native}) {
  const orm=drizzle(pool);
@@ -133,8 +134,9 @@ export function createMemberMaintenance({guild,client,cfg,pool,locked,resource,a
    if(state.member.pending!==false||!state.allowed.length)throw new Error('Rules acceptance and primary framework are required.');
    const version=(await db.query("SELECT value FROM bot_settings WHERE guild_id=$1 AND key='rules-version'",[guild.id])).rows[0]?.value??'1';
    if(state.record.onboarding_flow==='staged'&&state.record.rules_version_accepted!==version)throw new Error('Confirm the current rules version before activation.');
+   const fullyReviewed=frameworks.every(f=>!state.member.roles.cache.has(state.ids[f])||state.allowed.includes(f));
    await db.query(`UPDATE members SET interests_completed_at=COALESCE(interests_completed_at,now()),
-    access_authoritative=CASE WHEN onboarding_flow='staged' THEN true ELSE access_authoritative END WHERE guild_id=$1 AND user_id=$2`,[guild.id,uid]);
+    access_authoritative=CASE WHEN onboarding_flow='staged' AND $3 THEN true ELSE access_authoritative END WHERE guild_id=$1 AND user_id=$2`,[guild.id,uid,fullyReviewed]);
    await audit(db,uid,'interests-completed',{});
   });
   return reconcile(uid);
@@ -143,6 +145,7 @@ export function createMemberMaintenance({guild,client,cfg,pool,locked,resource,a
   await reconcile(uid);
   await audit(pool,actor,'onboarding-recovery-requested',{subject:uid,mode:'reconcile-only-no-security-reset'});
  }
- return {ensure,context,preferences,changeInterest,reconcile,accept,finish,recover,arrival,
+ const historical=createHistoricalReview({guild,cfg,pool,locked,audit,context});
+ return {ensure,context,preferences,changeInterest,reconcile,accept,finish,recover,arrival,historical,
   async leave(uid) {await pool.query('UPDATE members SET left_at=now() WHERE guild_id=$1 AND user_id=$2',[guild.id,uid]);}};
 }

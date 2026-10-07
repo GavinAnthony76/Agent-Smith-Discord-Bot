@@ -13,3 +13,16 @@ access role, and manual Discord assignment is not a saved bot approval.
 **How to apply:** Preserve existing roles, human-reviewed extras and all protected
 accounts. Request explicit per-member primary/extra decisions before recording
 reconciliation, using the actual new review time rather than backdating.
+
+Historical recording is separate from Discord role changes. Missing acceptance
+or primary intent requires the member's explicit current self-confirmation;
+Owner approval cannot substitute for member consent. An established primary
+stays immutable. Unreviewed historical extras remain protected from automatic
+cleanup, including after the member finishes staged onboarding.
+
+**Why:** The Owner authorized individual recording of real decisions, not
+blanket adoption, inferred consent, or removal of roles merely to clear an audit.
+
+**How to apply:** Keep recording-only decisions separate from gated explicit
+role-change workflows. Preserve old valid timestamps and reviewers; timestamp
+new human events when they occur, rather than when a waiting transaction began.
