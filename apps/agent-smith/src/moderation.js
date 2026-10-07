@@ -5,19 +5,35 @@ import { parseRequestId } from './review.js';
 import { assertNotOwner, assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, withModerationWorkflow, securityLimits } from './security-policy.js';
 import { reserveDestructiveOperation } from './security-rate.js';
 import { hasPermission } from './permissions.js';
+import { assertStaff } from './authorization.js';
 
 const PREFIX = 'smith:mod:';
 const confirmedOperations = new Set(['kick', 'ban', 'unban', 'purge']);
+export const moderationAliases=Object.freeze({warn:'warn',warnings:'history','clear-warning':'unwarn',timeout:'timeout',untimeout:'untimeout',kick:'kick',ban:'ban',unban:'unban',purge:'purge'});
+export function moderationAlias(i) {
+ const operation=moderationAliases[i.commandName];
+ if(!operation)return i;
+ return new Proxy(i,{get(target,key) {
+  if(key==='commandName')return 'mod';
+  if(key==='options')return new Proxy(target.options,{get(options,name) {
+   if(name==='getSubcommand')return ()=>operation;
+   const value=Reflect.get(options,name,options);return typeof value==='function'?value.bind(options):value;
+  }});
+  const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
+ }});
+}
 const protectedNames = new Set(categories.flatMap(category =>
   category.channels.filter(([, , readonly]) => readonly || category.gate === 'staff' || !category.gate).map(([name]) => name)));
 
 export function isModerationInteraction(interaction) {
   return (interaction.isChatInputCommand() && interaction.commandName === 'mod')
+    || (interaction.isChatInputCommand() && !!moderationAliases[interaction.commandName])
     || (interaction.isButton() && interaction.customId.startsWith(PREFIX));
 }
 
-export function createModeration({ guild, cfg, pool, resource, spam, confirmations = new Confirmations() }) {
+export function createModeration({ guild, cfg, pool, resource, spam, recordCase, confirmations = new Confirmations() }) {
   async function record(actor, action, detail) {
+    if(recordCase)return recordCase(actor,action,detail);
     const result = await pool.query(
       'INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4) RETURNING id',
       [guild.id, actor, action, JSON.stringify(detail)]);
@@ -62,7 +78,8 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
       assertSafeBot(bot);
       assertSafeHierarchy(bot, await guild.members.fetch({ user: guild.ownerId, force: true }));
     }
-    assertModerator(actorId, cfg);
+    if(cfg.owners.includes(actorId)||confirmedOperations.has(action.operation))assertModerator(actorId,cfg);
+    else assertStaff(await guild.members.fetch({user:actorId,force:true}),cfg,guild);
     if (action.target) assertNotOwner(guild, action.target, cfg);
     if (action.operation === 'unban') {
       discordId(action.target);
@@ -84,6 +101,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
     return { target };
   }
   async function execute(action, actorId, confirmed = false) {
+    action={...action,reason:validReason(action.reason)};
     const context = await validate(action, actorId); // Recheck hierarchy and permissions at confirmation time.
     await reserveDestructiveOperation(pool, guild.id, actorId, action);
     return withModerationWorkflow(action, actorId, async () => {
@@ -130,10 +148,14 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
     return { actorId: interaction.user.id, guildId: interaction.guildId, channelId: interaction.channelId };
   }
   return {
+    execute,
     async handle(interaction) {
+      interaction=moderationAlias(interaction);
       try {
         if (interaction.guildId !== guild.id || interaction.user.bot) throw new Error('This command is restricted to the authorized server and human owners.');
-        assertModerator(interaction.user.id, cfg);
+        const requested=!interaction.isButton()?interaction.options.getSubcommand():null;
+        if(cfg.owners.includes(interaction.user.id)||confirmedOperations.has(requested))assertModerator(interaction.user.id,cfg);
+        else assertStaff(await guild.members.fetch({user:interaction.user.id,force:true}),cfg,guild);
         const controlIds = await Promise.all(['smith-controls', 'access-review'].map(name => resource('channel', name)));
         if (!controlIds.includes(interaction.channelId)) throw new Error('Use moderation commands in #smith-controls or #access-review.');
         if (interaction.isButton()) {
@@ -156,7 +178,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
           const state = spam.status();
           const unresolved = await pool.query(
             "SELECT a.id FROM audit a WHERE a.guild_id=$1 AND a.action='mod.intent' AND NOT EXISTS (SELECT 1 FROM audit r WHERE r.guild_id=a.guild_id AND r.action='mod.result' AND r.detail->>'caseId'=a.id::text) ORDER BY a.id DESC LIMIT 10", [guild.id]);
-          await interaction.editReply({ content: `**Owner-only moderation**\nAnti-spam: ${state.enabled ? 'enabled' : 'disabled'}, alerts only. No automatic punishment.\nTriggers: ${state.burstThreshold}; ${state.sustainedThreshold}; ${state.mentionThreshold}. Alerts have a ${state.cooldown} cooldown.\nMessage content is not scanned or stored.\nBot permissions missing at server level: ${missing.join(', ') || 'none'}. Channel overrides and hierarchy are checked per action.\nUnresolved action intents: ${unresolved.rows.map(row => `#${row.id}`).join(', ') || 'none'}. Investigate these before retrying an action.`,
+          await interaction.editReply({ content: `**Staff moderation; destructive actions Owner-only**\nPassive anti-spam: ${state.enabled ? 'enabled' : 'disabled'}, alerts only.\nTriggers: ${state.burstThreshold}; ${state.sustainedThreshold}; ${state.mentionThreshold}. Alerts have a ${state.cooldown} cooldown.\nOptional content automod/text XP require separate explicit Owner configuration and Message Content intent. Raw content is not stored by these pipelines.\nBot permissions missing at server level: ${missing.join(', ') || 'none'}. Channel overrides and hierarchy are checked per action.\nUnresolved action intents: ${unresolved.rows.map(row => `#${row.id}`).join(', ') || 'none'}. Investigate these before retrying an action.`,
             allowedMentions: { parse: [] } }); return;
         }
         if (operation === 'antispam') {
@@ -191,6 +213,7 @@ export function createModeration({ guild, cfg, pool, resource, spam, confirmatio
             if (prior.rows.length) throw new Error('This warning was already withdrawn.');
             const saved = await db.query('INSERT INTO audit(guild_id,actor,action,detail) VALUES($1,$2,$3,$4) RETURNING id',
               [guild.id, interaction.user.id, 'mod.unwarn', JSON.stringify({ warningCase, target: warning.detail.target, reason })]);
+            if(recordCase)await db.query("UPDATE moderation_cases SET active=false,status='withdrawn',resolved_at=now() WHERE guild_id=$1 AND case_id=$2 AND action_type='warn'",[guild.id,warningCase]);
             caseId = String(saved.rows[0].id); await db.query('COMMIT');
           } catch (error) { await db.query('ROLLBACK'); throw error; } finally { db.release(); }
           await mirror(caseId, interaction.user.id, `Warning #${warningCase} withdrawn: ${reason}`);

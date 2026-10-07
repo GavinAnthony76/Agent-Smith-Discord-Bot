@@ -1,0 +1,200 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Agent Smith maintenance upgrade report</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#17202b;background:#f4f6f8;margin:0}article{max-width:960px;margin:36px auto;padding:40px;background:white;border:1px solid #ddd;border-radius:8px}h1{font-size:30px;line-height:1.3}h2{margin-top:32px;font-size:21px;border-top:1px solid #ddd;padding-top:20px}p{overflow-wrap:anywhere}.item{padding-left:22px;position:relative}.item:before{content:"•";position:absolute;left:4px}code{font:13px/1.5 ui-monospace,monospace;background:#eef1f4;padding:2px 4px;border-radius:3px}@media(max-width:700px){article{margin:0;padding:22px;border:none;border-radius:0}}@media print{article{margin:0;border:none;padding:0}body{background:white}}</style><article><h1>Hallowed Core / Agent Smith maintenance upgrade</h1>
+
+<h2>Delivery status — October 6, 2026 (America/Chicago)</h2>
+
+<p>This is a working, additive maintenance upgrade, not a claim that every requested phase is complete. Smith is running in the workspace and the new handlers are registered. Always-on production hosting, scheduled feed integration, guarded channel tools and automatically verified voice participation remain unfinished.</p>
+
+<h2>1. Architecture inspected</h2>
+
+<p>The bot is the Node ES-module application in <code>apps/agent-smith</code>, inside the existing pnpm workspace. It uses discord.js 14.25.1 and PostgreSQL through parameterized queries and advisory-locked transactions. Native onboarding, access requests, progression and notification recovery already had durable database state.</p>
+
+<p>The API-server artifact and its template Drizzle setup are unrelated to Smith. They were not repurposed. Drizzle ORM 0.45.1 was added to Smith for persisted interest preferences, using the existing PostgreSQL connections; established transaction and SQL interfaces were retained instead of replacing the database.</p>
+
+<p>The existing native onboarding selection question remains the primary selection signal. A selection signal is not an approval for additional frameworks. Discord permission enforcement and Smith's application-level authorization are separate controls.</p>
+
+<h2>2. Problems found and changes made</h2>
+
+<p class="item">Lifecycle state, versioned rules acknowledgment, interest intent and activation bookkeeping were incomplete.</p>
+<p class="item">Existing moderation audit intents/results needed structured case history and conservative recovery handling.</p>
+<p class="item">Reports needed private intake, staff controls and persistent protection against duplicate punishment.</p>
+<p class="item">Ordinary moderation and the new aliases needed consistent authorization through the SDK gate.</p>
+<p class="item">Runtime health and reconciliation needed operational controls, not only scripts.</p>
+<p class="item">XP needed an optional nonduplicate text source; optional currency needed transactional accounting.</p>
+<p class="item">Full member chunk requests raced at startup. The new maintenance roster scan uses paginated REST listing rather than another concurrent Gateway member-chunk request.</p>
+<p class="item">Historical framework roles still cannot safely be treated as prior recorded approvals. Ten members remain flagged for manual review.</p>
+
+<p>Smith now periodically reconciles lifecycle/access/interest state, restores recorded approved access on rejoin, restores remaining confirmed timeouts, and persists maintenance heartbeats. It does not automatically decide which historical grants the Owner intended.</p>
+
+<h2>3. Files changed</h2>
+
+<p>New runtime modules:</p>
+
+<p><code>authorization.js</code>, <code>lifecycle-policy.js</code>, <code>maintenance.js</code>, <code>maintenance-members.js</code>, <code>maintenance-model.js</code>, <code>maintenance-cases.js</code>, <code>maintenance-reports.js</code>, <code>maintenance-ui.js</code>, <code>maintenance-commands.js</code>, <code>community-economy.js</code>, <code>content-automod.js</code>, <code>text-participation.js</code>.</p>
+
+<p>New migration files:</p>
+
+<p><code>maintenance-schema.sql</code>, <code>maintenance-migrate.js</code>.</p>
+
+<p>Existing integration files changed:</p>
+
+<p><code>bot.js</code>, <code>commands.js</code>, <code>config.js</code>, <code>discord.js</code>, <code>migrate.js</code>, <code>moderation.js</code>, <code>native-policy.js</code>, <code>native-reconcile.js</code>, <code>request-lifecycle.js</code>, <code>review.js</code>, <code>security-policy.js</code>, <code>security-gate.js</code>, <code>smith-control.js</code>, <code>progression.js</code>, <code>progression-config.js</code>, <code>progression-interactions.js</code>, <code>progression-worker.js</code>.</p>
+
+<p>Dependencies/tests changed:</p>
+
+<p>Smith <code>package.json</code>, workspace <code>pnpm-lock.yaml</code>, <code>test/helpers/bot-fixture.js</code>, <code>test/permissions.test.js</code>; new <code>test/maintenance.test.js</code> and <code>test/maintenance-postgres.test.js</code>.</p>
+
+<p>All module paths above are relative to <code>apps/agent-smith/src</code> unless otherwise stated.</p>
+
+<h2>4. Migration and preservation</h2>
+
+<p>The additive maintenance migration was applied to the existing workspace database. It adds lifecycle columns, interest preferences, cases/notes, reports/action reservations, worker health, cosmetic economy records, automod observations/actions and text fingerprints. Public table count increased from 18 to 31.</p>
+
+<p>No existing table was dropped or replaced. A digest comparison immediately after migration confirmed original content unchanged in:</p>
+
+<p class="item">88 resource records</p>
+<p class="item">8 member records, excluding the newly added lifecycle metadata</p>
+<p class="item">2 grants</p>
+<p class="item">2 requests, excluding new information-request fields</p>
+<p class="item">59 audit records</p>
+
+<p>Subsequent runtime reconciliation legitimately adds roster records and lifecycle state. The observed roster now contains 19 records: 6 ACTIVE, 10 ONBOARDING_BLOCKED, 2 RULES_PENDING and 1 NEW. These counts are a snapshot, not permanent expected values.</p>
+
+<p>Old real acceptance is labeled <code>legacy-unversioned</code>; the migration does not invent a historical acceptance of the new rules version. Missing or ambiguous old moderation results are marked uncertain, not completed. Migration repetition and preservation were tested in an isolated PostgreSQL schema.</p>
+
+<p>Migration commands are development/operator actions, not production startup DDL. Production migration and historical data backfill must be checked separately during publishing; no production database was changed in this work.</p>
+
+<h2>5. Commands and controls</h2>
+
+<p>45 guild commands are now registered, including retained commands and aliases.</p>
+
+<p>Member-facing additions: <code>/onboarding</code>, <code>/interests</code>, <code>/report</code>, <code>/smith status</code>, <code>/balance</code>, <code>/daily</code>, <code>/shop</code>, <code>/buy</code>, <code>/inventory</code>.</p>
+
+<p>Staff additions: <code>/onboarding-recover</code>, <code>/cases</code>, <code>/case</code>, <code>/case-note</code>, <code>/case-close</code>, <code>/member-info</code>, <code>/mod-history</code>, <code>/smith-control panel</code>.</p>
+
+<p>Aliases: <code>/warn</code>, <code>/warnings</code>, <code>/clear-warning</code>, <code>/timeout</code>, <code>/untimeout</code>, <code>/kick</code>, <code>/ban</code>, <code>/unban</code>, <code>/purge</code>, <code>/access-request</code>, <code>/access-approve</code>, <code>/access-deny</code>, <code>/access-revoke</code>.</p>
+
+<p>Owner settings added under <code>/smith-control</code>: <code>rules-version</code>, <code>staged-onboarding</code>, <code>economy</code>, <code>shop-item</code>, <code>content-automod</code>, <code>text-xp</code>. Existing request-expiry and passive antispam controls remain.</p>
+
+<p>Pending-request cards now offer “Ask for more info.” Questions stay pending, grant no access, and appear in the applicant's private <code>/requests</code> inbox. This is not a new automatic DM-delivery guarantee.</p>
+
+<p>The panel has section navigation and contextual status/command guidance. Channels and feeds are inspection/deferred-operation sections, not implemented channel mutation or feed configuration interfaces.</p>
+
+<h2>6. Activation defaults and onboarding behavior</h2>
+
+<p>No optional feature overrides were enabled in the live database. Staged onboarding, content automod, text XP and the cosmetic economy are off by default.</p>
+
+<p>The existing native flow remains active: screening and exactly one valid community selection permit normal native reconciliation. Existing members are not retroactively moved into a new staged flow.</p>
+
+<p>The staged option applies to new records after the Owner explicitly enables it. It requires an existing tracked, permission-free <code>NEW ARRIVAL</code> role below Smith, without channel access grants. Enabling the setting validates/adopts that role but does not create it.</p>
+
+<p>Assigning any role while a member is still pending can bypass Discord-native screening. Therefore Smith intentionally does NOT assign NEW ARRIVAL before native screening completes. After screening, staged members may receive that cosmetic arrival role while completing additional steps.</p>
+
+<p>Staged activation requires explicit current-version acknowledgment, a persisted primary framework, and Finish interests. Finish may select no optional interests. Activation grants Member plus the allowed framework roles, records activation and removes NEW ARRIVAL.</p>
+
+<p>Only the primary framework and human-approved additional grants authorize access. Reviewed authoritative records permit removal of unexplained extra frameworks; uncertain/pending access decisions block blind cleanup. Historical unreviewed access is preserved for manual review.</p>
+
+<p>Recovery is deliberately reconcile-only. It does not erase the primary framework, fabricate approvals, clear punishment or reset security history.</p>
+
+<h2>7. Moderation, reports and logging</h2>
+
+<p>Owner/protected-account immunity, hierarchy checks, bot-specific permissions, protected-channel rules and bounded destructive confirmation remain enforced.</p>
+
+<p>Admin/Moderator accounts can perform supported ordinary moderation subject to permissions/hierarchy. Kick, ban, unban and purge remain Owner-only. No Administrator permission is requested for Smith.</p>
+
+<p>Warnings and punishment intent/results are linked to durable cases. Notes and closing paperwork do not delete history or clear punishment. Warning withdrawal updates both audit history and structured warning state.</p>
+
+<p>Rejoin recovery reapplies only the remaining duration of a confirmed, unexpired timeout. It uses the original human actor and the same SDK checks. Lost permissions/hierarchy produce a blocked recovery record rather than an unsafe bypass. Smith does not automatically re-ban rejoining members.</p>
+
+<p>Reports are private. Staff may claim, warn, timeout, escalate, dismiss or close. Punishment requires a reason and a durable action reservation; duplicate or uncertain actions cannot simply be repeated. Report cards may be redelivered after an acknowledgment failure, but action reservations prevent repeated punishment.</p>
+
+<p>Join/leave, nickname/role metadata, channel/role create-update-delete, and message edit/delete metadata are audited. Raw message text is not stored by the new content/XP pipelines. Not every metadata event has a durable Discord-channel delivery outbox. Manual moderation outside Smith and automatic audit-log ingestion are not fully tracked.</p>
+
+<h2>8. Automod, XP and economy</h2>
+
+<p>Optional deterministic content rules cover external invites, blocked terms/domains, mass mentions, message flooding, duplicates, emoji flooding, caps flooding and scam patterns. Configured actions: LOG, DELETE, WARN, TIMEOUT, ESCALATE. No AI classifies or executes moderation.</p>
+
+<p>Rules use bounded literal lists, not user regex. Channel exclusions are configurable. Content settings refresh within approximately 30 seconds. Automatic actions require explicit current Owner configuration and still use the normal permissions, immunity, hierarchy and destructive-rate safeguards. Known/uncertain attempts are recorded rather than blindly retried.</p>
+
+<p>Optional text XP applies only to approved framework categories and ACTIVE membership. Tiny posts, commands, repeated characters, known scam/caps patterns and duplicate fingerprints are rejected. Text rewards are 5 XP, a 60-second cooldown and a 60-XP source daily cap, alongside existing progression limits. No raw content is persisted.</p>
+
+<p>Existing verified participation/trivia sources remain. Automatic voice XP is NOT implemented: membership in a voice channel alone would reward idle farming, and reliable speaking/activity evidence was not added. Expiring Discord reward roles are not implemented.</p>
+
+<p>The optional economy uses cosmetic credits only: 10 daily credits per America/Chicago calendar day, transaction keys, per-member locks, nonnegative balances, shop/inventory and immutable transaction history. Purchases are cosmetic inventory badges, never framework, staff or other security roles. They are visible through inventory, not a new graphical profile system.</p>
+
+<h2>9. Intents, permissions and Owner setup</h2>
+
+<p>Current Gateway intents: Guilds, GuildMembers, GuildMessages. Message/Channel partials support metadata events. MessageContent is requested only when <code>SMITH_ENABLE_MESSAGE_CONTENT=true</code>.</p>
+
+<p>To enable content automod or text XP, enable Message Content in Discord Developer Portal, set that runtime flag through environment configuration, restart Smith, and then explicitly enable the feature in <code>/smith-control</code>. The implementation does not silently request a privileged intent.</p>
+
+<p>Guild Members intent must remain enabled. Voice States, Presence and moderation-audit-log intents were not added.</p>
+
+<p>Required ordinary bot access remains View Channel, Send Messages, Read Message History and Manage Roles for permitted roles. Manage Roles belongs on the bot guild role, not channel creation overwrites. Timeouts require Moderate Members; purge/delete requires Manage Messages in the target channel; kick/ban operations require their specific permissions. Missing powers cause refusal. No role permission or hierarchy changes were applied automatically.</p>
+
+<p>For staged onboarding, manually create the permission-free NEW ARRIVAL role below Smith, verify native screening/community selection, set the rules version, and explicitly enable staged onboarding with that role. Keep the native required community question single-select.</p>
+
+<p>For the economy, explicitly enable it and configure cosmetic shop items. No real-money checkout or payment integration exists.</p>
+
+<p>System-notice destination remains the Owner's #bot-spam choice. The reviewed extra Send Messages denial on community-help is retained.</p>
+
+<h2>10. Verification and audit results</h2>
+
+<p>Final automated run: 311 tests total; 310 passed, 0 failed, 1 skipped. The skipped test is the pre-existing isolated PostgreSQL progression suite, not a claimed passing test.</p>
+
+<p>The maintenance PostgreSQL integration group ran against a randomly isolated schema, never real Discord members, and cleaned up only that test schema. It covered repeatable migration, version acknowledgment, staged finish, interest intent recovery, rejoin access restoration, confirmed timeout expiry restoration, case notes/closing, report reservations and economy transactions.</p>
+
+<p>The daily-credit concurrency test held one transaction open and observed the second waiting on a real PostgreSQL advisory lock before release. That is stronger than two sequential calls.</p>
+
+<p>Static privileged-transport, permission-resolver and AI-boundary checks passed.</p>
+
+<p>Live Discord permission audit: reviewed permission overwrites remain consistent, including the approved community-help restriction. Audit exits nonzero for 10 unrecorded historical framework-access members. This audit is NOT reported as fully passed; Owner review is required. No historical roles were removed to force a pass.</p>
+
+<p>Command registration succeeded. Final runtime logged “Agent Smith ready.” Maintenance heartbeat showed queue 0 and failures 0 after the roster fix. This establishes current workspace operation, not production uptime or successful human interaction with every new command.</p>
+
+<p>No real Discord-member UI journey was driven automatically. The manual checks below are still required.</p>
+
+<h2>11. Exact new-member walkthrough and manual validation</h2>
+
+<p>Current native mode:</p>
+
+<p>1. Invite a fresh human account and complete Discord-native rules screening.</p>
+<p>2. Select exactly one of FAITH / GAMING / TECH in Channels &amp; Roles.</p>
+<p>3. Let native reconciliation persist acceptance/primary and grant Member plus that framework. Selecting another signal must never automatically approve crossover.</p>
+<p>4. Open <code>/onboarding</code> for recorded state and a link to the current rules.</p>
+<p>5. Use <code>/interests</code> to choose only interests offered for approved frameworks. Confirm selections/Finish and verify they survive a restart.</p>
+<p>6. Use the access-request menu or <code>/access-request</code> for an additional framework; verify no extra access is granted while pending.</p>
+<p>7. Have a different authorized human approve, deny or ask for more information in the control room. Read the applicant's <code>/requests</code> inbox.</p>
+
+<p>Owner-enabled staged mode, for a genuinely new record:</p>
+
+<p>1. Finish native screening first; verify no bot role bypasses screening.</p>
+<p>2. Choose exactly one native community signal.</p>
+<p>3. Open <code>/onboarding</code>, read the linked rules and click “I Agree.” Smith records the current version and queues native primary reconciliation.</p>
+<p>4. Reopen/refresh onboarding; verify one persisted primary and no Member/framework activation yet.</p>
+<p>5. Use <code>/interests</code>, choose appropriate optional interests or none, then Finish interests.</p>
+<p>6. Verify ACTIVE, recorded activation, Member + primary, NEW ARRIVAL removed, and no unapproved extra framework.</p>
+<p>7. Repeat the buttons; restart; leave/rejoin. Verify stable primary, saved interests, no duplicate approvals, and restoration of only approved access.</p>
+
+<p>Staff checks:</p>
+
+<p class="item">Submit a report from a normal account; confirm private staff-only visibility and persistence.</p>
+<p class="item">Claim and warn/timeout with a reason; double-click/reopen the action and verify no repeated punishment.</p>
+<p class="item">Simulate missing bot permission, lost actor hierarchy and closed DMs; verify safe refusals and retained audit/report state.</p>
+<p class="item">Leave/rejoin with a confirmed timeout; verify only its remaining duration is restored.</p>
+<p class="item">Try Owner/protected targets through commands, buttons and modals; every management/punishment attempt must be refused.</p>
+<p class="item">Exercise member versus staff status/panel access; ordinary members must not see private case/report data.</p>
+<p class="item">If enabling optional content/credits, test exclusions, duplicate messages, cooldowns, daily rewards and simultaneous purchases with non-Owner accounts.</p>
+
+<h2>12. Remaining risks and deferred scope</h2>
+
+<p class="item">No production deployment was created. The selected Reserved VM preparation still needs an approved worker publishing configuration and a single-Gateway cutover. Workspace operation is not 24/7 hosting.</p>
+<p class="item">Ten historical-access members need actual human provenance review. Native choices or existing role presence must not be used to fabricate earlier approvals.</p>
+<p class="item">Feeds retain the pre-existing manual polling/configuration path. Database-backed source management, integrated persistent scheduling, robust delivery recovery and automatic discussion threads were not completed.</p>
+<p class="item">Slowmode, channel lock/unlock, safe create/rename/delete and staff channel-management UI are not implemented. SDK structural writes remain blocked; manual Owner action is required.</p>
+<p class="item">Automatic verified voice XP, temporary reward-role expiry, full configurable logging retention/delivery, permission-repair controls, manual-moderation ingestion and complete rich control-panel actions remain deferred.</p>
+<p class="item">Native interest-question self-assignments are not a full synchronized replacement for the new PostgreSQL preference UI. The filtered bot picker is the persisted path; native cosmetics must not be confused with framework approvals.</p>
+<p class="item">Uncertain external writes intentionally favor preservation and staff reconciliation. They do not provide a mathematical exactly-once Discord delivery guarantee.</p>
+<p class="item">Always-on/sharding/Redis scaling was not introduced. Current operation is the existing single bot process with database-backed durable business state and transient retry queues.</p>
+
+<p>Do not treat deferred capabilities, dormant optional features or the manual checklist as completed live validation.</p>
+</article></html>

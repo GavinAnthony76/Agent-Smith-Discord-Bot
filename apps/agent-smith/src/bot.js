@@ -15,24 +15,33 @@ import { createProgressionInteractions } from './progression-interactions.js';
 import { assertNotOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
 import { createRequestLifecycle, withdrawalAction, myRequestsMessage, assignRequestExpiry, requestExpired, transitionRequest } from './request-lifecycle.js';
 import { createSmithControl } from './smith-control.js';
+import { createCases } from './maintenance-cases.js';
+import { createMaintenance } from './maintenance.js';
+import { canGrantFramework } from './authorization.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
 const control = createSmithControl({guild,cfg,pool,resource});
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
-const moderation = createModeration({ guild, cfg, pool, resource, spam });
-const native = await createNativeReconciler({ guild, client });
+const cases=createCases({guild,client,cfg,pool,locked,audit});
+const moderation = createModeration({ guild, cfg, pool, resource, spam, recordCase:cases.record });
+const native = await createNativeReconciler({ guild, client, restrictionActive:cases.restricted });
 const progression = await createProgression({ guild, client, cfg });
+const maintenance=createMaintenance({guild,client,cfg,pool,locked,resource,audit,native,progression,moderation,cases});
 const handleProgression = createProgressionInteractions({ progression, guild, cfg, client, pool, resource, audit });
 const roleIds = Object.fromEntries(await Promise.all([...frameworks,'Member'].map(async f=>[f,await resource('role',f)])));
-const human = id => canReview(id,cfg);
+const human = async id => {
+ if(canReview(id,cfg))return true;
+ try{return canGrantFramework(await guild.members.fetch({user:id,force:true}),cfg,guild);}catch{return false;}
+};
 async function log(actor, action, detail) {
   // The durable database log is authoritative. Discord delivery is best effort.
   try { const ch=await guild.channels.fetch(await resource('channel','audit-log')); await ch.send({content:`${action} | actor ${actor} | ${JSON.stringify(detail)}`.slice(0,1900),allowedMentions:{parse:[]}}); }
   catch { console.error('Discord audit mirror unavailable; see database audit table.'); }
 }
 client.on('interactionCreate', async i => {
-  if (i.isChatInputCommand() && i.commandName === 'smith-control') { await control.handle(i); return; }
-  if (await handleProgression(i)) return;
+  if (i.isChatInputCommand() && i.commandName === 'smith-control' && i.options.getSubcommand()!=='panel') { await control.handle(i); return; }
+    if (await maintenance.handle(i)) return;
+    if (await handleProgression(i)) return;
   if (isModerationInteraction(i)) {
     try { await moderation.handle(i); } catch (error) { console.error('Moderation interaction failed:', error.code ?? error.message); }
     return;
@@ -71,7 +80,8 @@ client.on('interactionCreate', async i => {
       || i.message.author.id !== client.user.id)) {
       throw new Error('Use the official request menu in #access-requests.');
     }
-    const name=action?.name ?? i.commandName, uid=i.user.id,
+    const aliases={'access-request':'request','access-approve':'review','access-deny':'review','access-revoke':'revoke'};
+    const name=action?.name ?? aliases[i.commandName] ?? i.commandName, uid=i.user.id,
       target=action ? action.framework : i.options.getString('framework');
     if (name==='requests') {
       const rows=(await pool.query('SELECT * FROM requests WHERE guild_id=$1 AND user_id=$2 ORDER BY id DESC LIMIT 15',[guild.id,uid])).rows;
@@ -79,7 +89,7 @@ client.on('interactionCreate', async i => {
     }
     if (['join','request','revoke'].includes(name)) assertFramework(target);
     if (['pending','review','revoke'].includes(name)) {
-      if (!human(uid)) throw new Error('Only allowlisted human reviewers may use this command.');
+      if (!await human(uid)) throw new Error('Only allowlisted human reviewers or Admins may use this command.');
       if (i.channelId !== await resource('channel','access-review') && i.channelId !== await resource('channel','smith-controls')) throw new Error('Use the control room.');
     }
     if (name==='pending') {
@@ -136,7 +146,7 @@ client.on('interactionCreate', async i => {
           await transitionRequest(db,{guildId:guild.id,request,status:'expired',actor:uid});
           return `Request #${request.id} expired. No access was granted; the member can resubmit.`;
         }
-        const approved=review ? review.approve : i.options.getBoolean('approve');
+        const approved=review ? review.approve : i.commandName==='access-approve'?true:i.commandName==='access-deny'?false:i.options.getBoolean('approve');
         if (approved) {
            assertFramework(request.framework);
           if (!m.accepted_at || !m.primary_framework) throw new Error('Member must complete onboarding first.');
@@ -221,17 +231,34 @@ client.on('interactionCreate', async i => {
 });
 const queueNative = member => {
   if (member.guild.id !== guild.id || member.user.bot) return;
-  native.enqueue(member.id).then(() => native.drain()).catch(() => console.error('Native event queue unavailable; periodic rescan will recover.'));
+  maintenance.ensureMember(member).then(()=>native.enqueue(member.id)).then(() => native.drain()).catch(() => console.error('Native event queue unavailable; periodic rescan will recover.'));
   progression.enqueue(member.id).catch(() => console.error('Progression event enqueue deferred.'));
 };
 client.on('guildMemberAdd', queueNative);
 client.on('guildMemberUpdate', (_old, member) => queueNative(member));
+client.on('guildMemberAdd',m=>maintenance.join(m).catch(()=>console.error('Member lifecycle join deferred.')));
+client.on('guildMemberRemove',m=>maintenance.leave(m).catch(()=>console.error('Member lifecycle leave audit deferred.')));
+client.on('guildMemberUpdate',(old,m)=>{
+ if(m.guild.id!==guild.id)return;
+ maintenance.enqueue(m.id);
+ maintenance.event('member-updated',{subject:m.id,nicknameChanged:old.nickname!==m.nickname,
+  rolesAdded:[...m.roles.cache.keys()].filter(id=>!old.roles.cache.has(id)),
+  rolesRemoved:[...old.roles.cache.keys()].filter(id=>!m.roles.cache.has(id))});
+});
+for(const [event,action] of [['channelCreate','channel-created'],['channelDelete','channel-deleted'],['channelUpdate','channel-updated'],
+ ['roleCreate','role-created'],['roleDelete','role-deleted'],['roleUpdate','role-updated']]) {
+ client.on(event,(old,current)=>{const r=current??old;if(r.guild?.id===guild.id)maintenance.event(action,{resourceId:r.id});});
+}
+client.on('messageDelete',m=>{if(m.guildId===guild.id)maintenance.event('message-deleted',{messageId:m.id,channelId:m.channelId,authorId:m.author?.id??null});});
+client.on('messageUpdate',(_old,m)=>{if(m.guildId===guild.id)maintenance.event('message-edited',{messageId:m.id,channelId:m.channelId,authorId:m.author?.id??null});});
 requests.start();
 native.scan().catch(() => console.error('Native startup scan deferred; periodic recovery remains active.'));
 progression.scan().catch(() => console.error('Progression startup scan deferred; recovery remains active.'));
+maintenance.scan().catch(error=>console.error('Maintenance startup scan deferred; periodic recovery remains active:',error.code??error.name));
 client.on('error', error => console.error('Discord client error:', error.code ?? error.name));
 client.on('messageCreate', message => {
+  maintenance.handleMessage(message).catch(error=>console.error('Content rule deferred:',error.code??error.name));
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{requests.stop();native.stop();progression.stop();client.destroy();await pool.end();process.exit(0);});
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{requests.stop();native.stop();progression.stop();maintenance.stop();client.destroy();await pool.end();process.exit(0);});
 console.log('Agent Smith ready. No AI access-control path exists.');

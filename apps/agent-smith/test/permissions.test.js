@@ -26,7 +26,11 @@ test('rules accessible before membership but cannot be edited by everyone',()=>{
 });
 test('all slash command definitions serialize',()=>{
   const json=commands.map(x=>x.toJSON());
-  assert.deepEqual(json.map(x=>x.name).sort(),['accept','join','request','requests','interest','pending','review','revoke','trivia','answer','profile','mod','ranks','xp','faith-review','smith-control'].sort());
+  const required=['accept','join','request','requests','interest','pending','review','revoke','trivia','answer','profile','mod','ranks','xp','faith-review','smith-control',
+   'onboarding','interests','onboarding-recover','smith','report','cases','case','case-note','case-close','member-info','mod-history',
+   'warn','warnings','clear-warning','timeout','untimeout','kick','ban','unban','purge','access-request','access-approve','access-deny','access-revoke',
+   'balance','daily','shop','buy','inventory'];
+  assert.deepEqual(json.map(x=>x.name).sort(),required.sort());
   assert.equal(new Set(json.map(x=>x.name)).size,json.length);
 });
 test('overwrite principal types are explicit even when human users are not cached',()=>{

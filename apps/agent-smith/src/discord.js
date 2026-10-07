@@ -1,11 +1,12 @@
-import { Client, GatewayIntentBits, PermissionFlagsBits as P, OverwriteType } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, PermissionFlagsBits as P, OverwriteType } from 'discord.js';
 import { config, assertWriteTarget } from './config.js';
 import { assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, registerSecurityConfiguration } from './security-policy.js';
 import { installSecurityGate } from './security-gate.js';
 export async function connect({ allowWrites = false } = {}) {
   const cfg = config();
   if (allowWrites) assertWriteTarget(cfg);
-  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages], allowedMentions: { parse: [] } });
+  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages,
+    ...(cfg.contentEnabled?[GatewayIntentBits.MessageContent]:[])],partials:[Partials.Message,Partials.Channel], allowedMentions: { parse: [] } });
   try {
     await client.login(cfg.token);
     if (!client.isReady()) await new Promise(resolve => client.once('clientReady', resolve));

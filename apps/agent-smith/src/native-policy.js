@@ -1,9 +1,11 @@
 import { frameworks } from './blueprint.js';
 
 // Selection roles are signals, never access roles. The durable primary wins.
-export function nativeDecision({ pending, bot, selections, record, held = [], grants = [] }) {
+export function nativeDecision({ pending, bot, selections, record, held = [], grants = [], restricted = false }) {
   if (bot) return { status: 'ignore' };
+  if (restricted) return { status: 'blocked', reason: 'active-restriction' };
   if (pending !== false) return { status: 'waiting-screening' };
+  if(record?.onboarding_flow==='staged'&&!record.rules_version_accepted)return {status:'waiting-rules'};
   if (selections.length > 1) return { status: 'blocked', reason: 'multiple-selections' };
   if (selections.length === 1 && !frameworks.includes(selections[0])) return { status: 'blocked', reason: 'invalid-selection' };
   const primary = record?.primary_framework;
@@ -18,6 +20,7 @@ export function nativeDecision({ pending, bot, selections, record, held = [], gr
   }
   if (selections.length !== 1) return { status: 'waiting-selection' };
   const candidate = primary ?? selections[0];
+  if(primary&&record?.onboarding_flow==='staged'&&!record.interests_completed_at)return {status:'waiting-interests',primary};
   return { status: primary ? 'ready' : 'initialize', primary: candidate };
 }
 

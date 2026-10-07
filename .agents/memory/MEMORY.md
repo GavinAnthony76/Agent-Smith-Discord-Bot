@@ -11,3 +11,4 @@
 - [Continuous uptime](discord-continuous-uptime.md) — Smith must stay online without an active workspace session; workflow restarts alone do not meet the Owner's requirement.
 - [Community help restriction](discord-community-help-intent.md) — Owner approved retaining the extra everyone Send Messages denial; recognize only the reviewed restriction.
 - [Unrecorded framework review](unrecorded-framework-review.md) — Owner chose manual case-by-case review; later native choices do not establish older role provenance.
+- [Maintenance rollout](discord-upgrade-rollout.md) — staged activation is an explicit Owner rollout; preserve the working native path and never invent historical consent.

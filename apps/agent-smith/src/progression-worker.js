@@ -9,6 +9,7 @@ export async function auditProgressionRoles({ guild, resource, config, readOnboa
   const errors = [], ids = new Set();
   for (const definition of rankDefinitions) {
     try {
+      if(definition.botRewardable!==true)throw new Error('Rank must be explicitly bot-rewardable.');
       const id = await resource('role', definition.name);
       ids.add(id);
       const role = guild.roles.cache.get(id);

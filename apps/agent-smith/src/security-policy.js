@@ -20,7 +20,7 @@ export const FORBIDDEN_COMMAND_NAMES = new Set([
   'nuke', 'reset', 'delete-channel', 'delete-role'
 ]);
 export const ROLE_WORKFLOWS = new Set(['member-command', 'native-reconciliation', 'progression-reconciliation', 'approval-recovery']);
-export const GRANTABLE_ROLE_NAMES = new Set(roleNames);
+export const GRANTABLE_ROLE_NAMES = new Set([...roleNames,'NEW ARRIVAL']);
 export function securityLimits(env = process.env) {
   const purge = Number(env.SMITH_MAX_PURGE ?? 50);
   if (!Number.isInteger(purge) || purge < 1 || purge > 100) throw new Error('SMITH_MAX_PURGE must be an integer from 1 to 100.');

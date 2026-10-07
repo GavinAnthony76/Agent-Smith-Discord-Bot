@@ -9,6 +9,7 @@ export const progressionConfig = {
   timezone: 'America/Chicago',
   sources: {
     trivia: { amount: 10, cooldownMs: 600000, dailyCap: 30, automatic: true },
+    text: {amount:5,cooldownMs:60000,dailyCap:60,automatic:true},
     helpful_answer: { amount: 40, cooldownMs: 3600000, dailyCap: 80, automatic: false },
     verified_event: { amount: 50, cooldownMs: 14400000, dailyCap: 100, automatic: false },
     completed_activity: { amount: 30, cooldownMs: 3600000, dailyCap: 60, automatic: false }
@@ -19,5 +20,5 @@ export const progressionConfig = {
 };
 export const rankName = (framework, level) => `${framework} • ${titles[framework][level - 1]}`;
 export const rankDefinitions = Object.keys(titles).flatMap(framework =>
-  thresholds.map((_, index) => ({ framework, level: index + 1, name: rankName(framework, index + 1) })));
+  thresholds.map((_, index) => ({ framework, level: index + 1, name: rankName(framework, index + 1),botRewardable:true })));
 export const faithDisclaimer = 'Faith titles recognize community participation and service, not spiritual worth, teaching/moderation authority, or unquestionable religious authority.';

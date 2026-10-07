@@ -168,3 +168,17 @@ mtime_ms = 1791290848494
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/6c1e0455-026f-4011-ac89-e1087f14306f/38aa4ac1-0cd6-4206-bd33-d0f33fccdc4f"
 storage_version_token = "1791290869760874"
 content_type = "text/html"
+
+[[outputs]]
+id = "x_5P1QWvB5ho8XgHLgV1X"
+uri = "file://reports/agent-smith-upgrade.html"
+type = "html"
+title = "Agent Smith upgrade report"
+description = "Implemented changes, preservation checks, migration and command details, test results, manual walkthrough, and clearly identified unfinished scope."
+logical_id = "f285d05a-a3ca-422f-9350-ab46d3244768"
+content_hash = "sha256:5a1ada14cc11b1155a0e2fe812ea6917152d4231f9a0b3816e7009665f23f89d"
+size = 21464
+mtime_ms = 1791333952132
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/f285d05a-a3ca-422f-9350-ab46d3244768/03813e9c-1d0b-4447-a6df-cc1505ad513c"
+storage_version_token = "1791333952875075"
+content_type = "text/html"

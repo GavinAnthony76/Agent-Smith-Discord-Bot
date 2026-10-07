@@ -72,7 +72,8 @@ export function pendingMessage(rows, after = null) {
       const id = parseRequestId(String(request.id));
       return new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`${PREFIX}approve:${id}`).setLabel(`Approve #${id}`).setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`${PREFIX}deny:${id}`).setLabel(`Deny #${id}`).setStyle(ButtonStyle.Danger)
+        new ButtonBuilder().setCustomId(`${PREFIX}deny:${id}`).setLabel(`Deny #${id}`).setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`smith:maintenance:moreinfo:${id}`).setLabel('Ask for more info').setStyle(ButtonStyle.Secondary)
       );
     }), ...(navigation.components.length ? [navigation] : [])],
     allowedMentions: { parse: [] }

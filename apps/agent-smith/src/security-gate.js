@@ -5,6 +5,7 @@ import { protectedResources, assertUnprotected } from './protected-resources.js'
 import { assertPermission, assertHigherRole, assertRoleChannelGrants } from './permissions.js';
 import { PermissionFlagsBits as P } from 'discord.js';
 import { moderationPermissions, assertTarget } from './moderation-policy.js';
+import { canModerate,canGrantFramework } from './authorization.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -46,8 +47,9 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
           const target=await guild.members.fetch({user:uid,force:true});
           assertHigherRole(bot,target,guild.ownerId,'Smith must be above the member receiving role changes.');
           if(context.actorId && context.actorId!==uid) {
-            if(![...cfg.owners,...(cfg.approvers??[])].includes(context.actorId))throw new Error('Role approval/revocation requires an allowlisted human.');
-            assertHigherRole(await guild.members.fetch({user:context.actorId,force:true}),target,guild.ownerId);
+            const actor=await guild.members.fetch({user:context.actorId,force:true});
+            if(!canGrantFramework(actor,cfg,guild))throw new Error('Role approval/revocation requires an allowlisted human or Admin.');
+            assertHigherRole(actor,target,guild.ownerId);
           }
         });
       }
@@ -60,11 +62,13 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
           : method === 'DELETE' ? 'kick' : method === 'PATCH' && Object.keys(body).every(k => k === 'communication_disabled_until')
             ? body.communication_disabled_until === null ? 'untimeout' : 'timeout' : null;
         if (!op || uid === cfg.clientId || context?.kind !== 'moderation'
-          || context.operation !== op || context.subject !== uid || !cfg.owners.includes(context.actorId)) {
+          || context.operation !== op || context.subject !== uid || !context.actorId
+          || (['kick','ban','unban'].includes(op)&&!cfg.owners.includes(context.actorId))) {
           throw new Error('Moderation requires the authenticated, validated interactive workflow; role replacement and nickname management are disabled.');
         }
         return privileged(async () => {
           const actor = await guild.members.fetch({ user: context.actorId, force: true });
+          if(!canModerate(actor,cfg,guild))throw new Error('Authenticated moderator authority required.');
           assertPermission(actor, moderationPermissions[op]);
           assertPermission(bot, moderationPermissions[op]);
           if (op !== 'unban') assertTarget({ actor, bot, target: await guild.members.fetch({ user: uid, force: true }),
@@ -139,9 +143,10 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
         if (context?.kind === 'notification' && context.source === 'request-expiry' && recipientId === context.subject
           && method === 'POST' && suffix === '/messages') return original(request);
         if (context?.kind !== 'moderation' || context.operation !== 'warn'
-          || !cfg.owners.includes(context.actorId) || recipientId !== context.subject) {
+          || !context.actorId || recipientId !== context.subject) {
           throw new Error('Direct messages require the exact authenticated warning recipient.');
         }
+        if(!canModerate(await guild.members.fetch({user:context.actorId,force:true}),cfg,guild))throw new Error('Warning delivery requires authenticated moderator authority.');
         assertNotOwner(guild, recipientId, cfg);
       }
       return !target.guildId ? privileged() : original(request);
@@ -150,6 +155,7 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
       && context?.kind === 'notification' && context.source === 'request-expiry' && body.recipient_id === context.subject) return original(request);
     if (/^\/users\/@me\/channels$/.test(route) && method === 'POST'
       && context?.kind === 'moderation' && context.operation === 'warn' && body.recipient_id === context.subject) {
+      if(!context.actorId||!canModerate(await guild.members.fetch({user:context.actorId,force:true}),cfg,guild))throw new Error('Warning notification requires authenticated moderator authority.');
       assertNotOwner(guild, body.recipient_id, cfg); return privileged();
     }
     if (/^\/applications\/\d+\/guilds\/\d+\/commands(?:\/\d+)?$/.test(route)) {

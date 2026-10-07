@@ -12,7 +12,7 @@ export function withdrawalAction(i) {
 }
 export function myRequestsMessage(rows) {
   return { content: rows.length ? ['**Your recent community requests**',
-    ...rows.map(r => `Request #${r.id} — ${r.framework} — **${r.status}**${requestAge(r)}`),
+    ...rows.map(r => `Request #${r.id} — ${r.framework} — **${r.status}**${requestAge(r)}${r.info_request_reason?`\nStaff asked: ${r.info_request_reason.slice(0,200)}`:''}`),
     'Expired or withdrawn requests grant no access. You may submit a new request.'].join('\n') : 'You have no community requests.',
     components: rows.filter(r => r.status === 'pending').slice(0,4).map(r => new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId(`smith:request:withdraw:${r.id}`).setLabel(`Withdraw #${r.id}`).setStyle(ButtonStyle.Secondary))),

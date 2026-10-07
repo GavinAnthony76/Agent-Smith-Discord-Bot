@@ -109,6 +109,9 @@ export async function botFixture() {
     './security-policy.js': securityPolicy,
     './request-lifecycle.js': {...requestLifecycle,createRequestLifecycle:()=>({start(){},stop(){}})},
     './smith-control.js': {createSmithControl:()=>({handle:async()=>{throw new Error('Control settings must use their isolated tests.');}})},
+    './maintenance-cases.js': {createCases:()=>({record:inert,restricted:async()=>false})},
+    './maintenance.js': {createMaintenance:()=>({handle:async()=>false,scan:inert,join:inert,leave:inert,event(){},handleMessage:inert,ensureMember:inert,enqueue(){},stop(){}})},
+    './authorization.js': {canGrantFramework:()=>false},
     './progression.js': { createProgression: async () => ({
       enqueue: async () => {}, scan: async () => {}, stop() {},
       earnTx: async () => { throw new Error('Progression earning must use its isolated test fixture.'); }

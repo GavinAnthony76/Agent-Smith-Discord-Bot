@@ -32,7 +32,8 @@ export async function createProgression({ guild, client, cfg }, dependencies) {
   }
   async function earnTx(db, { uid, framework, source, key, actor, reason, correction, now = new Date() }) {
     if (!titles[framework] || !key || key.length > 180 || !reason?.trim()) throw new Error('Framework, stable event ID and reason required.');
-    if (source !== 'trivia') assertAwardActor(cfg, actor, uid, source === 'correction');
+    if (!['trivia','text'].includes(source)) assertAwardActor(cfg, actor, uid, source === 'correction');
+    if(source==='text'&&actor!==cfg.clientId)throw new Error('Only the deterministic text pipeline may award text XP.');
     if (source === 'trivia' && framework !== 'Gaming') throw new Error('Trivia XP belongs to Gaming only.');
     if (source === 'trivia' && actor !== cfg.clientId) throw new Error('Only the verified trivia pipeline may award trivia XP.');
     await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`xp:${guild.id}:${uid}:${framework}`]);

@@ -14,4 +14,5 @@ CREATE TABLE IF NOT EXISTS native_jobs(guild_id text NOT NULL,user_id text NOT N
 CREATE TABLE IF NOT EXISTS native_alerts(id bigserial PRIMARY KEY,guild_id text NOT NULL,user_id text NOT NULL,fingerprint text NOT NULL,reason text NOT NULL,detail jsonb NOT NULL,delivered_at timestamptz,UNIQUE(guild_id,user_id,fingerprint));
 `);
 await pool.query(await readFile(new URL('./security-settings-schema.sql', import.meta.url), 'utf8'));
+await pool.query(await readFile(new URL('./maintenance-schema.sql', import.meta.url), 'utf8'));
 await pool.end(); console.log('Database ready');

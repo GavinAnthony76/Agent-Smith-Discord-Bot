@@ -5,7 +5,7 @@ import { assertAssignableRole } from './policy.js';
 import { assertNotOwner, isProtectedOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
 import { nativeDecision, reconcileNative } from './native-policy.js';
 
-export async function createNativeReconciler({ guild, client }, dependencies) {
+export async function createNativeReconciler({ guild, client, restrictionActive = async () => false }, dependencies) {
   if (guild.id !== TARGET_GUILD_ID) throw new Error('Native reconciliation is restricted to Hallowed Core.');
   const { pool, locked, resource, audit } = dependencies ?? await import('./db.js');
   const ids = Object.fromEntries(await Promise.all(
@@ -15,7 +15,7 @@ export async function createNativeReconciler({ guild, client }, dependencies) {
     const member = await guild.members.fetch({ user: uid, force: true });
     const record = (await db.query('SELECT * FROM members WHERE guild_id=$1 AND user_id=$2 FOR UPDATE', [guild.id, uid])).rows[0];
     const grants = (await db.query('SELECT framework FROM grants WHERE guild_id=$1 AND user_id=$2', [guild.id, uid])).rows.map(r => r.framework);
-    return { member, record, grants, pending: member.pending, bot: member.user.bot,
+    return { member, record, grants, restricted: await restrictionActive(uid), pending: member.pending, bot: member.user.bot,
       held: frameworks.filter(f => member.roles.cache.has(ids[f])),
       selections: frameworks.filter(f => member.roles.cache.has(ids[`Selection: ${f}`])) };
   }

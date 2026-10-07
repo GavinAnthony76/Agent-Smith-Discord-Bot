@@ -16,7 +16,8 @@ export function config(env = process.env) {
   assertWriteTarget({ guildId }, env);
   return Object.freeze({ token: env.DISCORD_TOKEN, clientId: env.DISCORD_CLIENT_ID, guildId,
     databaseUrl: env.DATABASE_URL, owners: Object.freeze(owners),
-    ownerDiscordId: env.OWNER_DISCORD_ID, approvers: Object.freeze(ids('APPROVER_IDS')) });
+    ownerDiscordId: env.OWNER_DISCORD_ID, approvers: Object.freeze(ids('APPROVER_IDS')),
+    contentEnabled:env.SMITH_ENABLE_MESSAGE_CONTENT==='true' });
 }
 
 export function assertWriteTarget(cfg, env = process.env) {

@@ -6,7 +6,7 @@ export function ranksGuide() {
   return [
     '**Framework progression — independent XP in Gaming, Faith and Tech**',
     ...Object.entries(titles).map(([framework, ladder]) => `**${framework}:** ${ladder.map((title, index) => `${index + 1}. ${title} (${thresholds[index].toLocaleString()} XP)`).join(' → ')}`),
-    '**Earning:** ' + Object.entries(progressionConfig.sources).map(([source, rate]) =>
+    '**Earning:** ' + Object.entries(progressionConfig.sources).filter(([source])=>source!=='text').map(([source, rate]) =>
       `${source}: ${rate.amount} XP, ${rate.cooldownMs / 60000}-minute cooldown, ${rate.dailyCap} XP/source/day${rate.automatic ? '' : ' (human verified)'}`).join('; '),
     `Shared daily maximum: ${progressionConfig.dailyCap} earned XP per framework (${progressionConfig.timezone}); capped awards may be partial.`,
     'No message-volume, command, bot, repeated-message, idle-voice or outside-framework XP. Trivia earns only for a correct, consumed Gaming question, not merely running a command.',
