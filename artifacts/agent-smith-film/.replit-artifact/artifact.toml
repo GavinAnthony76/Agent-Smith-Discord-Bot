@@ -1,0 +1,29 @@
+kind = "video"
+videoAspectRatio = "16:9"
+previewPath = "/agent-smith-film/"
+title = "Agent Smith — Hallowed Core"
+description = "A 55-second widescreen animated project film with the Hallowed Core emblem, human-reviewed access, moderation and community maintenance."
+version = "1.0.0"
+id = "artifacts/agent-smith-film"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/agent-smith-film/" ]
+localPort = 22495
+
+[services.development]
+run = "pnpm --filter @workspace/agent-smith-film run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/agent-smith-film", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/agent-smith-film/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22495"
+BASE_PATH = "/agent-smith-film/"

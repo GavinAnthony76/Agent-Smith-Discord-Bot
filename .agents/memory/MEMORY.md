@@ -13,3 +13,4 @@
 - [Unrecorded framework review](unrecorded-framework-review.md) — Owner chose manual case-by-case review; later native choices do not establish older role provenance.
 - [Maintenance rollout](discord-upgrade-rollout.md) — staged activation is an explicit Owner rollout; preserve the working native path and never invent historical consent.
 - [Feed delivery recovery](feed-delivery-recovery.md) — hold uncertain sends instead of auto-reposting; nonce deduplication is not a durable exactly-once guarantee.
+- [Video soundtrack timing](video-audio-duration.md) — measure generated duration and actual media-clock alignment; requested length and play events are not guarantees.

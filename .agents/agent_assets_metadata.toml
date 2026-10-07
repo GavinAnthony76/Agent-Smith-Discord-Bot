@@ -182,3 +182,10 @@ mtime_ms = 1791333952132
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/f285d05a-a3ca-422f-9350-ab46d3244768/03813e9c-1d0b-4447-a6df-cc1505ad513c"
 storage_version_token = "1791333952875075"
 content_type = "text/html"
+
+[[outputs]]
+id = "buznd5VkoEeau2Yz1jmwC"
+uri = "file://artifacts/agent-smith-film/public/audio/bg_music.mp3"
+type = "audio"
+title = "Hallowed Core instrumental film score"
+description = "Generated music: Original cinematic electronic instrumental for a 55-second modern community technology film. Warm low synth pulse, restrained deep percussion, shimmering soft mallets and hopeful har…"
