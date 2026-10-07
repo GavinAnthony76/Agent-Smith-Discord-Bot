@@ -19,7 +19,7 @@ test('login occurs once when Discord has sufficient session allowance', async ()
 
 test('the worker waits through exhaustion without attempting Gateway login', async () => {
   const responses = [gateway(0, 45000), gateway(0, 10000), gateway(1)];
-  const sleeps = [], logs = [];
+  const sleeps = [], logs = [], phases = [];
   let logins = 0, reads = 0;
   await loginWhenAllowed({
     waitForSession: true,
@@ -31,12 +31,14 @@ test('the worker waits through exhaustion without attempting Gateway login', asy
     },
     now: () => Date.UTC(2026, 9, 7, 22, 0),
     log: message => logs.push(message),
+    onStartupState: phase => phases.push(phase),
   });
   assert.deepEqual(sleeps, [50000, 15000]);
   assert.equal(reads, 3);
   assert.equal(logins, 1);
   assert.equal(logs.length, 2);
   assert.match(logs[0], /No Gateway login attempted/);
+  assert.deepEqual(phases, ['waiting_for_discord', 'waiting_for_discord', 'connecting']);
 });
 
 test('administrative one-off commands fail clearly rather than wait indefinitely', async () => {

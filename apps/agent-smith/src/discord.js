@@ -3,7 +3,7 @@ import { config, assertWriteTarget } from './config.js';
 import { assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, registerSecurityConfiguration } from './security-policy.js';
 import { installSecurityGate } from './security-gate.js';
 import { loginWhenAllowed } from './gateway-startup.js';
-export async function connect({ allowWrites = false, waitForSession = false } = {}) {
+export async function connect({ allowWrites = false, waitForSession = false, onStartupState } = {}) {
   const cfg = config();
   if (allowWrites) assertWriteTarget(cfg);
   const makeClient = () => new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages,
@@ -15,6 +15,7 @@ export async function connect({ allowWrites = false, waitForSession = false } = 
       getGateway: () => client.rest.get(Routes.gatewayBot()),
       login: () => client.login(cfg.token),
       waitForSession,
+      onStartupState,
       resetAfterSessionLimit: async () => {
         await client.destroy();
         client = makeClient();

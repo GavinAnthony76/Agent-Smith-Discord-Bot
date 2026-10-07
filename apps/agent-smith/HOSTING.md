@@ -1,4 +1,4 @@
-# Agent Smith — Reserved VM hosting preparation
+# Agent Smith — Reserved VM hosting
 
 ## Current Owner request
 
@@ -15,21 +15,26 @@ was running, and no active production deployment existed.
 API artifact's production configuration for Smith. Its production build now runs
 Smith's offline preflight, and its run command launches the standalone bot worker.
 API source, development command, local port and preview paths remain unchanged.
-The obsolete production API health probe and explicit HTTP port were removed.
+The initial worker-only preparation removed the obsolete API health probe.
+The Owner later approved a minimal process-status and Discord-readiness listener
+because published artifact startup continued to require an HTTP response.
 
-The global deployment target is Reserved VM (`vm`) with `ignorePorts = true`,
-through schema-validated configuration. This is preparation only: it does not
+The global deployment target remains Reserved VM (`vm`). HTTP startup checks
+are now enabled with `ignorePorts = false` through schema-validated configuration;
+the worker binds its approved status listener to `PORT`. This does not
 purchase a VM or publish. Review Publishing's actual Reserved VM/background-worker
 selection, price, production secrets and database-copy settings before proceeding.
 Changing only `.replit`'s run command is insufficient: artifact production
-commands take precedence. Do not add an HTTP server or a second development Gateway.
+commands take precedence. Do not add a dashboard, private data endpoints, or a
+second development Gateway. The only approved web surface is the minimal status check.
 
 ## Development does not depend on this document
 
 Agent Smith runs directly in the development workspace through the **Agent Smith
 Bot** workflow, or `pnpm run bot` from the root when that workflow is stopped.
-Do not run both. No VM, HTTP server, website, or publishing is required to build
-and test it. Template API/canvas services are independent and optional.
+Do not run both. No VM, website, or publishing is required for offline tests.
+The running bot now includes its minimal status listener; it is not the template
+API service. Template API/canvas services are independent and optional.
 
 This document records the approved hosting preparation and cutover safeguards.
 It is not authorization to create a paid Reserved VM, publish,
@@ -41,7 +46,8 @@ The worker's production configuration is prepared, but no production deployment
 was started by this configuration change. The registered artifact remains labeled
 API Server for development; only its production commands now run Smith.
 Recheck actual deployment status at cutover. The API server code is not the bot
-launcher; no dummy web server was added and the bot was not moved.
+launcher. The approved status listener is inside Smith's existing worker process,
+not a separate API server or second bot.
 
 Any suitable continuously running Node.js worker host can execute the same bot.
 On Replit, Reserved VM background-worker hosting is an option for unattended
@@ -52,7 +58,7 @@ Gateway operation. Development uses the existing workflow instead.
 | Setting | Value |
 | --- | --- |
 | Deployment type | Reserved VM (always running) |
-| Application type | Background worker, not web server |
+| Application type | Long-running bot worker with an approved minimal status listener |
 | Instances | One gateway process |
 | Runtime | Node.js 24; minimum 22.12 |
 | Command working directory | Repository root |
@@ -60,8 +66,8 @@ Gateway operation. Development uses the existing workflow instead.
 | Production build | `pnpm --filter @workspace/agent-smith run preflight` (offline, no database or Discord connection) |
 | Additional readiness verification | `pnpm --filter @workspace/agent-smith run test` |
 | Run command | `pnpm --filter @workspace/agent-smith run start` |
-| Public ports / routes | None for the bot |
-| HTTP health endpoint | None; this is a non-HTTP worker |
+| Public ports / routes | Configured `PORT`; `/api` and `/api/healthz` are liveness, `/api/readyz` is Discord readiness |
+| HTTP health endpoint | Status and readiness only; no identities, settings, private records or credentials |
 | Database schema changes | Managed Publish schema review only |
 
 The JavaScript bot needs no compilation. Do not use the root workspace build as
@@ -188,16 +194,17 @@ Recovery and future releases:
    feed schema remains incomplete. No Gateway starts during setup.
 3. Keep the workspace bot stopped. Review the development-to-production schema
    diff in Publishing, then republish the single Reserved VM worker with
-   `ignorePorts = true`. Do not select an overwrite/copy-development-data option.
+   the approved status listener and HTTP startup checks enabled. Do not select
+   an overwrite/copy-development-data option.
    Stop if the review proposes dropping or recreating existing state.
 4. Let Publish apply managed production schema changes. No migration runs in the
    build command or bot startup. Startup checks schema read-only **before**
    connecting to Discord and fails with recovery guidance if it is incomplete.
 5. Verify production has both feed tables, the log reaches “Agent Smith ready,”
    and there are no new missing-schema errors or restart loops. Check worker
-   health checks too: the broken release logged HTTP `/api` probes despite the
-   saved non-HTTP worker configuration. Do not add a dummy HTTP server to hide
-   a configuration issue.
+   health checks too: `/api` should report process liveness, while `/api/readyz`
+   must remain 503 until the Gateway and bot startup are actually ready. A
+   successful liveness response is not proof that Smith is online.
 6. Confirm production history is preserved and the workspace Gateway remains
    stopped. Republishing is incomplete until these live checks succeed.
 
@@ -227,12 +234,22 @@ sessions. A successful build is not proof of a successful Gateway connection.
 Republish is user-controlled, and live logs must reach `Agent Smith ready`
 without subsequent crashes before reporting that Smith is online.
 
-The current published artifact was also observed enforcing HTTP `/api` startup
+The previously published artifact was observed enforcing HTTP `/api` startup
 checks despite the saved `ignorePorts = true` worker configuration. Waiting for
 Discord's reset does not by itself resolve that publishing-layer mismatch.
-Do not add a status server without Owner approval: the previously approved
-worker-only setup did not include an HTTP endpoint. If an endpoint is approved,
-separate process liveness from Discord readiness and expose no private data.
+The Owner subsequently approved “Add status check (recommended).” The worker
+now includes this listener in the same process. It starts after the read-only
+schema check, before Gateway login, allowing it to remain alive while awaiting
+Discord's reset. `/api` reports liveness and `/api/readyz` returns 503 while
+starting, waiting, connecting or disconnected. Only completed bot startup plus
+`client.isReady()` produces readiness 200. Shutdown sets readiness false.
+Responses include only `status` and `ready`; routes accept GET/HEAD only.
+No member data, IDs, error details, secrets or dashboard are exposed.
+
+Deploy this repair to the existing Reserved VM using Publish; do not start
+the workspace Gateway to test it. Verify the published status endpoint and
+`Agent Smith ready` logs after Discord permits login. Code changes and offline
+tests do not establish live uptime before republishing.
 
 ## Official references
 

@@ -16,6 +16,7 @@ export async function loginWhenAllowed({
   now = Date.now,
   log = message => console.log(message),
   resetAfterSessionLimit,
+  onStartupState = () => {},
 }) {
   for (;;) {
     const gateway = await getGateway();
@@ -34,6 +35,7 @@ export async function loginWhenAllowed({
         throw new Error(`Discord Gateway login allowance exhausted; retry after ${new Date(resetAt + 5000).toISOString()}.`);
       }
       log(message);
+      onStartupState('waiting_for_discord');
       let remainingMs = Math.max(5000, limit.reset_after + 5000);
       while (remainingMs > 0) {
         const chunk = Math.min(remainingMs, MAX_TIMER_MS);
@@ -45,6 +47,7 @@ export async function loginWhenAllowed({
     }
 
     try {
+      onStartupState('connecting');
       return await login();
     } catch (error) {
       // Another process may consume the allowance between REST and login.
@@ -54,6 +57,7 @@ export async function loginWhenAllowed({
       // Client.login destroys its client after failure. The connector must
       // replace it before any retry; do not reuse a destroyed SDK client.
       await resetAfterSessionLimit();
+      onStartupState('waiting_for_discord');
       log('Discord Gateway allowance changed before login. Rechecking in five seconds without repeated identification attempts.');
       await sleep(5000);
     }

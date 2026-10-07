@@ -20,6 +20,7 @@ import { createMaintenance } from './maintenance.js';
 import { canGrantFramework } from './authorization.js';
 import { createFeeds } from './feeds.js';
 import { assertFeedSchema } from './feed-schema-check.js';
+import { createWorkerStatus } from './worker-status.js';
 // Fail before Gateway login rather than entering a Discord-connected crash loop.
 try {
   await assertFeedSchema(pool);
@@ -27,7 +28,21 @@ try {
   await pool.end();
   throw error;
 }
-const { client,guild,cfg } = await connect({ allowWrites: true, waitForSession: true });
+// One process: the status listener never starts a second Gateway connection.
+const statusPort = Number(process.env.PORT ?? 8080);
+if (!Number.isInteger(statusPort) || statusPort < 1 || statusPort > 65535) {
+  await pool.end();
+  throw new Error('PORT must be a valid TCP port for the worker status listener.');
+}
+let connectedClient;
+const workerStatus = createWorkerStatus({ isDiscordReady: () => connectedClient?.isReady() ?? false });
+await workerStatus.listen({ port: statusPort });
+console.log('Worker status listener started; Discord readiness is reported separately.');
+const { client,guild,cfg } = await connect({
+  allowWrites: true, waitForSession: true,
+  onStartupState: phase => workerStatus.setPhase(phase),
+});
+connectedClient = client;
 const feeds=createFeeds({guild,client,pool,resource,audit});
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
 const control = createSmithControl({guild,cfg,pool,resource,feeds});
@@ -273,5 +288,14 @@ client.on('messageCreate', message => {
   maintenance.handleMessage(message).catch(error=>console.error('Content rule deferred:',error.code??error.name));
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{requests.stop();native.stop();progression.stop();maintenance.stop();await feeds.stop();client.destroy();await pool.end();process.exit(0);});
+let shuttingDown = false;
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{
+ if(shuttingDown)return;
+ shuttingDown=true;
+ workerStatus.setPhase('stopping');
+ requests.stop();native.stop();progression.stop();maintenance.stop();
+ await feeds.stop();await client.destroy();await workerStatus.close();await pool.end();
+ process.exit(0);
+});
+workerStatus.setPhase('ready');
 console.log('Agent Smith ready. No AI access-control path exists.');
