@@ -1,14 +1,26 @@
-import { Client, GatewayIntentBits, Partials, PermissionFlagsBits as P, OverwriteType } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, PermissionFlagsBits as P, OverwriteType, Routes } from 'discord.js';
 import { config, assertWriteTarget } from './config.js';
 import { assertOwnerConfiguration, assertSafeBot, assertSafeHierarchy, registerSecurityConfiguration } from './security-policy.js';
 import { installSecurityGate } from './security-gate.js';
-export async function connect({ allowWrites = false } = {}) {
+import { loginWhenAllowed } from './gateway-startup.js';
+export async function connect({ allowWrites = false, waitForSession = false } = {}) {
   const cfg = config();
   if (allowWrites) assertWriteTarget(cfg);
-  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages,
+  const makeClient = () => new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages,
     ...(cfg.contentEnabled?[GatewayIntentBits.MessageContent]:[])],partials:[Partials.Message,Partials.Channel], allowedMentions: { parse: [] } });
+  let client = makeClient();
   try {
-    await client.login(cfg.token);
+    client.rest.setToken(cfg.token);
+    await loginWhenAllowed({
+      getGateway: () => client.rest.get(Routes.gatewayBot()),
+      login: () => client.login(cfg.token),
+      waitForSession,
+      resetAfterSessionLimit: async () => {
+        await client.destroy();
+        client = makeClient();
+        client.rest.setToken(cfg.token);
+      },
+    });
     if (!client.isReady()) await new Promise(resolve => client.once('clientReady', resolve));
     if (client.user.id !== cfg.clientId) throw new Error('Application ID does not match bot');
     const guild = await client.guilds.fetch(cfg.guildId);

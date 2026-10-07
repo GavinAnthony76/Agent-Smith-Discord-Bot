@@ -27,7 +27,7 @@ try {
   await pool.end();
   throw error;
 }
-const { client,guild,cfg } = await connect({ allowWrites: true });
+const { client,guild,cfg } = await connect({ allowWrites: true, waitForSession: true });
 const feeds=createFeeds({guild,client,pool,resource,audit});
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
 const control = createSmithControl({guild,cfg,pool,resource,feeds});

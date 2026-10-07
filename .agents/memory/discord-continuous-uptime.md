@@ -4,6 +4,7 @@ description: The Owner requires Smith to stay online without an active developme
 ---
 
 Smith must remain online when the Owner is away from the workspace.
+The Owner repeated: “the bot should be online 24/7.”
 
 **Why:** The user said the biggest issue is that the bot is always offline and
 explicitly requested that it remain online.

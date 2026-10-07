@@ -212,6 +212,28 @@ audit 59, moderation cases/notes 0, request notifications 0, legacy feed items 0
 These are observations, not a backup or fixed acceptance thresholds; production
 may legitimately gain records.
 
+## Gateway login allowance and unattended startup
+
+The long-running worker checks Discord's Gateway session-start allowance before
+logging in. If it is exhausted, it stays running and sleeps until the reported
+reset plus a small safety margin, then reads the allowance again. It does not
+repeatedly identify, start a second bot, or claim to be ready while waiting.
+Discord.js owns reconnect/resume after a successful connection. Invalid
+credentials, unsafe configuration and unrelated errors still fail explicitly.
+One-off administration commands report exhaustion instead of waiting indefinitely.
+
+A Reserved VM must run the **published** worker independently of workspace
+sessions. A successful build is not proof of a successful Gateway connection.
+Republish is user-controlled, and live logs must reach `Agent Smith ready`
+without subsequent crashes before reporting that Smith is online.
+
+The current published artifact was also observed enforcing HTTP `/api` startup
+checks despite the saved `ignorePorts = true` worker configuration. Waiting for
+Discord's reset does not by itself resolve that publishing-layer mismatch.
+Do not add a status server without Owner approval: the previously approved
+worker-only setup did not include an HTTP endpoint. If an endpoint is approved,
+separate process liveness from Discord readiness and expose no private data.
+
 ## Official references
 
 - [Deployment types: Reserved VM and background workers](https://docs.replit.com/features/publishing/deployment-types)
