@@ -7,6 +7,24 @@ import { assertOwnerConfiguration } from './security-policy.js';
 export const AUTOMOD_ACTIONS = Object.freeze(['log-only','escalate']);
 export const smithControlCommand = new SlashCommandBuilder().setName('smith-control')
   .setDescription('Owner-only audited operational settings').setDMPermission(false).setDefaultMemberPermissions(P.Administrator)
+  .addSubcommand(s=>s.setName('feed-save').setDescription('Save a disabled public RSS/Atom source; edits require fresh approval')
+    .addStringOption(o=>o.setName('id').setDescription('Lowercase source ID').setRequired(true).setMaxLength(40))
+    .addStringOption(o=>o.setName('url').setDescription('Public HTTPS feed, port 443 only').setRequired(true).setMaxLength(2048))
+    .addStringOption(o=>o.setName('destination').setDescription('Existing framework news channel').setRequired(true)
+      .addChoices(...['faith-news','gaming-news','tech-news'].map(value=>({name:value,value}))))
+    .addIntegerOption(o=>o.setName('minutes').setDescription('Poll interval, default 15 minutes').setMinValue(5).setMaxValue(1440))
+    .addBooleanOption(o=>o.setName('threads').setDescription('Optional public discussion threads, default off; permissions checked')))
+  .addSubcommand(s=>s.setName('feed-enable').setDescription('Explicit Owner approval or disable a saved source')
+    .addStringOption(o=>o.setName('id').setDescription('Saved source ID').setRequired(true).setMaxLength(40))
+    .addBooleanOption(o=>o.setName('enabled').setDescription('Approve and start polling, or stop it').setRequired(true)))
+  .addSubcommand(s=>s.setName('feed-status').setDescription('Source approvals, polling health and held uncertain deliveries')
+    .addStringOption(o=>o.setName('id').setDescription('Optional source ID').setMaxLength(40))
+    .addIntegerOption(o=>o.setName('page').setDescription('Browse sources and held deliveries, five per page').setMinValue(1).setMaxValue(10000)))
+  .addSubcommand(s=>s.setName('feed-resolve').setDescription('Review an unconfirmed delivery; never reposts it')
+    .addStringOption(o=>o.setName('id').setDescription('Source ID from feed-status').setRequired(true).setMaxLength(40))
+    .addStringOption(o=>o.setName('receipt').setDescription('Delivery receipt number from feed-status').setRequired(true).setMaxLength(19))
+    .addStringOption(o=>o.setName('message').setDescription('Existing Smith message ID, verified against saved content').setMaxLength(20))
+    .addBooleanOption(o=>o.setName('skip').setDescription('Explicitly suppress this entry permanently instead of confirming a message')))
   .addSubcommand(s=>s.setName('request-expiry').setDescription('Expiry window for new access requests; existing deadlines stay unchanged')
     .addIntegerOption(o=>o.setName('days').setDescription('Default 14 days').setRequired(true).setMinValue(1).setMaxValue(90)))
   .addSubcommand(s=>s.setName('automod').setDescription('Configure alerts only; no automatic punishment')
@@ -43,7 +61,7 @@ export const smithControlCommand = new SlashCommandBuilder().setName('smith-cont
 export function assertAutomodAction(action) {
   if (!AUTOMOD_ACTIONS.includes(action)) throw new Error('Automod is alerts-only: delete, warn, timeout, kick and ban are disabled.');
 }
-export function createSmithControl({guild,cfg,pool,resource}) {
+export function createSmithControl({guild,cfg,pool,resource,feeds}) {
   return {async handle(i) {
     try {
       if(i.guildId!==guild.id || i.user.bot) throw new Error('Authorized server and human owners only.');
@@ -52,9 +70,31 @@ export function createSmithControl({guild,cfg,pool,resource}) {
       await i.deferReply({flags:64});
       await guild.fetch();assertOwnerConfiguration(cfg,guild.ownerId);
       const sub=i.options.getSubcommand();
+      if(sub.startsWith('feed-')) {
+        if(!feeds)throw new Error('Integrated feed worker unavailable.');
+        let content;
+        const id=i.options.getString('id');
+        if(sub!=='feed-status'&&!/^[a-z0-9-]{1,40}$/.test(id??''))throw new Error('Invalid source ID.');
+        if(sub==='feed-save') {
+          await feeds.save({id,url:i.options.getString('url',true),destination:i.options.getString('destination',true),
+            interval:i.options.getInteger('minutes')??15,threads:i.options.getBoolean('threads')??false},i.user.id);
+          content=`Saved ${id} disabled. Review /smith-control feed-status, then explicitly approve with feed-enable. Existing history is preserved.`;
+        } else if(sub==='feed-enable') {
+          const enabled=i.options.getBoolean('enabled',true);
+          await feeds.approve(id,enabled,i.user.id);
+          content=`${id}: ${enabled?'Owner-approved; integrated polling enabled (up to five recent entries on first poll)':'disabled; history retained'}.`;
+        } else if(sub==='feed-resolve') {
+          const messageId=i.options.getString('message'),skip=i.options.getBoolean('skip')??false;
+          if(skip&&messageId||!skip&&!messageId)throw new Error('Choose an existing message ID OR skip=true.');
+          await feeds.resolve(id,i.options.getString('receipt',true),i.user.id,{messageId,skip});
+          content='Delivery review saved and audited. No new post or thread was created.';
+        } else if(sub==='feed-status')content=await feeds.status(id,i.options.getInteger('page')??1);
+        else throw new Error('Unknown feed control.');
+        await i.editReply({content:content.slice(0,1900),allowedMentions:{parse:[]}});return;
+      }
       if(sub==='status') {
         const rows=(await pool.query('SELECT key,value FROM bot_settings WHERE guild_id=$1 ORDER BY key',[guild.id])).rows;
-        await i.editReply({content:`**Operational settings**\n${rows.map(r=>`${r.key}: ${JSON.stringify(r.value)}`).join('\n')||'Defaults: request expiry 14 days; automod alerts-only.'}\nAutomatic punishments and AI execution remain disabled.`.slice(0,1900),allowedMentions:{parse:[]}});return;
+        await i.editReply({content:`**Operational settings**\nFeeds: integrated polling; /smith-control feed-status for approval and delivery health.\n${rows.map(r=>`${r.key}: ${JSON.stringify(r.value)}`).join('\n')||'Defaults: request expiry 14 days; automod alerts-only.'}\nAutomatic punishments and AI execution remain disabled.`.slice(0,1900),allowedMentions:{parse:[]}});return;
       }
       let key,value;
       if(sub==='text-xp') {

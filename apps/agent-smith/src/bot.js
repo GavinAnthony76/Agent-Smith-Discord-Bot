@@ -18,15 +18,17 @@ import { createSmithControl } from './smith-control.js';
 import { createCases } from './maintenance-cases.js';
 import { createMaintenance } from './maintenance.js';
 import { canGrantFramework } from './authorization.js';
+import { createFeeds } from './feeds.js';
 const { client,guild,cfg } = await connect({ allowWrites: true });
+const feeds=createFeeds({guild,client,pool,resource,audit});
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
-const control = createSmithControl({guild,cfg,pool,resource});
+const control = createSmithControl({guild,cfg,pool,resource,feeds});
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const cases=createCases({guild,client,cfg,pool,locked,audit});
 const moderation = createModeration({ guild, cfg, pool, resource, spam, recordCase:cases.record });
 const native = await createNativeReconciler({ guild, client, restrictionActive:cases.restricted });
 const progression = await createProgression({ guild, client, cfg });
-const maintenance=createMaintenance({guild,client,cfg,pool,locked,resource,audit,native,progression,moderation,cases});
+const maintenance=createMaintenance({guild,client,cfg,pool,locked,resource,audit,native,progression,moderation,cases,feeds});
 const handleProgression = createProgressionInteractions({ progression, guild, cfg, client, pool, resource, audit });
 const roleIds = Object.fromEntries(await Promise.all([...frameworks,'Member'].map(async f=>[f,await resource('role',f)])));
 const human = async id => {
@@ -252,6 +254,7 @@ for(const [event,action] of [['channelCreate','channel-created'],['channelDelete
 client.on('messageDelete',m=>{if(m.guildId===guild.id)maintenance.event('message-deleted',{messageId:m.id,channelId:m.channelId,authorId:m.author?.id??null});});
 client.on('messageUpdate',(_old,m)=>{if(m.guildId===guild.id)maintenance.event('message-edited',{messageId:m.id,channelId:m.channelId,authorId:m.author?.id??null});});
 requests.start();
+await feeds.start();
 native.scan().catch(() => console.error('Native startup scan deferred; periodic recovery remains active.'));
 progression.scan().catch(() => console.error('Progression startup scan deferred; recovery remains active.'));
 maintenance.scan().catch(error=>console.error('Maintenance startup scan deferred; periodic recovery remains active:',error.code??error.name));
@@ -260,5 +263,5 @@ client.on('messageCreate', message => {
   maintenance.handleMessage(message).catch(error=>console.error('Content rule deferred:',error.code??error.name));
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
-for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{requests.stop();native.stop();progression.stop();maintenance.stop();client.destroy();await pool.end();process.exit(0);});
+for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{requests.stop();native.stop();progression.stop();maintenance.stop();await feeds.stop();client.destroy();await pool.end();process.exit(0);});
 console.log('Agent Smith ready. No AI access-control path exists.');

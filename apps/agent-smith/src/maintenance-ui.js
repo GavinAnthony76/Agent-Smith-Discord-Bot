@@ -46,7 +46,7 @@ export function createMaintenanceUI(ctx) {
     (SELECT count(*) FROM progression_jobs WHERE guild_id=$1)::int AS progression`,[guild.id])).rows[0];
    lines.push(`Worker heartbeats: ${health.map(h=>`${h.worker}: ${new Date(h.last_seen_at).toISOString()}`).join('; ')||'not yet recorded'}`,
     `Pending reconciliation/access/reports/cases/XP: ${counts.native}/${counts.requests}/${counts.reports}/${counts.cases}/${counts.progression}`,
-    'Automod: passive by default; /smith-control status. Feeds: separate approved polling job, not claimed active.',
+    'Automod: passive by default; /smith-control status. Feeds: integrated worker; /smith-control feed-status for source approval/delivery health.',
     'Hosting: gateway runtime health does not establish a Reserved VM deployment.');
   }
   return lines.join('\n');
@@ -133,8 +133,18 @@ export function createMaintenanceUI(ctx) {
    await staff(i);const [, ,op,id]=custom.split(':');result=`Report #${id}: ${await reports.transition(id,i.user.id,op)}.`;
   } else if(panel||custom==='smith:maintenance:panel') {
    await staff(i);
-   result={content:`**Smith control panel${i.values?.[0]?` — ${i.values[0]}`:''}**\n${await status(await staff(i))}\nMembers/onboarding: /member-info, /onboarding-recover\nModeration: /mod, /cases, /case, /report\nFrameworks: /pending, /review, /revoke\nInterests: /interests\nChannels: protected; Owner manages structural changes manually\nFeeds: approved operator polling job\nXP: /xp, /ranks, /faith-review; economy not enabled\nSettings: /smith-control status, request-expiry, automod`,
+   if(i.values?.[0]==='FEEDS') {
+    if(!cfg.owners.includes(i.user.id))throw new Error('Configured Owner only for feed controls.');
+    if(i.channelId!==await ctx.resource('channel','smith-controls'))throw new Error('Use #smith-controls for feed controls.');
+    await guild.fetch();
+    const {assertOwnerConfiguration}=await import('./security-policy.js');
+    assertOwnerConfiguration(cfg,guild.ownerId);
+    result={content:`${await ctx.feeds.status()}\nOwner controls: /smith-control feed-save, feed-enable, feed-status id, feed-resolve.`,
+     components:[row(new StringSelectMenuBuilder().setCustomId('smith:maintenance:panel').addOptions(sections.map(s=>({label:s,value:s}))))]};
+   } else {
+   result={content:`**Smith control panel${i.values?.[0]?` — ${i.values[0]}`:''}**\n${await status(await staff(i))}\nMembers/onboarding: /member-info, /onboarding-recover\nModeration: /mod, /cases, /case, /report\nFrameworks: /pending, /review, /revoke\nInterests: /interests\nChannels: protected; Owner manages structural changes manually\nFeeds: integrated polling; select FEEDS for Owner status/controls\nXP: /xp, /ranks, /faith-review; economy not enabled\nSettings: /smith-control status, request-expiry, automod`,
     components:[row(new StringSelectMenuBuilder().setCustomId('smith:maintenance:panel').addOptions(sections.map(s=>({label:s,value:s}))))]};
+   }
   } else {
    await staff(i);
    if(cmd==='case-note') {await cases.note(i.options.getString('id',true),i.user.id,i.options.getString('note',true));result='Attributed case note saved.';}

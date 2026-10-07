@@ -15,4 +15,5 @@ CREATE TABLE IF NOT EXISTS native_alerts(id bigserial PRIMARY KEY,guild_id text 
 `);
 await pool.query(await readFile(new URL('./security-settings-schema.sql', import.meta.url), 'utf8'));
 await pool.query(await readFile(new URL('./maintenance-schema.sql', import.meta.url), 'utf8'));
+await pool.query(await readFile(new URL('./feed-schema.sql', import.meta.url), 'utf8'));
 await pool.end(); console.log('Database ready');

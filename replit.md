@@ -28,6 +28,7 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - **Agent Smith Bot** workflow / Run button: `pnpm --filter @workspace/agent-smith run start` — independent development Gateway process; no web port, VM, API/canvas process, or publishing required. Never start a second copy with the same token.
 - Root shortcuts: `pnpm run bot`, `pnpm run bootstrap`, `pnpm run register-commands`, `pnpm run bot:test`, `pnpm run bot:preflight`, and `pnpm run bot:audit`. Bootstrap defaults to live inspection; registration defaults to offline preview. Writes still require explicit `--apply`.
 - Database migration, bootstrap, registration with `--apply`, live audit, and feed polling are documented in `apps/agent-smith/README.md`; they are not offline checks.
+- Feeds share the existing bot Gateway. `feeds:run` refuses standalone polling; `feeds:migrate` is additive development DDL. Owner source edits disable approval; uncertain deliveries never auto-repost.
 - Native inspection/preparation/cutover and Server Guide tasks are documented in `apps/agent-smith/NATIVE-ONBOARDING.md`. Cutover defaults to read-only checks; apply requires `--confirm-native-published`, an enabled native UI with correct mappings, and passing permission checks.
 - Root workspace `pnpm run typecheck` and `pnpm run build` remain for the template's TypeScript packages; they do not validate this JavaScript bot.
 
