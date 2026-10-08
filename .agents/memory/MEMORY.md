@@ -15,3 +15,4 @@
 - [Feed delivery recovery](feed-delivery-recovery.md) — hold uncertain sends instead of auto-reposting; nonce deduplication is not a durable exactly-once guarantee.
 - [Video soundtrack timing](video-audio-duration.md) — measure generated duration and actual media-clock alignment; requested length and play events are not guarantees.
 - [PostgreSQL test isolation](postgres-test-isolation.md) — public search-path fallback can hide missing test schema and send test writes into live tables.
+- [Conversation boundaries](conversation-upgrade-boundaries.md) — preserve the existing bot/runtime; conversational AI is advisory, permission-scoped and short-lived.
