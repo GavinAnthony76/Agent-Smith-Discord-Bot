@@ -8,6 +8,7 @@ import { createAIProvider } from '../src/ai-provider.js';
 import { smithCommand } from '../src/conversation-commands.js';
 import { inspectSecuritySource } from '../src/security-source-audit.js';
 import { readFile } from 'node:fs/promises';
+import { budgetFixture } from './helpers/conversation-budget-fixture.js';
 
 const settings = conversationSettings({ AI_ENABLED: 'true', AGENT_SMITH_CHAT_CHANNEL_IDS: '1556423231232024689' });
 const context = { accessSignature: 'gaming-access', server: { name: 'Hallowed Core' },
@@ -20,7 +21,8 @@ function harness(options = {}) {
   const calls = [], logs = [];
   let time = 1000000;
   const provider = { configured: true, complete: async messages => { calls.push(messages); return 'Your Warlock has options.'; } };
-  const service = createConversationService({ settings, provider, now: () => time, log: m => logs.push(m), ...options });
+  const { budget } = budgetFixture({ requests: 10000, tokens: 1000000000, timezone: 'UTC' });
+  const service = createConversationService({ settings, provider, budget, now: () => time, log: m => logs.push(m), ...options });
   return { service, calls, logs, advance: ms => { time += ms; } };
 }
 
@@ -135,6 +137,7 @@ test('clearing context cancels pending AI and cannot restore old history', async
   const provider = { configured: true, complete: () => new Promise(resolve => { release = resolve; }) };
   const { service } = harness({ provider });
   const pending = service.answer(ask('Old question'));
+  while (!release) await new Promise(resolve => setImmediate(resolve));
   service.clear('u1');
   release('Old answer');
   assert.match(await pending, /cancelled/);
@@ -166,7 +169,7 @@ test('provider timeout/config and transport have no Discord tools or credentials
 });
 
 test('all Smith subcommands exist, and AI modules stay outside privileged capability imports', async () => {
-  assert.deepEqual(smithCommand.toJSON().options.map(option => option.name), ['ask', 'help', 'about', 'status', 'clear-context']);
+  assert.deepEqual(smithCommand.toJSON().options.map(option => option.name), ['ask', 'help', 'about', 'status', 'budget', 'clear-context']);
   for (const name of ['ai-conversation.js', 'ai-provider.js', 'ai-safety.js', 'ai-personality.js'])
     assert.deepEqual(inspectSecuritySource(name, await readFile(new URL(`../src/${name}`, import.meta.url), 'utf8')), []);
   assert.ok(inspectSecuritySource('ai-conversation.js', "import { pool } from './db.js';").length);

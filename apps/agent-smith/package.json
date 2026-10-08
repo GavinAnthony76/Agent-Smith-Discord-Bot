@@ -21,6 +21,7 @@
     "discord:register": "node --env-file-if-exists=.env src/register.js",
     "feeds:run": "node src/feed-cli.js",
     "feeds:migrate": "node --env-file-if-exists=.env src/feed-migrate.js",
+    "conversation:budget:migrate": "node --env-file-if-exists=.env src/conversation-budget-migrate.js",
     "feeds:schema-check": "node --env-file-if-exists=.env src/feed-schema-cli.js",
     "test": "node --experimental-vm-modules --test test/*.test.js",
     "preflight": "node src/preflight.js",

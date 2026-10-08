@@ -38,7 +38,7 @@ Agent Smith is a Discord bot for the user's NEW server, Hallowed Core. It provid
 - `apps/agent-smith`: imported JavaScript ESM bot, discord.js 14, pg, rss-parser
 - Bot PostgreSQL schema remains parameterized SQL in its own migration source; no ORM conversion
 - `artifacts/api-server`, `artifacts/mockup-sandbox`, and `lib/*` are template packages, not the bot runtime. The bot must remain independent of the API server.
-- Keep template API/canvas workflows stopped unless needed for separate web/design work; retain their files. Post-merge setup installs dependencies, applies only the Owner-approved additive feed migration to development, and verifies feed schema read-only. It never starts a Gateway or migrates production.
+- Keep template API/canvas workflows stopped unless needed for separate web/design work; retain their files. Post-merge setup installs dependencies, applies the Owner-approved additive feed and daily-AI-budget migrations to development, and verifies feed schema read-only. It never starts a Gateway or migrates production.
 
 ## Configuration
 
@@ -56,7 +56,7 @@ Required for live operation: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUIL
 - Permission overwrites must specify Role/Member types explicitly. **Why:** a fresh Discord login may not cache configured humans, and discord.js cannot safely infer their principal types from IDs alone.
 - Continuous production hosting is a later setup step, not a sleeping web preview or autoscaling request server. Read the deployment skill before configuring it.
 - `apps/agent-smith/HOSTING.md` is future production guidance only, not a development prerequisite or publishing authorization. A 24/7 hosting decision requires a separate explicit request. Preserve database data as well as schema; an empty production database is unsafe.
-- Do not run the template Drizzle schema push against Agent Smith's database. The bot owns its tables through explicit SQL migrations; automatic merge hooks must not change server resources or run other migrations. The Owner approved only the existing additive feed migration in development at merge. **Why:** task-local schema must reach main before Publish can diff it; the empty template schema may propose incompatible changes. Managed production schema still changes only through Publish, never a build/startup migration.
+- Do not run the template Drizzle schema push against Agent Smith's database. The bot owns its tables through explicit SQL migrations; automatic merge hooks must not change server resources or run unapproved migrations. The Owner approved additive feed and daily-AI-budget migrations in development at merge. **Why:** task-local schema must reach main before Publish can diff it; the empty template schema may propose incompatible changes. Managed production schema still changes only through Publish, never a build/startup migration.
 
 ## Pointers
 

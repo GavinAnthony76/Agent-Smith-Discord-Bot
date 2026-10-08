@@ -3,8 +3,9 @@
 ## Activation and current verification
 
 The existing bot, fixed guild, hosting launcher, Gateway, database and health
-routes are preserved. No second bot or API server is introduced. No migrations
-or Discord role/permission changes run as part of this upgrade.
+routes are preserved. No second bot or API server is introduced. The Owner
+approved an additive daily-budget migration; no Discord role/permission changes
+run as part of this upgrade.
 
 The selected provider is **OpenAI through Replit AI Integrations**; no personal
 OpenAI key is required. Usage is billed to Replit credits. A real, minimal request
@@ -76,6 +77,66 @@ Core maintenance/moderation/progression handlers remain independent of AI failur
 - Threads under that dedicated channel also support plain conversation.
 - Optional comma-separated `AGENT_SMITH_TRIGGERS`; none configured by default.
 - `/smith ask`, `/smith help`, `/smith about`, `/smith status`, `/smith clear-context`.
+- `/smith budget` — private Owner-only daily allowance status and settings.
+
+
+## Daily paid-AI allowance
+
+The Owner explicitly selected **100 paid requests and 10,000 total tokens per
+day**, resetting at **midnight America/Chicago**, including daylight saving.
+These are request/token limits, not a dollar estimate or a provider price.
+The lower limit wins; 100 requests is not a promise that 10,000 tokens can cover
+100 answers.
+
+`/smith budget` shows measured provider tokens separately from conservative
+unmeasured reservations. To edit, the configured human Server Owner must supply
+all three options, for example:
+
+`/smith budget requests:100 tokens:10000 timezone:America/Chicago`
+
+The bot re-fetches the guild Owner and requires both configured Owner identities.
+Settings edits are audited, private, and preserve already charged usage. Zero
+requests or zero tokens pauses paid AI only. A timezone edit takes effect when
+the existing window ends; it cannot create a fresh allowance immediately.
+Lowering a limit below usage does not undo past charges; it prevents new calls.
+There is no member punishment, credential change or account disabling.
+
+Before transport, PostgreSQL serializes check-and-reserve operations across
+processes for this guild. A committed reservation consumes one request and
+UTF-8 bytes of all model input plus conservative message-framing margin and the
+entire configured completion ceiling, including reasoning tokens. This is a
+conservative estimate, not measured tokenizer usage. Large server context or
+history may not fit even when some allowance remains; rejected calls cost
+nothing. Smaller questions may still fit. No allowance is bypassed for Owners.
+
+Valid provider `prompt_tokens`, `completion_tokens` and `total_tokens` replace
+the reservation with measured total usage, even for empty/cancelled completions.
+Cached input remains included; no provider price is inferred. Without valid
+usage, or after timeout, uncertain delivery, restart or lost database commit
+acknowledgement, the full reservation remains charged. Settlement is idempotent
+and stays in the original window even when it completes after midnight.
+If provider accounting unexpectedly exceeds the conservative reservation, the
+actual amount is recorded and further calls in that window are blocked. The
+allowance is an admission/accounting guard, not a provider-enforced billing cap.
+
+Missing schema/database outages fail closed for paid AI; there is no in-memory
+fallback or retry of an uncertain paid request. Greetings, local help, `/smith
+help`, operational `/smith status`, access/onboarding, moderation and XP remain
+independent and operational. No prompt, reply or member profile is persisted
+in the budget tables.
+
+Apply the approved additive schema to **development only** with
+`pnpm --filter @workspace/agent-smith run conversation:budget:migrate`.
+The post-merge setup applies it alongside the previously approved feed schema.
+Do not put migrations in bot startup or the deployment build; production DDL
+is applied only through the existing user-controlled Publishing schema flow.
+Default selected limits are inserted on the first budget operation if no
+settings row exists; subsequent starts never overwrite Owner edits.
+
+Offline checks: `node --test test/conversation-budget.test.js` from the bot
+directory. Optional isolated development PostgreSQL checks:
+`SMITH_PG_TESTS=1 node --test test/conversation-budget-postgres.test.js`.
+These use a disposable schema without public search-path fallback.
 
 Ordinary channels otherwise remain quiet. Bots, self messages, webhooks, DMs and
 empty messages are ignored. Duplicate Gateway message deliveries are deduplicated.
@@ -186,7 +247,7 @@ AI outage/disabled mode, length/mention handling, private thread filtering, call
 thread controls, exact command-upsert scope and static AI capability isolation.
 
 No live Gateway was started for testing. No live role grants, moderation actions,
-database migrations or publishing were performed by the agent.
+production database migrations or publishing were performed by the agent.
 
 ## 13. Manual Discord checks after activation and Publish
 

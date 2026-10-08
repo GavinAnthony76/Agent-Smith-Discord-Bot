@@ -5,7 +5,7 @@ export function createAIProvider(settings, { env = process.env, transport = fetc
   const configured = Boolean(base && key);
   return {
     configured,
-    async complete(messages, signal) {
+    async complete(messages, signal, { onUsage = () => {} } = {}) {
       if (!configured) throw new Error('provider_not_configured');
       const body = { model: settings.model, messages, max_completion_tokens: settings.maxTokens };
       // Reasoning-model APIs restrict temperature. Keep their model default.
@@ -20,6 +20,7 @@ export function createAIProvider(settings, { env = process.env, transport = fetc
       });
       if (!response.ok) throw new Error(`provider_http_${response.status}`);
       const data = await response.json();
+      onUsage(data.usage);
       const content = data.choices?.[0]?.message?.content;
       if (typeof content !== 'string' || !content.trim()) throw new Error('provider_empty_response');
       return content;

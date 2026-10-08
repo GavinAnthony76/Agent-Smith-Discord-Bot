@@ -14,5 +14,7 @@ export function conversationSettings(env = process.env) {
     channelIds, triggers: (env.AGENT_SMITH_TRIGGERS ?? '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean),
     ttlMs: integer(env.AI_CONTEXT_TTL_MINUTES, 20, 15, 30) * 60000,
     cooldownMs: integer(env.AI_COOLDOWN_SECONDS, 5, 2, 60) * 1000,
+    // Explicitly selected by the Owner; persisted guild settings take precedence.
+    dailyBudget: Object.freeze({ requests: 100, tokens: 10000, timezone: 'America/Chicago' }),
   });
 }

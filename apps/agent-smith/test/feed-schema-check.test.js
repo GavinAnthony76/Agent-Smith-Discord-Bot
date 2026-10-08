@@ -32,7 +32,7 @@ test('connection and permission errors are not treated as missing schema', async
   }
 });
 
-test('schema readiness precedes Gateway login and merge setup uses only the approved development migration', async () => {
+test('schema readiness precedes Gateway login and merge setup uses only approved development migrations', async () => {
   const bot = await readFile(new URL('../src/bot.js', import.meta.url), 'utf8');
   assert.ok(bot.indexOf('await assertFeedSchema(pool)') < bot.indexOf('await connect('));
   assert.match(bot, /await pool\.end\(\);\s+throw error/);
@@ -44,7 +44,8 @@ test('schema readiness precedes Gateway login and merge setup uses only the appr
     'pnpm install --frozen-lockfile',
     'pnpm --filter @workspace/agent-smith run feeds:migrate',
     'pnpm --filter @workspace/agent-smith run feeds:schema-check',
+    'pnpm --filter @workspace/agent-smith run conversation:budget:migrate',
   ]);
   const artifact = await readFile(new URL('../../../artifacts/api-server/.replit-artifact/artifact.toml', import.meta.url), 'utf8');
-  assert.doesNotMatch(artifact, /feeds:migrate|db:migrate|push-force|drizzle-kit/);
+  assert.doesNotMatch(artifact, /feeds:migrate|conversation:budget:migrate|db:migrate|push-force|drizzle-kit/);
 });

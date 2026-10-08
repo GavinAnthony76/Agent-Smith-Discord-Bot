@@ -7,6 +7,8 @@ import { createConversationService, isLocalConversation } from './ai-conversatio
 import { buildConversationContext } from './conversation-context.js';
 import { registerSmithCommand } from './conversation-commands.js';
 import { splitDiscord, unavailable } from './ai-safety.js';
+import { createConversationBudget, budgetStatusText } from './conversation-budget.js';
+import { createBudgetStore } from './conversation-budget-store.js';
 
 export async function conversationTrigger(message, { clientId, channelIds, triggers = [] }) {
   if (!message.guildId || message.author?.bot || message.author?.id === clientId || message.webhookId) return null;
@@ -27,7 +29,10 @@ export async function conversationTrigger(message, { clientId, channelIds, trigg
 export function createConversationHandlers({ client, guild, cfg, pool }, dependencies = {}) {
   const settings = dependencies.settings ?? conversationSettings();
   const provider = dependencies.provider ?? createAIProvider(settings);
-  const service = dependencies.service ?? createConversationService({ settings, provider });
+  const budget = dependencies.budget ?? createConversationBudget({
+    store: createBudgetStore({ pool, guildId: guild.id }), defaults: settings.dailyBudget,
+  });
+  const service = dependencies.service ?? createConversationService({ settings, provider, budget });
   const build = dependencies.buildContext ?? (args => buildConversationContext({ guild, cfg, pool, ...args }));
   const pending = new Map(), seen = new Map();
   let registrationReady = false, registrationTimer, attempts = 0;
@@ -157,7 +162,30 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
       const action = interaction.options.getSubcommand();
       const isPrivate = action !== 'ask' || interaction.options.getBoolean('private') !== false;
       await interaction.deferReply(isPrivate ? { flags: 64 } : {});
-      if (action === 'clear-context') {
+      if (action === 'budget') {
+        // Settings are an explicit human Owner action, never model-controlled.
+        const freshGuild = await guild.fetch();
+        if (!cfg.owners.includes(interaction.user.id) || interaction.user.id !== freshGuild.ownerId ||
+            cfg.ownerDiscordId !== interaction.user.id) {
+          await interaction.editReply('Only the configured human Server Owner can view or change this budget.');
+          return true;
+        }
+        const requests = interaction.options.getInteger('requests');
+        const tokens = interaction.options.getInteger('tokens');
+        const timezone = interaction.options.getString('timezone');
+        const editing = [requests, tokens, timezone].some(value => value !== null);
+        if (editing && [requests, tokens, timezone].some(value => value === null)) {
+          await interaction.editReply('To change the allowance, supply requests, tokens and timezone together. No settings changed.');
+          return true;
+        }
+        try {
+          const state = editing ? await budget.configure({ requests, tokens, timezone }, interaction.user.id) : await budget.status();
+          await interaction.editReply(budgetStatusText(state));
+        } catch (error) {
+          await interaction.editReply(error.message.startsWith('Use an IANA') || error.message === 'Invalid reset timezone.'
+            ? error.message : 'Budget storage is unavailable; no change is confirmed. Paid AI fails closed; server functions remain available.');
+        }
+      } else if (action === 'clear-context') {
         service.clear(interaction.user.id);
         await interaction.editReply('Your temporary conversation context has been cleared.');
       } else if (action === 'about') {
