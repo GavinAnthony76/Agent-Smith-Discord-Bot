@@ -13,6 +13,11 @@ import { createAIProvider } from '../ai-provider.js';
 import { meterProvider } from './ai-usage.js';
 import { createActivityService } from './activity.js';
 import { createTicketService } from './tickets.js';
+import { createWelcomeService } from './welcome.js';
+import { createOnboardingService } from './onboarding.js';
+import { createEconomyService } from './economy.js';
+import { registerPlatformCommands } from './commands.js';
+import { PlatformError } from './catalog.js';
 
 /**
  * Shares the existing Discord client. Never logs in, migrates or provisions
@@ -22,10 +27,14 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
   const discord = createDiscordAccess({ client });
   const origin = process.env.PLATFORM_PUBLIC_URL;
   const tickets = createTicketService({ client, pool, discord });
-  const web = createPlatformHttp({ pool, discord, origin, legacyActions, ticketActions: tickets.staffAction });
+  const web = createPlatformHttp({ pool, discord, origin, legacyActions, ticketActions: tickets.staffAction,
+    onboardingActions: authority => onboarding.publish(authority) });
   setPlatformTransportGuard(client, communicationGuard);
   const conversations = new Map();
   const activity = createActivityService(pool);
+  const welcome = createWelcomeService({ pool, discord, moduleConfig });
+  const onboarding = createOnboardingService({ client, pool, discord, moduleConfig });
+  const economy = createEconomyService({ pool, moduleConfig });
   async function moduleConfig(guildId, key) {
     const row = (await pool.query(
       'SELECT enabled,configuration_json,revision FROM platform_modules WHERE guild_id=$1 AND module_key=$2',
@@ -104,9 +113,15 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
         userId ? createHash('sha256').update(`${guildId}:${userId}`).digest('hex') : null]);
   }
   const events = {
-    guildCreate: guild => { void web.service.adopt(guild).catch(() => console.error('Platform guild initialization deferred.')); },
+    guildCreate: guild => {
+      void web.service.adopt(guild).then(()=>registerPlatformCommands({client,pool,discord,
+        guildId:guild.id,applicationId:cfg.clientId})).catch(() => console.error('Platform guild initialization/command registration deferred.'));
+    },
     guildDelete: guild => { void pool.query('UPDATE platform_guilds SET installed=false,updated_at=now() WHERE guild_id=$1', [guild.id]).catch(() => {}); },
-    guildMemberAdd: member => { void recordActivity('join', member.guild.id, `join:${member.id}:${Date.now()}`, member.id).catch(() => {}); },
+    guildMemberAdd: member => {
+      void recordActivity('join', member.guild.id, `join:${member.id}:${Date.now()}`, member.id).catch(() => {});
+      void welcome.join(member).catch(() => console.error('Welcome delivery held; no automatic resend.'));
+    },
     guildMemberRemove: member => { void recordActivity('leave', member.guild.id, `leave:${member.id}:${Date.now()}`, member.id).catch(() => {}); },
     messageCreate: message => {
       if (!message.guildId || message.author.bot || message.webhookId) return;
@@ -130,8 +145,40 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
     },
     async handleInteraction(interaction) {
       if (interaction.guildId && await tickets.handleInteraction(interaction)) return true;
+      if (interaction.guildId && await onboarding.handleInteraction(interaction)) return true;
+      if (interaction.isChatInputCommand?.() && interaction.commandName === 'smith-community' &&
+          interaction.guildId && interaction.guildId !== TARGET_GUILD_ID) {
+        await interaction.deferReply({flags:64});
+        try {
+          const guild=await discord.freshGuild(interaction.guildId);
+          const member=await guild.members.fetch({user:interaction.user.id,force:true});
+          const channel=guild.channels.cache.get(interaction.channelId);
+          if(member.pending!==false||member.user.bot||!discord.memberRolesVerified(guild,member)||
+            !channel||!hasPermission(member,P.ViewChannel,channel)||!hasPermission(member,P.ReadMessageHistory,channel))
+            throw new PlatformError('community_member_not_eligible',403);
+          const command=interaction.options.getSubcommand();
+          let content;
+          if(command==='daily'||command==='buy'){
+            const result=await economy.change({guildId:guild.id,userId:member.id,interactionId:interaction.id,kind:command,
+              ...(command==='buy'?{itemId:interaction.options.getString('item',true),
+                expectedPrice:interaction.options.getInteger('price',true)}:{})});
+            content=`${command==='daily'?'Daily claimed':'Cosmetic item purchased'}. Balance: ${result.balance} ${result.currencyName}. No real-money value.`;
+          }else if(command==='shop'){
+            const rows=await economy.shop(guild.id);
+            content=rows.length?rows.map(row=>`${row.title} · ${row.price} ${row.currencyName} · ID ${row.id}`).join('\n'):'No enabled cosmetic shop items.';
+          }else if(command==='balance'||command==='inventory'){
+            const value=await economy.wallet(guild.id,member.id);
+            content=command==='balance'?`${value.balance} ${value.currencyName}. No real-money value.`:
+              value.inventory.length?value.inventory.map(row=>row.title).join('\n'):'Your cosmetic inventory is empty.';
+          }else throw new PlatformError('community_command_not_available',409);
+          await interaction.editReply({content:safeText(content,1900),allowedMentions:{parse:[],repliedUser:false}});
+        }catch(error){await interaction.editReply(error instanceof PlatformError?
+          `Community action refused: ${error.code}.`:'Community action could not be confirmed. Inspect your balance/inventory before trying again.');}
+        return true;
+      }
       if (!interaction.guildId || !(
-        interaction.isChatInputCommand?.() && interaction.commandName === 'smith' && interaction.options.getSubcommand() !== 'status' ||
+        interaction.isChatInputCommand?.() && interaction.commandName === 'smith' &&
+          (interaction.guildId !== cfg.guildId || interaction.options.getSubcommand() !== 'status') ||
         interaction.isButton?.() && interaction.customId.startsWith('smith:chat:')
       )) return false;
       if (interaction.guildId === cfg.guildId && !(await pool.query(
@@ -142,10 +189,14 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
       return true;
     },
     async initialize() {
-      for (const guild of client.guilds.cache.values()) await web.service.adopt(guild);
+      for (const guild of client.guilds.cache.values()) {
+        await web.service.adopt(guild);
+        await registerPlatformCommands({client,pool,discord,guildId:guild.id,applicationId:cfg.clientId});
+      }
     },
     stop() {
       tickets.stop();
+      onboarding.stop();
       for (const [event, handler] of Object.entries(events)) client.off(event, handler);
       for (const value of conversations.values()) value.handlers.stop();
       conversations.clear();

@@ -11,6 +11,8 @@ import { isLookupWarningContent } from './lookup-warning-policy.js';
 import { smithControlCommand } from './smith-control.js';
 import { platformTransportAllowed } from './platform/transport.js';
 import { executeTicketWrite } from './platform/ticket-write.js';
+import { executeSelfRoleWrite } from './platform/role-write.js';
+import { executePlatformCommandWrite } from './platform/commands.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -22,6 +24,10 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
     if (['GET', 'HEAD'].includes(method)) return original(request);
     const ticketWrite = executeTicketWrite(client, request, () => original(request));
     if (ticketWrite) return ticketWrite;
+    const selfRoleWrite = executeSelfRoleWrite(client, request, () => original(request));
+    if (selfRoleWrite) return selfRoleWrite;
+    const commandWrite = executePlatformCommandWrite(client, request, () => original(request));
+    if (commandWrite) return commandWrite;
     if (platformTransportAllowed(client, request)) return original(request);
     const context = mutationScope();
     async function lookupWarningOwner(recipientId) {

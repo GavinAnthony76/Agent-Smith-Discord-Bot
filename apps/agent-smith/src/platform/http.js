@@ -22,9 +22,9 @@ async function jsonBody(request) {
   }
   catch { throw new PlatformError('invalid_json'); }
 }
-export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport, ticketActions }) {
+export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport, ticketActions, onboardingActions }) {
   const oauth = createOAuth({ pool, env, ...(oauthTransport ? { transport: oauthTransport } : {}) });
-  const service = createPlatformService({ pool, discord, env, legacyActions, ticketActions });
+  const service = createPlatformService({ pool, discord, env, legacyActions, ticketActions, onboardingActions });
   const secure = origin.startsWith('https://');
   if (env.NODE_ENV === 'production' && !secure) throw new Error('Platform HTTPS public origin is required.');
   const cookie = (name, value, age) => {
@@ -130,7 +130,8 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       else if (area === 'actions') {
         const input = await jsonBody(request);
         if (typeof input.action !== 'string') throw new PlatformError('invalid_action');
-        capability = input.action?.startsWith('ticket-') ? 'tickets' : 'moderation';
+        capability = input.action?.startsWith('ticket-') ? 'tickets' :
+          input.action === 'onboarding-publish' ? 'onboarding' : 'moderation';
         request.platformInput = input;
       }
       if (!capability) throw new PlatformError('route_not_found', 404);

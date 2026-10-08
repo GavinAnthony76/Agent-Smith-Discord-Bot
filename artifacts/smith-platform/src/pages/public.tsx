@@ -134,7 +134,7 @@ export function Status() {
         <ul className="mt-6 divide-y rounded-xl border bg-card">
           {row('API', h.isLoading ? 'load' : h.isError ? 'bad' : 'ok', h.isError ? 'unreachable' : 'active')}
           {row('Discord bot', s.isLoading ? 'load' : 'ok', s.data?.runtimeMode === 'preview' ? 'REST-only preview; no Gateway started' : s.data?.botOnline ? 'active' : 'inactive: offline')}
-          {row('Discord OAuth', s.isLoading ? 'load' : 'ok', !s.data?.oauthConfigured ? 'credentials not configured' : s.data?.oauthCallbackRegistered === true ? 'callback registered; sign-in testing required' : s.data?.oauthCallbackRegistered === false ? 'callback registration required' : 'callback not verified')}
+          {row('Discord OAuth', s.isLoading ? 'load' : 'ok', !s.data?.oauthConfigured ? 'credentials not configured' : s.data?.oauthCallbackRegistered === true ? 'callback registered; Discord sign-in available' : s.data?.oauthCallbackRegistered === false ? 'callback registration required' : 'callback not verified')}
         </ul>
       </div>
     </PublicLayout>

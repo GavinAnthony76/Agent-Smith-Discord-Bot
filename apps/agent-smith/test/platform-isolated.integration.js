@@ -14,6 +14,11 @@ import { authorizeTenant } from '../src/platform/catalog.js';
 import { createTicketService } from '../src/platform/tickets.js';
 import { executeTicketWrite } from '../src/platform/ticket-write.js';
 import { PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
+import { createWelcomeService } from '../src/platform/welcome.js';
+import { createOnboardingService } from '../src/platform/onboarding.js';
+import { executeSelfRoleWrite } from '../src/platform/role-write.js';
+import { communicationGuard } from '../src/platform/transport.js';
+import { createEconomyService } from '../src/platform/economy.js';
 
 if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1' || !process.env.DATABASE_URL) {
   throw new Error('Development database required; production/default fallback is prohibited.');
@@ -215,6 +220,144 @@ await test('platform HTTP and PostgreSQL isolation', async t => {
       await assert.rejects(tickets.open(args), /ticket_already_open/);
       assert.equal(count, 4); // Multiple live matches remain held; no automatic deletion/retry.
       tickets.stop();
+    });
+    await t.test('welcome deduplicates actual joins and six-step onboarding persists consent without retaining answers', async () => {
+      const cid='81000000000000071',rid='81000000000000072',botId='90000000000000099';
+      const perms=new PermissionsBitField([P.ViewChannel,P.ReadMessageHistory,P.SendMessages]);
+      const member={id:userB,pending:false,user:{bot:false,username:'Synthetic member'},displayName:'Synthetic member',
+        roles:{cache:new Map(),highest:{position:0}},permissions:perms};
+      const bot={id:botId,roles:{highest:{position:5,comparePositionTo:other=>5-other.position}},
+        permissions:new PermissionsBitField([...perms.toArray(),P.ManageRoles])};
+      const role={id:rid,name:'Gamer',position:2,permissions:new PermissionsBitField(0n)};
+      let sent=0,roleWrites=0,loseWelcome=false;
+      const guild={id:guildA,ownerId:userA,name:'Isolated community',memberCount:10,
+        roles:{cache:new Map([[rid,role]])},members:{me:bot,cache:new Map([[userB,member]]),
+          fetch:async ({user})=>{
+            const value=user===userB?member:{...member,id:user};
+            guild.members.cache.set(user,value);return value;
+          }},
+        channels:{cache:new Map()}};
+      const channel={id:cid,type:0,permissionsFor:()=>perms,permissionOverwrites:{cache:new Map()},
+        send:async body=>{
+          assert.equal(communicationGuard({method:'POST',fullRoute:`/channels/${cid}/messages`,
+            body:{content:body.content,allowed_mentions:{parse:[],replied_user:false}}}),true);
+          sent++;
+          if(loseWelcome)throw Error('synthetic welcome acknowledgement lost');
+          return{id:'83000000000000071'};
+        }};
+      guild.channels.cache.set(cid,channel);
+      const access={freshGuild:async id=>{if(id!==guildA)throw Error('Unknown isolated guild');return guild;},memberRolesVerified:()=>true};
+      const config={
+        welcome:{enabled:true,revision:1,configuration:{channelId:cid,message:'Welcome {user}!',roleBehavior:'ONBOARDING'}},
+        roles:{enabled:true,revision:1,configuration:{selfAssignableRoles:[rid],protectedRoles:[]}},
+        onboarding:{enabled:true,revision:1,configuration:{entryChannelId:cid,steps:
+          ['MESSAGE','RULES_ACCEPTANCE','ROLE_SELECT','QUESTION','BUTTON','FINALIZATION']
+            .map(type=>({type,title:type,content:'Configured public instruction'}))}}
+      };
+      const moduleConfig=async (id,key)=>{assert.equal(id,guildA);return config[key];};
+      const welcome=createWelcomeService({pool,discord:access,moduleConfig});
+      const joining={...member,guild,joinedTimestamp:1000};
+      await Promise.all([welcome.join(joining),welcome.join(joining)]);
+      assert.equal(sent,1);
+      loseWelcome=true;
+      await assert.rejects(welcome.join({...joining,joinedTimestamp:1001}),/acknowledgement lost/);
+      await welcome.join({...joining,joinedTimestamp:1001});
+      assert.equal(sent,2);
+      const sdk={rest:{}};
+      sdk.rest.put=(route,{body})=>executeSelfRoleWrite(sdk,{method:'PUT',fullRoute:route,body},async()=>{
+        roleWrites++;member.roles.cache.set(rid,role);return{};
+      });
+      const onboarding=createOnboardingService({client:sdk,pool,discord:access,moduleConfig});
+      loseWelcome=false;
+      const publishPermit=await authorizeTenant({userId:userA,guildId:guildA,capability:'onboarding',write:true,
+        resolve:async()=>({installed:true,member:true,role:'OWNER'})});
+      const entry=await onboarding.publish({permit:publishPermit});
+      assert.equal(entry.ok,true);assert.equal(sent,3);
+      function interaction(customId,type='button',extra={}){
+        return{customId,guildId:guildA,channelId:cid,user:{id:userB},values:[rid],
+          isButton:()=>type==='button',isStringSelectMenu:()=>type==='select',isModalSubmit:()=>type==='modal',
+          fields:{getTextInputValue:()=> 'PRIVATE ANSWER SENTINEL'},
+          deferReply:async function(){this.deferred=true;},
+          reply:async function(body){this.replied=true;this.output=body;},
+          editReply:async function(body){this.output=body;},
+          showModal:async function(modal){this.modal=modal.toJSON();},...extra};
+      }
+      let current=interaction('smith:onboarding:start');
+      assert.equal(await onboarding.handleInteraction(current),true);
+      for(let index=0;index<6;index++){
+        const button=current.output.components.at(-1).components[0];
+        let next=interaction(button.custom_id);
+        if(index===2)next=interaction(current.output.components[0].components[0].custom_id,'select');
+        await onboarding.handleInteraction(next);
+        if(index===3){
+          assert.ok(next.modal);
+          const submit=interaction(next.modal.custom_id,'modal');
+          await onboarding.handleInteraction(submit);next=submit;
+        }
+        assert.ok(next.output,`Step ${index} produces a private output`);
+        current=next;
+      }
+      assert.match(current.output.content,/complete/);
+      assert.equal(roleWrites,1);
+      const progress=(await pool.query(`SELECT data FROM platform_records WHERE guild_id=$1 AND
+        collection='onboarding-progress' AND created_by=$2`,[guildA,userB])).rows[0].data;
+      assert.equal(progress.step,6);assert.equal(progress.consentSteps.length,1);assert.ok(progress.completedAt);
+      assert.deepEqual(progress.selectedRoles,[rid]);
+      const stored=JSON.stringify((await pool.query(`SELECT data FROM platform_records WHERE guild_id=$1`,[guildA])).rows);
+      assert.ok(!stored.includes('PRIVATE ANSWER SENTINEL'));
+      const audit=JSON.stringify((await pool.query(`SELECT after_state FROM platform_audit WHERE guild_id=$1`,[guildA])).rows);
+      assert.ok(!audit.includes('PRIVATE ANSWER SENTINEL'));
+      const foreign=interaction('smith:onboarding:start','button',{guildId:guildB});
+      await onboarding.handleInteraction(foreign);
+      assert.equal((await pool.query(`SELECT count(*) FROM platform_records WHERE guild_id=$1 AND collection='onboarding-progress'`,[guildB])).rows[0].count,'0');
+      config.onboarding.revision=2;
+      const restart=interaction('smith:onboarding:start');await onboarding.handleInteraction(restart);
+      assert.ok(restart.output.content.startsWith('1/6'));
+      onboarding.stop();
+    });
+    await t.test('cosmetic daily claims serialize, purchase price/inventory are atomic and wallets remain guild-scoped', async()=>{
+      const settings={enabled:true,revision:1,configuration:{currencyName:'Test credits',dailyAmount:25,
+        cooldownHours:24,inventoryBehavior:'UNIQUE'}};
+      const moduleConfig=async()=>settings;
+      let entered,release,first=true;
+      const inside=new Promise(resolve=>{entered=resolve;});
+      const hold=new Promise(resolve=>{release=resolve;});
+      const economy=createEconomyService({pool,moduleConfig,onWalletLocked:async()=>{
+        if(first){first=false;entered();await hold;}
+      }});
+      const a=economy.change({guildId:guildA,userId:userB,interactionId:'84000000000000001',kind:'daily'});
+      await inside;
+      const b=economy.change({guildId:guildA,userId:userB,interactionId:'84000000000000002',kind:'daily'})
+        .then(value=>({value}),error=>({error}));
+      try{
+        let blocked=false;const deadline=Date.now()+4000;
+        while(Date.now()<deadline){
+          const row=(await admin.query(`SELECT count(*) FROM pg_stat_activity WHERE application_name=$1
+            AND wait_event_type='Lock'`,[schema])).rows[0];
+          if(Number(row.count)>0){blocked=true;break;}
+          await new Promise(resolve=>setTimeout(resolve,20));
+        }
+        assert.ok(blocked,'The second daily must actually wait on the first wallet transaction.');
+      }finally{release();}
+      assert.equal((await a).balance,25);assert.equal((await b).error.code,'daily_cooldown_active');
+      const replay=await economy.change({guildId:guildA,userId:userB,interactionId:'84000000000000001',kind:'daily'});
+      assert.equal(replay.replayed,true);assert.equal(replay.balance,25);
+      const itemId='bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
+      await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by)
+        VALUES($1,'shop',$2,'Cosmetic badge',$3,$4)`,[guildA,itemId,{price:5,enabled:true},userA]);
+      await assert.rejects(economy.change({guildId:guildA,userId:userB,interactionId:'84000000000000003',
+        kind:'buy',itemId,expectedPrice:6}),/shop_price_changed/);
+      const purchase=await economy.change({guildId:guildA,userId:userB,interactionId:'84000000000000004',
+        kind:'buy',itemId,expectedPrice:5});
+      assert.equal(purchase.balance,20);
+      await assert.rejects(economy.change({guildId:guildA,userId:userB,interactionId:'84000000000000005',
+        kind:'buy',itemId,expectedPrice:5}),/item_already_owned/);
+      assert.equal((await economy.wallet(guildA,userB)).inventory.length,1);
+      assert.equal((await economy.wallet(guildB,userB)).balance,0);
+      assert.equal((await economy.wallet(guildB,userB)).inventory.length,0);
+      assert.equal((await economy.wallet(guildA,userA)).balance,0);
+      settings.enabled=false;
+      await assert.rejects(economy.wallet(guildA,userB),/economy_disabled/);
     });
     await t.test('OAuth ciphertext and schema remain isolated, logout invalidates the session', async () => {
       const row = (await pool.query('SELECT token_ciphertext FROM platform_sessions')).rows[0];

@@ -35,6 +35,13 @@ function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: Platfor
   const [enabled, setEnabled] = useState(mod.enabled);
   const [config, setConfig] = useState<Record<string, unknown>>({ ...mod.configuration });
   const dirty = enabled !== mod.enabled || JSON.stringify(config) !== JSON.stringify(mod.configuration);
+  const publish = usePerformPlatformAction({ request, mutation: {
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: getGetPlatformOverviewQueryKey(guildId) });
+      toast({ title: 'Onboarding entry published', description: result.message });
+    },
+    onError: (e) => toast({ title: 'Entry not published', description: errMsg(e), variant: 'destructive' }),
+  } });
   const save = useUpdatePlatformModule({
     request,
     mutation: {
@@ -68,6 +75,11 @@ function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: Platfor
       </div>
       {!ro && (
         <div className="flex justify-end gap-2 border-t p-4">
+          {mod.moduleKey === 'onboarding' && mod.runtimeStatus === 'Platform runtime' && <Button variant="outline"
+            disabled={dirty || !mod.enabled || publish.isPending} data-testid="button-publish-onboarding"
+            onClick={() => publish.mutate({ guildId, data: { action: 'onboarding-publish', target: 'onboarding' } })}>
+            {publish.isPending ? 'Publishing' : 'Publish start / resume button'}
+          </Button>}
           <Button variant="ghost" disabled={!dirty} onClick={() => { setEnabled(mod.enabled); setConfig({ ...mod.configuration }); }} data-testid="button-reset-module">Discard</Button>
           <Button disabled={!dirty || save.isPending} data-testid="button-save-module"
             onClick={() => save.mutate({ guildId, moduleKey: mod.moduleKey, data: { enabled, configuration: config, revision: mod.revision } })}>

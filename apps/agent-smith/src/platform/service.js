@@ -7,6 +7,7 @@ import { MODULE_FIELDS, COLLECTIONS } from './fields.js';
 import { thresholds } from '../progression-config.js';
 import { hasPermission } from '../permissions.js';
 import { TARGET_GUILD_ID } from '../config.js';
+import { assertSelfRoleSafe } from './roles.js';
 import { validatePublicFeedSource } from './source-policy.js';
 import { calculateLevel } from './activity.js';
 import { safetyReply } from '../ai-safety.js';
@@ -16,6 +17,10 @@ const record = row => ({
   data: row.data ?? {}, revision: Number(row.revision ?? 1),
   createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
 });
+function validHttps(value) {
+  try { const url = new URL(value); return typeof value === 'string' && value.length <= 2000 &&
+    url.protocol === 'https:' && !url.username && !url.password; } catch { return false; }
+}
 export function defaultModule(key, legacy, env) {
   const settings = {
     ai: { allowedChannels: legacy ? (env.AGENT_SMITH_CHAT_CHANNEL_IDS ?? '').split(',').filter(Boolean) : [],
@@ -34,9 +39,10 @@ export function defaultModule(key, legacy, env) {
     automod: { inviteFilter: false, duplicateMessages: true, maxMentions: 5,
       capsThreshold: 80, emojiThreshold: 20, blockedDomains: [], bannedTerms: [],
       excludedChannels: [], excludedRoles: [], action: 'LOG' },
-    economy: { currencyName: 'Community credits', dailyAmount: 25, cooldownHours: 24 },
+    economy: { currencyName: 'Community credits', dailyAmount: 25, cooldownHours: 24, inventoryBehavior: 'STACK' },
     roles: { selfAssignableRoles: [], rewardableRoles: [], protectedRoles: [], roleGroups: [] },
-    welcome: { channelId: null, message: 'Welcome {user} to {server}.', embedTitle: 'Welcome', description: '' },
+    welcome: { channelId: null, message: 'Welcome {user} to {server}.', embedTitle: 'Welcome', description: '',
+      imageUrl: '', buttons: [], roleBehavior: 'NONE' },
     analytics: { collectActivity: true }, feeds: { pollMinutes: 15 }, youtube: { pollMinutes: 15 },
   };
   return { moduleKey: key, enabled: legacy ?
@@ -44,7 +50,7 @@ export function defaultModule(key, legacy, env) {
   configuration: settings[key] ?? {}, revision: 0 };
 }
 
-export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null, ticketActions }) {
+export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null, ticketActions, onboardingActions }) {
   const configuration = createGuildConfigurationService(pool, { onSave: async (db, change) => {
     if (change.guildId !== TARGET_GUILD_ID) return;
     if (change.key === 'leveling' || change.key === 'economy') {
@@ -119,8 +125,10 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   function presentModule(row, authority) {
     const base = defaultModule(row.module_key, authority.guild.id === TARGET_GUILD_ID, env);
-    const runtimeStatus = ['ai', 'analytics'].includes(row.module_key) ||
-      ['leveling', 'tickets'].includes(row.module_key) && authority.guild.id !== TARGET_GUILD_ID ?
+    const runtimeStatus = row.module_key === 'roles' && authority.guild.id !== TARGET_GUILD_ID ?
+      'Cosmetic self-assignment runtime; private access and human-reviewed extras are not automated' :
+      ['ai', 'analytics'].includes(row.module_key) ||
+      ['leveling', 'tickets', 'welcome', 'onboarding', 'economy'].includes(row.module_key) && authority.guild.id !== TARGET_GUILD_ID ?
       'Platform runtime' : authority.guild.id === TARGET_GUILD_ID ?
       ['moderation', 'automod', 'onboarding', 'roles', 'leveling', 'economy', 'rewards', 'feeds', 'youtube'].includes(row.module_key) ?
         'Existing Hallowed Core service; protected policy retained. Some settings remain draft.' :
@@ -163,6 +171,10 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
       if (field.type === 'select' && !field.options.includes(value)) throw new PlatformError('invalid_option');
       if (field.key === 'personalityAdditions' && safetyReply(value)) throw new PlatformError('unsafe_personality_additions');
       if (field.key === 'mentionOnly' && value !== true) throw new PlatformError('outside_channel_mentions_are_required');
+      if (field.key === 'imageUrl' && value && !validHttps(value)) throw new PlatformError('https_image_required');
+      if (field.key === 'buttons' && (!Array.isArray(value) || value.length > 4 ||
+          value.some(b => !b || typeof b.label !== 'string' || !b.label.trim() || b.label.length > 80 ||
+            !validHttps(b.url)))) throw new PlatformError('invalid_welcome_buttons');
       if (field.key === 'questions' && (!Array.isArray(value) || value.length > 5 ||
           new Set(value.map(q => q?.id)).size !== value.length || value.some(q => !q ||
           typeof q.id !== 'string' || !/^[a-z0-9_-]{1,30}$/.test(q.id) || typeof q.label !== 'string' ||
@@ -180,6 +192,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
             if (!role) throw new PlatformError('role_not_in_guild');
             if (['roleId', 'rewardRoleId', 'rewardableRoles', 'selfAssignableRoles'].includes(field.key)) {
               discord.assertRewardRole(role, authority.guild, authority.actor);
+              if (field.key === 'selfAssignableRoles') assertSelfRoleSafe(role, authority.guild, data.protectedRoles ?? []);
               if (['roleId', 'rewardRoleId'].includes(field.key) && !configuredRewardable.includes(id)) {
                 throw new PlatformError('role_not_marked_bot_rewardable');
               }
@@ -263,9 +276,12 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
           `SELECT configuration_json FROM platform_modules WHERE guild_id=$1 AND module_key='leveling'`, [id])).rows[0]?.configuration_json ??
           defaultModule('leveling', false, env).configuration;
         records = (await pool.query(
-          'SELECT user_id,xp,created_at FROM platform_member_profiles WHERE guild_id=$1 ORDER BY xp DESC LIMIT 100', [id])).rows
+          `SELECT p.user_id,p.xp,p.created_at,w.data->>'balance' AS cosmetic_balance FROM platform_member_profiles p
+            LEFT JOIN platform_records w ON w.guild_id=p.guild_id AND w.record_id=p.user_id AND w.collection='economy-wallet'
+            WHERE p.guild_id=$1 ORDER BY p.xp DESC LIMIT 100`, [id])).rows
           .map(row => record({ record_id: row.user_id, title: row.user_id,
-            data: { userId: row.user_id, xp: Number(row.xp), level: calculateLevel(Number(row.xp), config.thresholds) }, created_at: row.created_at }));
+            data: { userId: row.user_id, xp: Number(row.xp), level: calculateLevel(Number(row.xp), config.thresholds),
+              cosmeticBalance: Number(row.cosmetic_balance ?? 0), noRealMoneyValue: true }, created_at: row.created_at }));
       }
     }
     else if (key === 'audit') records = (await pool.query(
@@ -437,6 +453,10 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     finally { db.release(); }
   }
   async function action(authority, input) {
+    if (input.action === 'onboarding-publish') {
+      if (!onboardingActions) throw new PlatformError('onboarding_runtime_not_available_in_readonly_preview', 409);
+      return onboardingActions(authority);
+    }
     if (typeof input.action === 'string' && input.action.startsWith('ticket-')) {
       if (!ticketActions) throw new PlatformError('ticket_runtime_not_available_in_readonly_preview', 409);
       return ticketActions(authority, input);

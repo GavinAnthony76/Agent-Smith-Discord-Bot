@@ -18,3 +18,4 @@
 - [Conversation boundaries](conversation-upgrade-boundaries.md) — preserve the existing bot/runtime; conversational AI is advisory, permission-scoped and short-lived.
 - [Platform productization](platform-productization.md) — multi-server commercial scope preserves Hallowed Core; no billing activation or completion claim before two-guild verification.
 - [Ticket rollout safety](ticket-rollout-safety.md) — preserve opening-time access and private evidence; uncertain writes require review, never automatic retries or cleanup.
+- [Standard onboarding](standard-onboarding-boundaries.md) — cosmetic self-assignment only; questions are transient, private access and human-reviewed extras need separate policy.

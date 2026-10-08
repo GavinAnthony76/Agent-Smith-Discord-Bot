@@ -1,8 +1,10 @@
 # Platform upgrade — interim implementation status
 
 This is **not** the final production acceptance report. The complete requested
-upgrade is still in progress. No new version has been published, and neither real
-Discord OAuth nor two-guild behavior has passed live acceptance.
+upgrade is still in progress. No new version has been published. The Owner
+completed real Discord OAuth in the preview: active encrypted sessions resolve
+fresh Owner authority in both Hallowed Core and LMOC TEST. Two-guild runtime
+behavior has not passed live acceptance.
 
 ## Built and verified
 
@@ -58,12 +60,67 @@ reconciliation without another creation. These use simulated Discord operations,
 not live Gateway events. Real SDK REST encoding is also checked against a local
 synthetic server, never Discord.
 
+## Welcome and standard onboarding adapters implemented; live activation pending
+
+Welcome supports a configured channel, bounded `{user}`, `{server}` and
+`{memberCount}` placeholders, embed text, an HTTPS banner, HTTPS link buttons and
+an optional onboarding button. Actual joins get durable delivery reservations;
+replayed events do not automatically resend. Unconfirmed deliveries stay held.
+Joining alone grants no role.
+
+The standard-server onboarding flow supports MESSAGE, RULES_ACCEPTANCE,
+ROLE_SELECT, QUESTION, BUTTON and FINALIZATION. Members can start/resume through
+a published dashboard entry button or welcome button. Progress and explicit rules
+acceptance are stored per guild/member/configuration revision. Configuration
+changes restart consent; old acceptance is never inferred. Question answers are
+transient and are not stored in SQL, audit, model context or form metadata.
+
+Self-role selection uses a one-request audited SDK gate and fresh configuration,
+membership and hierarchy checks. Only explicitly self-assignable cosmetic roles
+can be added to the requesting member. Staff/security/managed/unknown permission
+bits, Owner targets, bot targets and private-channel grants are refused. Role
+groups, human-reviewed additional access and automatic rewards remain unfinished.
+Hallowed Core's native onboarding and guarded role workflows are unchanged.
+
+These adapters were exercised with synthetic SDK operations and isolated
+PostgreSQL data, not live joins or Gateway button events. The read-only preview
+cannot publish the entry message or grant a role.
+
+Latest checks: 435 offline regression tests passed, six skipped; all nine isolated
+PostgreSQL checks passed. The welcome/onboarding check exercises replayed joins,
+lost send acknowledgement, entry publishing, all six step types, cosmetic role
+selection, retained consent, transient questions, foreign-guild refusal and
+configuration-revision reset. Website/API type checks and the website build pass.
+Source security checks pass; SAST has only the previously reviewed medium session
+cookie warning. No live Discord mutation, production DDL or release was performed.
+
+## Standard commands and cosmetic economy adapters implemented; live activation pending
+
+The shared Gateway can add missing guild-local `/smith` and `/smith-community`
+commands in standard guilds. Registration uses a closed audited exact-payload
+scope. Existing names and command trees are not overwritten or deleted; Hallowed
+Core registration is untouched. Preview identity clients still reject writes.
+
+`/smith-community` supports onboard, balance, daily, shop, buy and inventory.
+Cosmetic wallets, cooldowns, shop purchases and inventory are guild/member scoped.
+Daily claims serialize with an advisory transaction lock. The isolated test
+observes a second transaction waiting, verifies only one claim, replays the saved
+interaction without another credit, checks confirmed purchase price and UNIQUE
+inventory, and confirms other guilds/members see no wallet data. Purchases debit
+and record inventory/audit atomically. Credits have no real-money value, do not
+grant roles and do not activate billing. Member progression records also expose
+the recorded cosmetic balance.
+
+These remain unpublished. Simulated registration/interaction checks do not prove
+live slash-command appearance or actual Gateway operation in LMOC TEST.
+
 ## Not finished
 
-- Real browser OAuth and live ticket flow on LMOC TEST, plus policy-reviewed
+- Live ticket flow on LMOC TEST, plus policy-reviewed
   Hallowed Core ticket activation. No new runtime version has been published.
-- Standard-guild onboarding, role assignment/human-review adapters, moderation
-  command registration/execution, AutoMod and economy adapters.
+- Live standard-guild onboarding and welcome verification, role-group and
+  human-reviewed access adapters, moderation command registration/execution,
+  AutoMod adapters, plus live standard command/economy acceptance.
 - Achievement trigger execution and automatic reward assignment.
 - Voice XP, voice-time analytics, retention calculations and analytics charts.
 - Live feed publication/approval editing through the new dashboard. Existing
@@ -71,7 +128,7 @@ synthetic server, never Discord.
 - Full Hallowed Core configuration bindings. Text-XP/economy switches and excluded
   text channels have a guarded settings binding. Other unsupported settings are
   drafts, not a replacement of its native onboarding, access or security policy.
-- Live OAuth and both-guild acceptance. Browser-intercepted UI checks are synthetic
+- Both-guild runtime acceptance. Browser-intercepted UI checks are synthetic
   and must not be described as real authentication or real Discord operation.
 
 ## Checks
@@ -99,13 +156,14 @@ Portal. Both registrations have been checked through Discord.
 
 The Owner authorized and installed Smith in the distinct private **LMOC TEST**
 server. Read-only SDK checks confirm installation and freshly resolve its actual
-server owner's dashboard authority. This is not a real browser sign-in test or
-proof of unpublished runtime operation.
+server owner's dashboard authority. The Owner subsequently completed real preview
+sign-in, with active encrypted sessions freshly resolving Owner authority in both
+guilds. This still is not proof of unpublished runtime operation.
 
-At inspection, the test bot could view/read/send messages but lacked Manage Roles,
-Manage Channels, Manage Messages, Moderate Members, Kick Members and Ban Members.
-Controlled tests of the corresponding modules require only their necessary
-permissions on this test server; never Administrator or changes to Hallowed Core.
+After the Owner's permission update, LMOC TEST has Manage Roles, Manage Channels,
+Manage Messages, Kick Members and Ban Members. Moderate Members is still absent;
+Administrator remains off. Timeout tests need that additional permission only in
+LMOC TEST. Ticket/onboarding permissions do not require changing Hallowed Core.
 
 Server AI phrasing preferences now reach the provider's message assembly as
 bounded, additive, untrusted style data. They cannot replace the base safety
