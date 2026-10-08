@@ -19,6 +19,19 @@ support cannot be declared complete until Hallowed Core and a separate test guil
 have both been verified. Web configuration must never bypass existing guarded
 Discord mutation services.
 
+During controlled two-server acceptance, runtime changes are authorized only in
+LMOC TEST. Do not modify Hallowed Core or activate modules labeled “runtime
+activation pending.”
+
+**Why:** The Owner explicitly limited the live acceptance rollout to the eight
+already-supported modules and required Hallowed Core to remain unchanged.
+
+**How to apply:** Verify the production process can load the test guild's saved
+configuration before creating live test events. Enforce the test-guild activation
+boundary, including startup adoption and analytics, rather than assuming a shared
+runtime's defaults are harmless. Keep one Gateway; never use the read-only
+preview client as a second mutation authority.
+
 Private previews must distinguish stored configuration from active runtime
 behavior and credential availability from successful Discord authentication.
 

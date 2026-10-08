@@ -6,6 +6,14 @@ completed real Discord OAuth in the preview: active encrypted sessions resolve
 fresh Owner authority in both Hallowed Core and LMOC TEST. Two-guild runtime
 behavior has not passed live acceptance.
 
+Controlled live acceptance was inspected on 2026-10-08 after the Owner completed
+LMOC TEST setup. The production worker is connected and ready, but the managed
+production database has zero platform tables and the real platform session route
+returns 404. Setup and 15 module configurations exist in development only.
+Live tests were held at that prerequisite; no Gateway/runtime, Discord resources,
+Hallowed Core configuration or pending adapter was changed. Exact observations
+and additional release blockers are in `LIVE-ACCEPTANCE.md`.
+
 ## Built and verified
 
 - Public website and responsive, sign-in-gated dashboard, in the existing Smith
