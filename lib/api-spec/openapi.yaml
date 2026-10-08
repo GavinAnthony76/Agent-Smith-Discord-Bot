@@ -24,6 +24,170 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /platform/session:
+    get:
+      operationId: getPlatformSession
+      responses:
+        "200":
+          description: Current dashboard session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSession" }
+  /platform/logout:
+    post:
+      operationId: logoutPlatform
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformResult" }
+  /platform/guilds:
+    get:
+      operationId: listPlatformGuilds
+      responses:
+        "200":
+          description: Authorized installed servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlatformGuild" }
+  /platform/guilds/{guildId}/overview:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPlatformOverview
+      responses:
+        "200":
+          description: Real server overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformOverview" }
+  /platform/guilds/{guildId}/modules:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPlatformModules
+      responses:
+        "200":
+          description: Server modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlatformModule" }
+  /platform/guilds/{guildId}/modules/{moduleKey}:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+      - { name: moduleKey, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: updatePlatformModule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformModuleInput" }
+      responses:
+        "200":
+          description: Saved and audited configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformModule" }
+  /platform/guilds/{guildId}/resources:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPlatformResources
+      responses:
+        "200":
+          description: Permitted channel and role choices
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformResources" }
+  /platform/guilds/{guildId}/collections/{collection}:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+      - { name: collection, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPlatformCollection
+      responses:
+        "200":
+          description: Real scoped records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformCollection" }
+    post:
+      operationId: createPlatformRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformRecordInput" }
+      responses:
+        "200":
+          description: Record saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformRecord" }
+  /platform/guilds/{guildId}/collections/{collection}/{recordId}:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+      - { name: collection, in: path, required: true, schema: { type: string } }
+      - { name: recordId, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: updatePlatformRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformRecordInput" }
+      responses:
+        "200":
+          description: Record saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformRecord" }
+    delete:
+      operationId: deletePlatformRecord
+      responses:
+        "200":
+          description: Record removed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformResult" }
+  /platform/guilds/{guildId}/actions:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: performPlatformAction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformActionInput" }
+      responses:
+        "200":
+          description: Guarded action result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformResult" }
+  /platform/guilds/{guildId}/setup:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    put:
+      operationId: savePlatformSetup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformSetupInput" }
+      responses:
+        "200":
+          description: Setup completed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformResult" }
 components:
   schemas:
     HealthStatus:
@@ -33,4 +197,143 @@ components:
           type: string
       required:
         - status
+    PlatformResult:
+      type: object
+      required: [ok, message]
+      properties:
+        ok: { type: boolean }
+        message: { type: string }
+    PlatformSession:
+      type: object
+      required: [authenticated, loginUrl, installUrl, oauthConfigured, botOnline]
+      properties:
+        authenticated: { type: boolean }
+        loginUrl: { type: string }
+        installUrl: { type: string }
+        oauthConfigured: { type: boolean }
+        oauthCallbackRegistered: { type: ["boolean", "null"] }
+        runtimeMode: { type: string, enum: [preview, production] }
+        botOnline: { type: boolean }
+        csrfToken: { type: string }
+        user:
+          type: object
+          required: [id, username]
+          properties:
+            id: { type: string }
+            username: { type: string }
+            avatar: { type: ["string", "null"] }
+    PlatformGuild:
+      type: object
+      required: [id, name, role, setupComplete, policy]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        icon: { type: ["string", "null"] }
+        role: { type: string }
+        setupComplete: { type: boolean }
+        policy: { type: string }
+    PlatformMetric:
+      type: object
+      required: [key, label, value]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        value: { type: ["number", "null"] }
+        reason: { type: string }
+    PlatformOverview:
+      type: object
+      required: [guild, metrics, recentActions, warnings, botOnline, plan]
+      properties:
+        guild: { $ref: "#/components/schemas/PlatformGuild" }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformMetric" }
+        recentActions:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformRecord" }
+        warnings: { type: array, items: { type: string } }
+        botOnline: { type: boolean }
+        plan: { type: string }
+    PlatformField:
+      type: object
+      required: [key, label, type]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        type: { type: string, enum: [boolean, number, text, channel, role, channels, roles, steps, json, select] }
+        options: { type: array, items: { type: string } }
+        description: { type: string }
+        min: { type: number }
+        max: { type: number }
+    PlatformModule:
+      type: object
+      required: [moduleKey, enabled, configuration, revision, editable, fields, runtimeStatus]
+      properties:
+        moduleKey: { type: string }
+        enabled: { type: boolean }
+        configuration: { type: object, additionalProperties: true }
+        revision: { type: integer }
+        editable: { type: boolean }
+        fields: { type: array, items: { $ref: "#/components/schemas/PlatformField" } }
+        runtimeStatus: { type: string }
+    PlatformModuleInput:
+      type: object
+      required: [enabled, configuration, revision]
+      properties:
+        enabled: { type: boolean }
+        configuration: { type: object, additionalProperties: true }
+        revision: { type: integer, minimum: 0 }
+    PlatformChoice:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        protected: { type: boolean }
+        rewardable: { type: boolean }
+    PlatformResources:
+      type: object
+      required: [channels, roles]
+      properties:
+        channels: { type: array, items: { $ref: "#/components/schemas/PlatformChoice" } }
+        roles: { type: array, items: { $ref: "#/components/schemas/PlatformChoice" } }
+    PlatformRecord:
+      type: object
+      required: [id, title, data, revision]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        data: { type: object, additionalProperties: true }
+        revision: { type: integer }
+        createdAt: { type: ["string", "null"] }
+    PlatformCollection:
+      type: object
+      required: [records, editable, fields, description]
+      properties:
+        records: { type: array, items: { $ref: "#/components/schemas/PlatformRecord" } }
+        editable: { type: boolean }
+        fields: { type: array, items: { $ref: "#/components/schemas/PlatformField" } }
+        description: { type: string }
+    PlatformRecordInput:
+      type: object
+      required: [title, data]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 150 }
+        data: { type: object, additionalProperties: true }
+        revision: { type: integer, minimum: 0 }
+    PlatformActionInput:
+      type: object
+      required: [action, target]
+      properties:
+        action: { type: string }
+        target: { type: string }
+        note: { type: string }
+        confirmed: { type: boolean }
+    PlatformSetupInput:
+      type: object
+      required: [modules, logChannelId, welcomeChannelId]
+      properties:
+        modules: { type: array, items: { type: string } }
+        logChannelId: { type: ["string", "null"] }
+        welcomeChannelId: { type: ["string", "null"] }
 

@@ -218,3 +218,17 @@ mtime_ms = 1791484170700
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/855cec5c-cce5-47e3-b653-d58c91cfd73f/201a8b20-4ea2-4bb5-b7e3-7caf821fba8d"
 storage_version_token = "1791484492240821"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "cj28S-6GUtR3VReyt2VH-"
+uri = "file://apps/agent-smith/PLATFORM-PROGRESS.md"
+type = "text"
+title = "Agent Smith — interim implementation status"
+description = "Implemented foundations, unfinished runtime adapters, verification boundaries and Owner setup needed. This is not a final production acceptance report."
+logical_id = "c3747efd-4b90-4d4e-b53c-31541dec31ac"
+content_hash = "sha256:51b2aaafd11e43df97248d3a8165866a479b4860b009405eab9c659b042fe711"
+size = 4766
+mtime_ms = 1791487997361
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/c3747efd-4b90-4d4e-b53c-31541dec31ac/c2a1696e-3ea3-4ddf-aa6d-91cc947ea712"
+storage_version_token = "1791488561486743"
+content_type = "text/markdown"

@@ -116,13 +116,16 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
     if (seen.has(message.id)) return true;
     seen.set(message.id, Date.now());
     const limit = service.reserve(message.author.id, owner(message.author.id));
+    const send = payload => dependencies.sendScope ?
+      dependencies.sendScope({ guild, userId: message.author.id, channelId: message.channelId }, () => message.reply(payload)) :
+      message.reply(payload);
     if (!limit.allowed) {
-      if (limit.warning) await message.reply({ content: 'Please wait a few seconds before asking again.', allowedMentions }).catch(() => {});
+      if (limit.warning) await send({ content: 'Please wait a few seconds before asking again.', allowedMentions }).catch(() => {});
       return true;
     }
     try {
       await respond({ userId: message.author.id, channelId: message.channelId, text, channel: message.channel,
-        send: payload => message.reply(payload) });
+        send });
     } catch {
       console.error('Smith conversation unavailable; no prompt or private data logged.');
       // No fallback send after an authorization failure.

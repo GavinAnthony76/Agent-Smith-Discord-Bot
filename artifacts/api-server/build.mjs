@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, copyFile } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -118,6 +118,12 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+  // Bot-owned permission definitions are read relative to import.meta.url.
+  // Bundling moves that URL to dist; retain the original runtime asset.
+  await copyFile(
+    path.resolve(artifactDir, "../../apps/agent-smith/src/permission-capabilities.json"),
+    path.resolve(distDir, "permission-capabilities.json"),
+  );
 }
 
 buildAll().catch((err) => {

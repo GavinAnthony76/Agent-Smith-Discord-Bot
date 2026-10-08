@@ -1,7 +1,7 @@
 import { PlatformError, moduleKey, permitScope } from './catalog.js';
 
 // Tenant additions cannot weaken immutable platform safety instructions.
-const forbidden = /(?:token|secret|password|api.?key|system.?prompt|security.?instructions|owner.?ids|bootstrap)/i;
+const forbidden = /(?:^(?:(?:access|refresh|discord|bot)[_-]?)?token$|secret|password|api.?key|system.?prompt|security.?instructions|owner.?ids|bootstrap)/i;
 function inspect(value, depth = 0) {
   if (depth > 8) throw new PlatformError('configuration_too_deep');
   if (value === null || ['string', 'boolean'].includes(typeof value)) return;
@@ -32,7 +32,7 @@ export function validateConfiguration(configuration) {
   return JSON.parse(encoded);
 }
 
-export function createGuildConfigurationService(pool) {
+export function createGuildConfigurationService(pool, { onSave = async () => {} } = {}) {
   async function getGuildSettings(permit) {
     const { guildId } = permitScope(permit, 'settings');
     const result = await pool.query(
@@ -79,6 +79,7 @@ export function createGuildConfigurationService(pool) {
         `INSERT INTO platform_audit(guild_id,actor_user_id,action,module,before_state,after_state)
          VALUES($1,$2,'module_configuration_updated',$3,$4,$5)`,
         [guildId, userId, key, { enabled: old.enabled, configuration: old.configuration_json }, { enabled, configuration: sanitized }]);
+      await onSave(db, { guildId, userId, key, enabled, configuration: sanitized });
       await db.query('COMMIT');
       return next;
     } catch (error) {

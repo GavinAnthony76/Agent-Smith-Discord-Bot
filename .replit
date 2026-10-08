@@ -10,7 +10,7 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Agent Smith Bot"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Agent Smith Bot"
@@ -87,3 +87,6 @@ AI_MAX_RESPONSE_TOKENS = "2048"
 AI_MODEL = "gpt-5.4-mini"
 AI_TEMPERATURE = "1"
 SMITH_ENABLE_MESSAGE_CONTENT = "true"
+
+[userenv.production]
+PLATFORM_PUBLIC_URL = "https://agent-smith-discord-bot.replit.app"

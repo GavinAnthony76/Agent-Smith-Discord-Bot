@@ -9,6 +9,7 @@ import { canModerate,canGrantFramework } from './authorization.js';
 import { smithCommand } from './conversation-commands.js';
 import { isLookupWarningContent } from './lookup-warning-policy.js';
 import { smithControlCommand } from './smith-control.js';
+import { platformTransportAllowed } from './platform/transport.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -18,6 +19,7 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
   client.rest.request = async request => {
     const method = request.method.toUpperCase(), route = request.fullRoute, body = request.body ?? {};
     if (['GET', 'HEAD'].includes(method)) return original(request);
+    if (platformTransportAllowed(client, request)) return original(request);
     const context = mutationScope();
     async function lookupWarningOwner(recipientId) {
       if (recipientId !== cfg.ownerDiscordId || recipientId !== context.subject)

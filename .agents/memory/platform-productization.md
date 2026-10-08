@@ -18,3 +18,26 @@ charging, aggressive public installation or sharding in this phase. Multi-server
 support cannot be declared complete until Hallowed Core and a separate test guild
 have both been verified. Web configuration must never bypass existing guarded
 Discord mutation services.
+
+Private previews must distinguish stored configuration from active runtime
+behavior and credential availability from successful Discord authentication.
+
+**Why:** Discord may have valid credentials but no registered OAuth callback.
+The Owner's acceptance condition is working behavior in two guilds, not screens
+or successful simulated tests.
+
+**How to apply:** Mark unconnected module adapters as inactive/draft, describe
+browser-intercepted checks as synthetic, and obtain an authorized second guild
+before claiming commercial multi-server readiness.
+
+SDK permission objects may be hydrated by a REST-only dashboard client, but that
+client must have no Gateway session and must reject all Discord REST writes.
+
+**Why:** A development dashboard runs while the published bot remains online.
+Logging in another client would violate the single-Gateway rollout boundary;
+giving the preview client write access would create a second mutation authority.
+
+**How to apply:** Keep permission hydration separate from privileged execution.
+Production web actions reuse the already-connected, guarded bot and its actual
+guild services; do not make the read-only preview client privileged just to enable
+an unsupported dashboard control.

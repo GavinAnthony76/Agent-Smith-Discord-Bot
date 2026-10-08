@@ -8,12 +8,25 @@ const READY_PATHS = new Set(['/readyz', '/api/readyz']);
 export function createWorkerStatus({ isDiscordReady = () => false } = {}) {
   let phase = 'starting';
   let closing;
+  let requestHandler;
   const snapshot = () => {
     const ready = phase === 'ready' && isDiscordReady() === true;
     const status = phase === 'ready' ? (ready ? 'connected' : 'disconnected') : phase;
     return { status, ready };
   };
   const server = createServer((request, response) => {
+    if (request.url?.startsWith('/api/platform/')) {
+      if (requestHandler) {
+        void requestHandler(request, response).catch(() => {
+          if (!response.headersSent) response.writeHead(503, { 'Content-Type': 'application/json' });
+          response.end('{"error":"platform_temporarily_unavailable"}');
+        });
+      } else {
+        response.writeHead(503, { 'Content-Type': 'application/json' });
+        response.end('{"error":"platform_starting"}');
+      }
+      return;
+    }
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -47,6 +60,7 @@ export function createWorkerStatus({ isDiscordReady = () => false } = {}) {
   server.maxHeadersCount = 32;
   return {
     snapshot,
+    attachHandler(handler) { requestHandler = handler; },
     setPhase(value) {
       if (!PHASES.has(value)) throw new Error('Invalid worker status phase.');
       phase = value;

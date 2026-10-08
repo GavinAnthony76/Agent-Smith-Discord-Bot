@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Agent Smith Platform"
+description = "Discord OAuth administration dashboard and public website for the existing Agent Smith bot, with tenant-scoped modules, server analytics, configuration and audit history."
+version = "1.0.0"
+id = "artifacts/smith-platform"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24853
+
+[services.development]
+run = "pnpm --filter @workspace/smith-platform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/smith-platform", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/smith-platform/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24853"
+BASE_PATH = "/"

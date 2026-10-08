@@ -90,8 +90,9 @@ export function createConversationService({ settings, provider, budget, now = Da
       available = true;
       ok = true;
       return save(safeOutput(output, context));
-    } catch {
+    } catch (error) {
       metrics.errors++; available = false;
+      if (error?.code === 'monthly_ai_budget_exhausted') return 'This server has reached its monthly paid-AI allowance. Help and server commands remain available.';
       return unavailable;
     } finally {
       if (reservation?.allowed) {
