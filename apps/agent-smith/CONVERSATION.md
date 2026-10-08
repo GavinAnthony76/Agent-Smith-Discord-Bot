@@ -219,6 +219,76 @@ rate-limit events, latency and last-request availability. Logs contain metadata 
 The Owner's private conversational status includes aggregate counts. No scheduled
 conversation starters or unsolicited daily messages are enabled.
 
+
+### Lookup budgets and safe shared reads
+
+Content-free lookup metrics are available to the actual Owner in the existing
+private status response: attempted reads, failures and cumulative latency by
+fixed operation type; coalesced reads, public-cache hits, admission refusals,
+timeouts, invalidations and REST backoffs. No user/channel/guild identifiers,
+SQL, prompts, names, error bodies or generated content enter those metrics.
+
+Before changing reuse behavior, an offline instrumented baseline for three
+answers (six context builds) measured six member, six role-list, six channel-list,
+six event reads and 42 database queries. Fixture latency was approximately zero
+for Discord operations and 2 ms cumulatively for database operations; **these
+are offline measurements, not production Discord latency**.
+
+Only the public cosmetic shop titles/prices have a TTL cache: one guild-local
+entry, 15 seconds (hard ceiling 30 seconds), at most 100 rewards, titles at most
+100 characters, with defensive copies. No resource mappings, member records,
+grants, XP, inventories, onboarding mode, permissions or thread membership are
+cached. Public rewards are advisory and never authorize access.
+
+Role/channel/event lists and public-reward cache misses can be batched for
+callers requesting them **before dispatch in the same event-loop turn**. Once
+the request starts, new callers must start their own fresh request. Neither
+completed permission snapshots nor already-running snapshots are reused by
+later callers. Channel-scoped events are filtered against each caller's fresh,
+approved visible-channel set. Events have no TTL cache.
+
+The offline overlapping sample (two simultaneous builds, then a third) reduces
+role/channel/event reads from three each to two each and public-shop queries
+from three to one. Member, bot-member and per-user approval reads remain
+independent. Fresh bot-member reads were added deliberately, so before/after
+total REST counts must account for that safety improvement rather than claim
+all authorization work was eliminated.
+
+Each context build has a five-second deadline; at most two are active and at
+most 60 may start per minute (each answer needs two). Excess work is refused
+immediately, never placed in a conversation queue. Timed-out underlying SDK/DB
+operations retain their admission slot until they settle; late completions
+cannot continue into model generation or delivery. These operations cannot be
+canceled through Discord's manager APIs. The conversation budget neither
+wraps nor serializes core audit/moderation/onboarding reads. New conversation
+work yields when the SDK knows a route bucket is exhausted, the global bucket
+has fewer than ten requests left, or a REST rate-limit backoff is active.
+Core operations still obey Discord's own rate limits; this is not a promise to
+bypass those limits.
+
+Guild/channel/role/member/thread/event updates invalidate in-progress freshness
+and clear public metadata. Disconnect/reconnect, unavailable guilds and shutdown
+also fail closed. Listener cleanup occurs on stop; no additional Gateway is
+created. Authorization uses returned fresh channel listings (not stale SDK cache
+entries), fresh caller and bot members, central effective permission resolution,
+fresh recorded approvals, and forced current-thread/membership reads. Missing
+role/parent/listing state is refused, not guessed.
+
+Pre-send context is still freshly rebuilt. The access signature includes visible
+channel metadata and events, not only IDs. A changed signature discards the
+generated answer and user/channel history; an authorization error or timeout
+sends no generated answer. Freshness is checked before every multipart reply.
+Offline tests cover concurrent shared reads, separate callers, cache TTL/bounds,
+update invalidation, deleted SDK entries, recorded-access and bot revocation,
+private-thread revocation, deadlines with late completion, REST headroom and
+shutdown. The workspace Gateway remains stopped during these tests.
+
+Lookup optimization verification after combining daily-budget changes:
+**386 passed, 0 failed, 5 existing PostgreSQL
+tests skipped** across the full offline suite. Permission preflight and static
+privileged-transport/permission-resolver/AI-boundary checks passed. No Gateway,
+production load test, migration or publishing was started for this change.
+
 ## 11. Short-lived context and threads
 
 In-process sessions are keyed by user and channel/thread, retaining the last

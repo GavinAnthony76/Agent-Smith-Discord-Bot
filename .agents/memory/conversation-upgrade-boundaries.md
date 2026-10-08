@@ -39,3 +39,15 @@ it before enabling the SDK intent so the conversation upgrade does not take the
 otherwise stable bot offline.
 Verify this through read-only application metadata, not an additional test
 Gateway connection; the single-instance hosting constraint still applies.
+
+Do not rely on Gateway invalidation alone to justify a permission TTL cache.
+Freshness-sensitive sharing is allowed only when every caller requested the
+read before its dispatch; later callers must obtain another fresh snapshot.
+
+**Why:** Disconnects can hide revocations, and the SDK's guild-wide fetch does
+not necessarily evict deleted entries from its local cache. A successful fetch
+plus a cache hit is not proof that the object is still in the authoritative list.
+
+**How to apply:** Keep caller/bot roles, recorded approvals and private-thread
+membership freshly read. Use returned listings and reject missing parents or
+roles. Reserve TTL reuse for explicitly public, non-authorizing metadata.

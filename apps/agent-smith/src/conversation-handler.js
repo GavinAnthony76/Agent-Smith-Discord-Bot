@@ -9,6 +9,7 @@ import { registerSmithCommand } from './conversation-commands.js';
 import { splitDiscord, unavailable } from './ai-safety.js';
 import { createConversationBudget, budgetStatusText } from './conversation-budget.js';
 import { createBudgetStore } from './conversation-budget-store.js';
+import { createConversationLookups } from './conversation-lookups.js';
 
 export async function conversationTrigger(message, { clientId, channelIds, triggers = [] }) {
   if (!message.guildId || message.author?.bot || message.author?.id === clientId || message.webhookId) return null;
@@ -33,7 +34,11 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
     store: createBudgetStore({ pool, guildId: guild.id }), defaults: settings.dailyBudget,
   });
   const service = dependencies.service ?? createConversationService({ settings, provider, budget });
-  const build = dependencies.buildContext ?? (args => buildConversationContext({ guild, cfg, pool, ...args }));
+  const lookups = createConversationLookups({ client, guild, ...dependencies.lookupOptions });
+  const contextBuilder = dependencies.buildContext ?? (args => buildConversationContext({ guild, cfg, pool, ...args }));
+  const build = args => lookups.run(async scope => ({
+    ...await contextBuilder({ ...args, lookups: scope }), lookupVersion: scope.version,
+  }));
   const pending = new Map(), seen = new Map();
   let registrationReady = false, registrationTimer, attempts = 0;
   const options = { clientId: cfg.clientId, channelIds: settings.channelIds, triggers: settings.triggers };
@@ -41,8 +46,9 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
   const owner = id => cfg.owners.includes(id) && id === guild.ownerId;
   function statusText(userId) {
     const status = service.status();
+    const lookupStatus = lookups.snapshot();
     return `Conversation AI: ${status.enabled ? 'enabled' : 'disabled'} · provider ${status.configured ? 'configured' : 'not configured'} · availability ${status.available === null ? 'not yet checked' : status.available ? 'last request succeeded' : 'unavailable'}.\nModel: ${status.model}. Slash registration: ${registrationReady ? 'ready' : 'pending'}.\nContext: ${settings.ttlMs / 60000} minutes. Plain dedicated-channel chat: ${cfg.contentEnabled ? 'Message Content enabled' : 'Message Content disabled'}.${
-      owner(userId) ? `\nRequests: ${status.requests}; AI: ${status.aiRequests}; errors: ${status.errors}; rate limits: ${status.rateLimits}; cumulative AI latency: ${status.latencyMs}ms.` : ''}`;
+      owner(userId) ? `\nRequests: ${status.requests}; AI: ${status.aiRequests}; errors: ${status.errors}; rate limits: ${status.rateLimits}; cumulative AI latency: ${status.latencyMs}ms.\nLookup metrics (counts and cumulative milliseconds only): ${JSON.stringify(lookupStatus)}` : ''}`;
   }
   function sweep() {
     const time = Date.now();
@@ -64,6 +70,7 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
     return { entry, row: new ActionRowBuilder().addComponents(...buttons) };
   }
   async function respond({ userId, channelId, text, channel, send, isPrivate = false }) {
+    try {
     const context = await build({ userId, channelId });
     const bot = guild.members.me;
     if (!hasPermission(bot, channel.isThread?.() ? P.SendMessagesInThreads : P.SendMessages, channel))
@@ -87,9 +94,14 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
     const { entry, row } = controls(userId, channelId, !isPrivate &&
       (answer.length > 1000 || (service.turnCount?.(userId, channelId) ?? 0) >= 3 || /\bthread\b/i.test(text)));
     for (let index = 0; index < pieces.length; index++) {
+      lookups.assertFresh(fresh.lookupVersion);
       const message = await send({ content: pieces[index], allowedMentions,
         ...(index === pieces.length - 1 ? { components: [row] } : {}) }, index);
       if (index === pieces.length - 1) entry.messageId = message?.id;
+    }
+    } catch (error) {
+      service.clear(userId, channelId);
+      throw error;
     }
   }
   async function handleMessage(message) {
@@ -143,13 +155,14 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
           }
           entry.busy = true;
           try {
-            await build({ userId: interaction.user.id, channelId: interaction.channelId });
+            const sourceContext = await build({ userId: interaction.user.id, channelId: interaction.channelId });
             const member = await guild.members.fetch({ user: interaction.user.id, force: true });
             const channel = interaction.channel;
             if (channel.isThread?.() || !interaction.message.startThread ||
                 ![member, guild.members.me].every(actor => hasPermission(actor, P.CreatePublicThreads, channel) &&
                   hasPermission(actor, P.SendMessagesInThreads, channel)))
               throw new Error('Thread creation is not allowed here.');
+            lookups.assertFresh(sourceContext.lookupVersion);
             const thread = await interaction.message.startThread({ name: 'Agent Smith conversation', autoArchiveDuration: 60 });
             entry.threadId = thread.id;
             const threadContext = await build({ userId: interaction.user.id, channelId: thread.id });
@@ -219,5 +232,5 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
   }
   return { handleMessage, handleInteraction, register,
     appendStatus: interaction => interaction.followUp({ content: statusText(interaction.user.id), flags: 64, allowedMentions }),
-    stop() { clearTimeout(registrationTimer); clearInterval(cleanupTimer); service.stop(); pending.clear(); seen.clear(); } };
+    stop() { clearTimeout(registrationTimer); clearInterval(cleanupTimer); lookups.stop(); service.stop(); pending.clear(); seen.clear(); } };
 }
