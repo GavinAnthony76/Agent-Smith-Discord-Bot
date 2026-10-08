@@ -9,6 +9,7 @@ import { hasPermission } from '../permissions.js';
 import { TARGET_GUILD_ID } from '../config.js';
 import { validatePublicFeedSource } from './source-policy.js';
 import { calculateLevel } from './activity.js';
+import { safetyReply } from '../ai-safety.js';
 
 const record = row => ({
   id: String(row.record_id ?? row.id), title: row.title ?? row.action ?? 'Record',
@@ -159,6 +160,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
       if (field.type === 'number' && (!Number.isSafeInteger(value) || value < field.min || value > field.max)) throw new PlatformError('invalid_number');
       if (['text', 'select'].includes(field.type) && (typeof value !== 'string' || value.length > 2000)) throw new PlatformError('invalid_text');
       if (field.type === 'select' && !field.options.includes(value)) throw new PlatformError('invalid_option');
+      if (field.key === 'personalityAdditions' && safetyReply(value)) throw new PlatformError('unsafe_personality_additions');
+      if (field.key === 'mentionOnly' && value !== true) throw new PlatformError('outside_channel_mentions_are_required');
       if (['roles', 'channels'].includes(field.type) && (!Array.isArray(value) || value.length > 100)) throw new PlatformError('invalid_choices');
       if (['role', 'roles', 'channel', 'channels'].includes(field.type)) {
         for (const id of Array.isArray(value) ? value : [value]) {
@@ -364,17 +367,19 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     const id = authority.guild.id;
     const result = (await pool.query(
       `SELECT
-       (SELECT count(*) FROM members WHERE guild_id=$1 AND left_at IS NULL) AS members,
+        CASE WHEN $1=$2 THEN (SELECT count(*) FROM members WHERE guild_id=$1 AND left_at IS NULL)
+         ELSE (SELECT count(*) FROM platform_member_profiles WHERE guild_id=$1) END AS members,
        (SELECT count(*) FROM moderation_cases WHERE guild_id=$1 AND closed_at IS NULL) AS cases,
        (SELECT count(*) FROM member_reports WHERE guild_id=$1 AND status='open') AS reports,
-       (SELECT COALESCE(sum(xp),0) FROM progression_balances WHERE guild_id=$1) AS xp,
+        CASE WHEN $1=$2 THEN (SELECT COALESCE(sum(xp),0) FROM progression_balances WHERE guild_id=$1)
+         ELSE (SELECT COALESCE(sum(xp),0) FROM platform_member_profiles WHERE guild_id=$1) END AS xp,
        (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='message' AND occurred_at>=date_trunc('day',now())) AS messages,
        (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='join' AND occurred_at>=date_trunc('day',now())) AS joins,
        (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='leave' AND occurred_at>=date_trunc('day',now())) AS leaves,
        (SELECT count(DISTINCT user_hash) FROM platform_activity WHERE guild_id=$1 AND occurred_at>=date_trunc('day',now())) AS active`,
-      [id])).rows[0];
+       [id, TARGET_GUILD_ID])).rows[0];
     const data = [
-      ['members', 'Recorded members', result.members], ['messages', 'Messages today (UTC)', result.messages],
+      ['members', id === TARGET_GUILD_ID ? 'Recorded members' : 'Recorded XP profiles', result.members], ['messages', 'Messages today (UTC)', result.messages],
       ['active', 'Active today (UTC)', result.active], ['joins', 'New members today (UTC)', result.joins],
       ['leaves', 'Members left today (UTC)', result.leaves], ['xp', 'Recorded XP', result.xp],
     ];

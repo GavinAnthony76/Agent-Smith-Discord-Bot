@@ -79,7 +79,8 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
     const config = value.configuration;
     const settings = { ...conversationSettings(), enabled: true, model: config.model,
       channelIds: config.allowedChannels, maxTokens: config.maxTokens,
-      ttlMs: config.ttlMinutes * 60000, cooldownMs: config.cooldownSeconds * 1000 };
+      ttlMs: config.ttlMinutes * 60000, cooldownMs: config.cooldownSeconds * 1000,
+      personalityAdditions: config.personalityAdditions, genericServer: guildId !== cfg.guildId };
     const handlers = createConversationHandlers({ client, guild, cfg: guildCfg, pool }, {
       settings,
       provider: meterProvider({ provider: createAIProvider(settings), pool, guildId }),

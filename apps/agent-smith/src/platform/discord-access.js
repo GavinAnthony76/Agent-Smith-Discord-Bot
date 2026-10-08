@@ -10,6 +10,7 @@ import { installSecurityGateForRestOnly } from './transport.js';
  */
 export function createDiscordAccess({ client, env = process.env } = {}) {
   let initializing;
+  const roleSnapshots = new WeakMap();
   const ownsClient = !client;
   if (!client) client = new Client({ intents: [] });
   if (ownsClient) {
@@ -26,14 +27,18 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
     await initialize();
     const raw = await client.rest.get(Routes.guild(guildId));
     const guild = client.guilds._add(raw);
-    await Promise.all([guild.roles.fetch(), guild.channels.fetch(), guild.members.fetchMe({ force: true })]);
+    const [roles] = await Promise.all([guild.roles.fetch(), guild.channels.fetch(), guild.members.fetchMe({ force: true })]);
+    roleSnapshots.set(guild, roles);
     return guild;
   }
   async function authority({ guildId, userId, pool }) {
     try {
       const guild = await freshGuild(guildId);
       const member = await guild.members.fetch({ user: userId, force: true });
-      if (member.user.bot || member.pending === true) return null;
+      const roles = roleSnapshots.get(guild);
+      if (member.user.bot || member.pending !== false || !roles ||
+          [member, guild.members.me].some(actor => !actor ||
+            [...actor.roles.cache.keys()].some(id => !roles.has(id)))) return null;
       let role;
       if (guild.ownerId === userId) role = 'OWNER';
       else if (hasPermission(member, P.Administrator) || hasPermission(member, P.ManageGuild)) role = 'ADMIN';

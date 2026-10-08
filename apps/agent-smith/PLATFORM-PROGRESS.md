@@ -64,15 +64,27 @@ Security dependency findings were patched where compatible trusted releases were
 available. Remaining build-tool advisories and any reviewed static-analysis
 warning must remain visible; do not report the whole project as vulnerability-free.
 
-## Owner setup needed for live verification
+## Live setup verified and remaining prerequisites
 
-In the **existing** Discord application's Developer Portal, open **OAuth2 →
-General → Redirects**, add both callback URLs supplied in chat, and save. Neither
-was registered when inspected. No new application or new secret is needed.
+The Owner registered both OAuth callbacks in the existing application's Developer
+Portal. Both registrations have been checked through Discord.
 
-Provide the ID of a private, authorized second test guild. Enable Discord
-Developer Mode, right-click the server and choose **Copy Server ID**. Do not
-install into unrelated public communities during this phase.
+The Owner authorized and installed Smith in the distinct private **LMOC TEST**
+server. Read-only SDK checks confirm installation and freshly resolve its actual
+server owner's dashboard authority. This is not a real browser sign-in test or
+proof of unpublished runtime operation.
+
+At inspection, the test bot could view/read/send messages but lacked Manage Roles,
+Manage Channels, Manage Messages, Moderate Members, Kick Members and Ban Members.
+Controlled tests of the corresponding modules require only their necessary
+permissions on this test server; never Administrator or changes to Hallowed Core.
+
+Server AI phrasing preferences now reach the provider's message assembly as
+bounded, additive, untrusted style data. They cannot replace the base safety
+persona. The standard-server persona no longer claims to serve Hallowed Core.
+Fresh-role authorization rejects cached role ghosts, and standard-server overview
+XP comes from its actual platform profiles rather than Hallowed Core's legacy
+progression table.
 
 Do not publish this partial upgrade or apply its production schema until the
 unfinished runtime adapters and their acceptance checks have been completed.

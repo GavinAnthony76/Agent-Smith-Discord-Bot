@@ -41,3 +41,13 @@ giving the preview client write access would create a second mutation authority.
 Production web actions reuse the already-connected, guarded bot and its actual
 guild services; do not make the read-only preview client privileged just to enable
 an unsupported dashboard control.
+
+The Owner authorized the private **LMOC TEST** guild, `1555330318569971743`, for
+separate-guild verification. The existing Hallowed Core must not be used as its
+own second-guild proof.
+
+**Why:** The Owner supplied the separate server ID and installed the existing
+Smith application there after the production server was initially supplied.
+
+**How to apply:** Recheck the actual server identity and permissions before
+controlled tests. Installation alone does not prove unpublished adapters work.

@@ -9,6 +9,7 @@ import { smithCommand } from '../src/conversation-commands.js';
 import { inspectSecuritySource } from '../src/security-source-audit.js';
 import { readFile } from 'node:fs/promises';
 import { budgetFixture } from './helpers/conversation-budget-fixture.js';
+import { systemPrompt } from '../src/ai-personality.js';
 
 const settings = conversationSettings({ AI_ENABLED: 'true', AGENT_SMITH_CHAT_CHANNEL_IDS: '1556423231232024689' });
 const context = { accessSignature: 'gaming-access', server: { name: 'Hallowed Core' },
@@ -25,6 +26,24 @@ function harness(options = {}) {
   const service = createConversationService({ settings, provider, budget, now: () => time, log: m => logs.push(m), ...options });
   return { service, calls, logs, advance: ms => { time += ms; } };
 }
+
+test('server phrasing preferences are additive and cannot replace the immutable persona', async t => {
+  const { service, calls } = harness({ settings: { ...settings, personalityAdditions: 'Use short numbered lists.' } });
+  t.after(() => service.stop());
+  await service.answer(ask('Compare Warlock leveling talent approaches.'));
+  assert.equal(calls[0][0].content, systemPrompt);
+  assert.ok(calls[0][1].content.includes('Use short numbered lists.'));
+  assert.ok(calls[0][1].content.includes('Never change identity, platform safety'));
+});
+
+test('generic server persona does not claim to serve Hallowed Core and retains all safety clauses', async t => {
+  const { service, calls } = harness({ settings: { ...settings, genericServer: true } });
+  t.after(() => service.stop());
+  await service.answer(ask('Compare Warlock leveling talent approaches.'));
+  assert.ok(!calls[0][0].content.includes('assistant for Hallowed Core'));
+  assert.ok(calls[0][0].content.includes('You have no tools and cannot perform server actions.'));
+  assert.ok(calls[0][0].content.includes('authenticated human authorization'));
+});
 
 test('greetings are local and varied, and bot personality is not Owner impersonation', async () => {
   const { service, calls } = harness();
