@@ -16,3 +16,4 @@
 - [Video soundtrack timing](video-audio-duration.md) — measure generated duration and actual media-clock alignment; requested length and play events are not guarantees.
 - [PostgreSQL test isolation](postgres-test-isolation.md) — public search-path fallback can hide missing test schema and send test writes into live tables.
 - [Conversation boundaries](conversation-upgrade-boundaries.md) — preserve the existing bot/runtime; conversational AI is advisory, permission-scoped and short-lived.
+- [Platform productization](platform-productization.md) — multi-server commercial scope preserves Hallowed Core; no billing activation or completion claim before two-guild verification.

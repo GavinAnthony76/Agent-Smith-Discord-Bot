@@ -204,3 +204,17 @@ mtime_ms = 1791430834209
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/50c70e7f-98f5-4084-937d-569e20b3cc4b/00a9fbe9-5d96-4643-9ccd-14b3d563d705"
 storage_version_token = "1791430859300206"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "wZ0TCWaCpKWQQ_SwuDfbZ"
+uri = "file://apps/agent-smith/PLATFORM-AUDIT.md"
+type = "text"
+title = "Agent Smith platform architecture audit"
+description = "Existing architecture, single-server restrictions, data-preservation strategy and the boundary for the new platform foundation."
+logical_id = "855cec5c-cce5-47e3-b653-d58c91cfd73f"
+content_hash = "sha256:147f15f8268233b68c2f881d42d18bb98ce0409c661da0ce9f4233e3204bb218"
+size = 3924
+mtime_ms = 1791484170700
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/855cec5c-cce5-47e3-b653-d58c91cfd73f/201a8b20-4ea2-4bb5-b7e3-7caf821fba8d"
+storage_version_token = "1791484492240821"
+content_type = "text/markdown"

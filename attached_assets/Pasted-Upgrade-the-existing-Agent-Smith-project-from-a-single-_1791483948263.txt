@@ -1,0 +1,1385 @@
+Upgrade the existing Agent Smith project from a single-server Discord bot into the foundation of a commercial multi-server Discord platform with a full web administration dashboard.
+
+IMPORTANT:
+
+Agent Smith is already working and stable in Hallowed Core.
+
+DO NOT rebuild the bot from scratch.
+
+DO NOT break:
+
+- current Discord login
+- Hallowed Core onboarding
+- framework separation
+- crossover approval rules
+- moderation
+- XP/levels
+- achievements
+- economy/rewards
+- feeds
+- conversational AI
+- current stable deployment/runtime
+
+The goal of this phase is PRODUCTIZATION.
+
+Agent Smith should evolve from:
+
+"one custom Discord bot"
+
+into:
+
+"an installable Discord platform with configurable modules, a web dashboard,
+multi-server support, analytics, premium entitlements, and future paid plans."
+
+==================================================
+1. FIRST STEP — FULL AUDIT
+==================================================
+
+Before changing architecture:
+
+Inspect the complete current project.
+
+Identify:
+
+- framework
+- backend
+- frontend if any
+- database
+- ORM
+- Discord client architecture
+- command handler
+- event handler
+- current guild configuration
+- onboarding implementation
+- framework access system
+- crossover approval system
+- moderation
+- automod
+- XP
+- leveling
+- achievements
+- economy
+- rewards
+- feeds
+- YouTube
+- AI conversation layer
+- temporary conversation context
+- current Replit deployment
+- secrets
+- current tests
+- database schema
+- all assumptions that currently hardcode Hallowed Core
+
+Produce a short architecture audit.
+
+Then continue implementation.
+
+Do NOT stop at planning.
+
+==================================================
+2. PRIMARY PRODUCT GOAL
+==================================================
+
+Build the foundation for:
+
+AGENT SMITH PLATFORM
+
+Components:
+
+1. Discord Bot
+2. Public Website
+3. Web Admin Dashboard
+4. Discord OAuth Authentication
+5. Multi-Guild Configuration
+6. Modular Feature System
+7. Moderation
+8. AutoMod
+9. Onboarding
+10. Roles
+11. XP / Levels
+12. Achievements
+13. Economy
+14. Rewards / Perks
+15. Tickets
+16. Feeds
+17. AI Assistant
+18. Analytics
+19. Premium Entitlements
+20. Subscription Billing Later
+
+The current Hallowed Core server becomes the first production guild using this
+platform.
+
+==================================================
+3. MULTI-GUILD ARCHITECTURE
+==================================================
+
+This is critical.
+
+Refactor all server-specific configuration so Agent Smith can safely support
+multiple Discord guilds.
+
+Every server-specific table must include:
+
+guild_id
+
+Examples:
+
+guild_settings
+guild_modules
+guild_roles
+guild_channels
+guild_onboarding
+guild_automod
+guild_feeds
+guild_level_settings
+guild_rewards
+guild_tickets
+
+User-specific records that vary by server must also include guild_id.
+
+Examples:
+
+member_xp
+member_levels
+member_achievements
+economy_balances
+moderation_cases
+warnings
+reports
+member_profiles
+
+Do NOT assume one global guild.
+
+Hallowed Core must continue working after migration.
+
+==================================================
+4. GUILD CONFIGURATION LAYER
+==================================================
+
+Create a central guild configuration service.
+
+Example API/service methods:
+
+getGuildSettings(guildId)
+
+getGuildModuleConfig(guildId, module)
+
+updateGuildModuleConfig(guildId, module, settings)
+
+getGuildRoles(guildId)
+
+getGuildChannels(guildId)
+
+getGuildPermissions(guildId)
+
+Do not scatter guild-specific constants throughout command files.
+
+==================================================
+5. MODULE SYSTEM
+==================================================
+
+Build a configurable module architecture.
+
+Initial modules:
+
+moderation
+automod
+onboarding
+roles
+leveling
+economy
+achievements
+rewards
+tickets
+welcome
+feeds
+youtube
+events
+ai
+analytics
+
+Database model:
+
+guild_modules
+
+guild_id
+module_key
+enabled
+configuration_json
+updated_by
+updated_at
+
+Example dashboard state:
+
+Moderation       ON
+AutoMod          ON
+Onboarding       ON
+Leveling         ON
+Economy          ON
+Tickets          OFF
+Feeds            ON
+AI               ON
+
+Commands/events belonging to disabled modules should gracefully stop operating.
+
+==================================================
+6. PRESERVE HALLOWED CORE CUSTOM LOGIC
+==================================================
+
+Hallowed Core has three frameworks:
+
+FAITH
+GAMING
+TECH
+
+Normal users may self-select exactly one.
+
+Second/third framework access requires explicit human approval.
+
+Preserve this completely.
+
+However:
+
+move this into a configurable onboarding/access-policy model so future servers
+can choose different onboarding rules.
+
+Do NOT remove Hallowed Core's current behavior.
+
+==================================================
+7. WEB APPLICATION
+==================================================
+
+Build the initial Agent Smith web application.
+
+Suggested routes:
+
+/
+ /login
+ /dashboard
+ /dashboard/:guildId
+ /dashboard/:guildId/overview
+ /dashboard/:guildId/moderation
+ /dashboard/:guildId/automod
+ /dashboard/:guildId/onboarding
+ /dashboard/:guildId/roles
+ /dashboard/:guildId/leveling
+ /dashboard/:guildId/economy
+ /dashboard/:guildId/achievements
+ /dashboard/:guildId/rewards
+ /dashboard/:guildId/tickets
+ /dashboard/:guildId/feeds
+ /dashboard/:guildId/ai
+ /dashboard/:guildId/analytics
+ /dashboard/:guildId/settings
+ /premium
+ /docs
+ /status
+
+Use the project's existing frontend framework if present.
+
+If no frontend exists, create a clean modern dashboard using the current Replit-
+friendly stack.
+
+==================================================
+8. DISCORD OAUTH LOGIN
+==================================================
+
+Implement Discord OAuth2 for dashboard login.
+
+Use Authorization Code flow.
+
+Scopes:
+
+identify
+guilds
+email if useful
+
+Store provider identity securely.
+
+Do not use display name as identity.
+
+Use stable Discord user ID.
+
+==================================================
+9. SERVER SELECTION
+==================================================
+
+After login:
+
+show only Discord servers where:
+
+A. Agent Smith is installed
+
+AND
+
+B. the user has appropriate management authority.
+
+Default requirement:
+
+Manage Guild
+
+Also allow configured Agent Smith dashboard managers.
+
+Example flow:
+
+LOGIN WITH DISCORD
+↓
+SELECT SERVER
+↓
+OPEN DASHBOARD
+
+Do not allow someone to guess a guild ID URL and gain access.
+
+Every dashboard route must enforce server-side authorization.
+
+==================================================
+10. DASHBOARD ACCESS ROLES
+==================================================
+
+Support dashboard permission levels.
+
+Suggested:
+
+OWNER
+ADMIN
+MODERATOR
+COMMUNITY_MANAGER
+VIEW_ONLY
+
+Possible capabilities:
+
+OWNER:
+everything
+
+ADMIN:
+most modules/settings
+
+MODERATOR:
+moderation/reports/logs
+
+COMMUNITY_MANAGER:
+onboarding/events/feeds/welcome
+
+VIEW_ONLY:
+analytics/status only
+
+Store configuration per guild.
+
+==================================================
+11. DASHBOARD OVERVIEW
+==================================================
+
+Create a polished server overview page.
+
+Metrics may include:
+
+Members
+Active Today
+Messages Today
+Voice Hours
+New Members
+Members Left
+Open Moderation Cases
+Pending Reports
+Onboarding Completion Rate
+XP Activity
+Top Channels
+Feed Status
+Agent Smith Status
+
+Use real database/API data.
+
+Do not invent metrics.
+
+==================================================
+12. MODERATION DASHBOARD
+==================================================
+
+Display:
+
+open cases
+recent warnings
+timeouts
+bans
+reports
+automod incidents
+
+Allow authorized staff to:
+
+view case
+add notes
+close case
+review report
+take approved actions
+
+All actions must use existing backend permission/security services.
+
+The dashboard is UI only.
+
+It must not bypass Discord hierarchy or safety rules.
+
+==================================================
+13. AUTOMOD DASHBOARD
+==================================================
+
+Configurable rules:
+
+invite filtering
+spam
+duplicate messages
+mass mentions
+caps
+emoji flood
+blocked domains
+scam/phishing patterns
+banned terms
+account-age checks later
+join-rate checks later
+
+Each rule:
+
+enabled
+threshold
+action
+excluded channels
+excluded roles
+
+Actions:
+
+LOG
+DELETE
+WARN
+TIMEOUT
+ESCALATE
+
+==================================================
+14. ONBOARDING BUILDER — FOUNDATION
+==================================================
+
+Build the first version of a visual onboarding configuration system.
+
+Support configurable steps:
+
+MESSAGE
+RULES_ACCEPTANCE
+ROLE_SELECT
+QUESTION
+BUTTON
+FINALIZATION
+
+Hallowed Core's current flow should be represented through this model.
+
+Example:
+
+Step 1 Welcome
+Step 2 Rules
+Step 3 Choose Framework
+Step 4 Choose Interests
+Step 5 Finish
+
+Do not remove current production onboarding until the new system is proven.
+
+==================================================
+15. ROLE MANAGEMENT DASHBOARD
+==================================================
+
+Show:
+
+security roles
+framework roles
+interest roles
+reward roles
+moderator roles
+protected roles
+
+Allow configuration of:
+
+self-assignable roles
+rewardable roles
+protected roles
+role groups
+
+Never allow the dashboard to circumvent Discord role hierarchy.
+
+==================================================
+16. LEVELING DASHBOARD
+==================================================
+
+Expose existing XP/level settings.
+
+Controls:
+
+Text XP
+Voice XP
+XP cooldown
+Minimum XP
+Maximum XP
+Eligible channels
+Excluded channels
+Voice participant minimum
+AFK prevention
+Voice XP interval
+
+Display:
+
+level thresholds
+role rewards
+leaderboard configuration
+
+==================================================
+17. LEVEL REWARDS
+==================================================
+
+Create dashboard management for level rewards.
+
+Example:
+
+Level 5 → Challenger
+Level 10 → Veteran
+Level 20 → Elite
+
+Only allow roles marked:
+
+bot_rewardable = true
+
+Never allow:
+
+Owner
+Admin
+Moderator
+Agent Smith
+security roles
+
+to be awarded automatically.
+
+==================================================
+18. MEMBER PROFILES / RANK CARDS
+==================================================
+
+Build the data/API foundation for richer profiles.
+
+Support:
+
+display name
+avatar
+level
+XP progress
+achievements
+badges
+framework/interests
+economy balance
+rank
+
+Prepare for configurable visual rank cards.
+
+Do not block this phase on advanced image generation if not ready.
+
+==================================================
+19. ACHIEVEMENTS DASHBOARD
+==================================================
+
+Allow admins to:
+
+create achievement
+edit achievement
+set trigger type
+set icon/image
+set description
+assign reward
+enable/disable
+
+Trigger types may include:
+
+manual
+XP level
+event participation
+message milestone
+voice milestone
+trivia milestone
+community contribution
+
+==================================================
+20. ECONOMY DASHBOARD
+==================================================
+
+Expose:
+
+currency name
+daily amount
+cooldowns
+enabled/disabled
+shop items
+prices
+inventory behavior
+
+Economy must remain cosmetic/community-oriented.
+
+No real-money value.
+
+==================================================
+21. TICKETS MODULE
+==================================================
+
+Add a configurable tickets module.
+
+Support ticket panels.
+
+Panel config:
+
+title
+description
+button label
+category
+support roles
+questions/form fields
+
+Ticket types may include:
+
+Support
+Report User
+Appeal
+Access Request
+Other
+
+On open:
+
+create private ticket channel/thread
+
+authorized roles only
+
+Support:
+
+CLAIM
+CLOSE
+ESCALATE
+
+Store:
+
+ticket_id
+guild_id
+creator_id
+claimed_by
+status
+created_at
+closed_at
+
+Prepare transcript support.
+
+==================================================
+22. WELCOME MODULE
+==================================================
+
+Create dashboard controls for:
+
+welcome enabled
+channel
+message
+embed title
+description
+banner/image
+buttons
+role behavior
+
+Support placeholders:
+
+{user}
+{server}
+{memberCount}
+
+Prepare future custom welcome-card rendering.
+
+==================================================
+23. FEEDS DASHBOARD
+==================================================
+
+Manage:
+
+YouTube
+RSS
+future Twitch
+future Reddit
+future custom webhook feeds
+
+Each feed:
+
+type
+source
+destination
+notification role
+enabled
+auto-thread
+custom message
+
+Prevent duplicate posts.
+
+==================================================
+24. AI MODULE DASHBOARD
+==================================================
+
+Expose Agent Smith AI configuration.
+
+Settings:
+
+AI enabled
+allowed channels
+mention-only channels
+dedicated conversation channels
+response length
+temporary context TTL
+rate limits
+model selection where appropriate
+server-specific personality additions
+
+Do NOT allow server admins to overwrite hard security instructions.
+
+Maintain immutable platform safety rules.
+
+==================================================
+25. AI USAGE METERING
+==================================================
+
+Start tracking AI usage per guild.
+
+Store:
+
+guild_id
+user_id
+request_count
+input_tokens if available
+output_tokens if available
+estimated_cost if available
+timestamp
+
+This is needed for future premium limits.
+
+Do not expose secrets.
+
+==================================================
+26. ANALYTICS FOUNDATION
+==================================================
+
+Build server analytics using actual collected data.
+
+Metrics:
+
+joins
+leaves
+retention
+messages
+voice activity
+XP earned
+active users
+top channels
+onboarding completion
+onboarding drop-off
+moderation actions
+reports
+automod events
+feed engagement if measurable
+
+Avoid collecting unnecessary private content.
+
+==================================================
+27. AUDIT LOG FOR DASHBOARD CHANGES
+==================================================
+
+Every significant dashboard change should create an audit event.
+
+Store:
+
+guild_id
+actor_user_id
+action
+module
+before_state
+after_state
+timestamp
+
+Examples:
+
+changed spam threshold
+enabled AI
+disabled YouTube feed
+added reward role
+changed XP rate
+
+Create dashboard page:
+
+Audit History
+
+==================================================
+28. ENTITLEMENT SYSTEM
+==================================================
+
+Build the entitlement architecture now even if payments are not enabled yet.
+
+Create centralized service:
+
+canUse(guildId, feature)
+
+getLimit(guildId, feature)
+
+getPlan(guildId)
+
+Possible plans:
+
+FREE
+PRO
+ULTIMATE
+
+Do not hardcode premium checks across commands.
+
+All feature availability should route through this entitlement layer.
+
+==================================================
+29. INITIAL PLAN MODEL
+==================================================
+
+Create configurable plan definitions.
+
+FREE may include:
+
+moderation
+basic automod
+onboarding
+leveling
+basic economy
+basic achievements
+limited feeds
+limited ticket panels
+basic AI allowance
+basic analytics
+
+PRO may later include:
+
+advanced automod
+more feeds
+custom welcome
+custom rank cards
+advanced onboarding
+more tickets
+more AI
+advanced analytics
+scheduled announcements
+more rewards
+
+ULTIMATE may later include:
+
+highest AI limits
+AI summaries
+advanced audit history
+custom branding
+advanced analytics
+API access
+higher limits
+priority processing
+
+Do NOT enable charging yet unless payment setup is explicitly configured.
+
+==================================================
+30. STRIPE READINESS
+==================================================
+
+Prepare the data model for Stripe.
+
+Tables may include:
+
+billing_customers
+subscriptions
+subscription_events
+guild_entitlements
+
+Fields:
+
+guild_id
+stripe_customer_id
+stripe_subscription_id
+plan
+status
+current_period_end
+
+Do not require Stripe secrets to run the free platform.
+
+Billing integration can remain disabled until configured.
+
+==================================================
+31. FEATURE LIMITS
+==================================================
+
+Create limit infrastructure.
+
+Examples:
+
+FREE:
+feeds = 3
+ticket_panels = 1
+custom_rank_cards = 0
+ai_monthly_requests = configurable
+
+PRO:
+feeds = 25
+ticket_panels = 10
+custom_rank_cards = 5
+higher AI limit
+
+ULTIMATE:
+larger/unlimited limits as configured
+
+Do not hardcode these values in command handlers.
+
+==================================================
+32. PUBLIC WEBSITE FOUNDATION
+==================================================
+
+Create a polished public landing page.
+
+Sections:
+
+Agent Smith
+AI-Powered Discord Operations
+
+Features:
+
+Moderation
+Onboarding
+AI
+Leveling
+Economy
+Tickets
+Feeds
+Analytics
+
+Buttons:
+
+ADD TO DISCORD
+OPEN DASHBOARD
+
+Also create placeholders/pages for:
+
+Pricing
+Documentation
+Status
+Privacy
+Terms
+
+Do not claim pricing/features are final if they are not.
+
+==================================================
+33. INSTALL FLOW
+==================================================
+
+Prepare an Add to Discord flow.
+
+Use the existing Agent Smith application.
+
+Do NOT create another Discord application.
+
+Invite permissions should follow least privilege.
+
+Document:
+
+required permissions
+required intents
+OAuth scopes
+
+==================================================
+34. GUILD INSTALL INITIALIZATION
+==================================================
+
+When Agent Smith joins a new guild:
+
+create guild record
+create default settings
+create default module configuration
+create safe baseline security config
+
+Do NOT automatically create dozens of channels/roles in public servers.
+
+Instead:
+
+provide setup wizard/dashboard.
+
+Hallowed Core may retain its custom bootstrap behavior.
+
+==================================================
+35. SERVER SETUP WIZARD
+==================================================
+
+Create initial setup flow.
+
+Steps:
+
+1. Welcome
+2. Select modules
+3. Configure moderation
+4. Configure onboarding
+5. Configure leveling
+6. Choose logging channels
+7. Choose welcome channel
+8. Review permissions
+9. Finish
+
+Allow setup through dashboard first.
+
+==================================================
+36. HORIZONTAL SECURITY RULE
+==================================================
+
+A dashboard manager for Guild A must NEVER be able to:
+
+read
+change
+query
+or infer
+
+Guild B configuration/data.
+
+Every guild-scoped query must enforce guild authorization.
+
+Test this explicitly.
+
+==================================================
+37. DATABASE MIGRATION
+==================================================
+
+Inspect current single-guild schema.
+
+Create safe migrations to multi-guild.
+
+Do not destroy Hallowed Core data.
+
+Migration must preserve:
+
+XP
+levels
+economy
+achievements
+moderation
+roles
+feeds
+settings
+AI configuration
+onboarding state
+
+Backfill existing records with Hallowed Core guild_id where required.
+
+==================================================
+38. PROJECT STRUCTURE
+==================================================
+
+Refactor toward clear service boundaries.
+
+Suggested:
+
+src/
+  discord/
+    commands/
+    events/
+
+  web/
+    routes/
+    api/
+    dashboard/
+
+  services/
+    guilds/
+    modules/
+    permissions/
+    moderation/
+    automod/
+    onboarding/
+    roles/
+    leveling/
+    achievements/
+    economy/
+    tickets/
+    feeds/
+    ai/
+    analytics/
+    entitlements/
+    billing/
+
+  db/
+  security/
+  config/
+
+Keep transport/UI logic separate from business logic.
+
+==================================================
+39. API LAYER
+==================================================
+
+Create authenticated dashboard APIs.
+
+Examples:
+
+GET /api/guilds
+
+GET /api/guilds/:guildId/overview
+
+GET/PUT /api/guilds/:guildId/modules
+
+GET/PUT /api/guilds/:guildId/automod
+
+GET/PUT /api/guilds/:guildId/leveling
+
+GET/PUT /api/guilds/:guildId/onboarding
+
+GET/POST /api/guilds/:guildId/tickets
+
+GET/POST /api/guilds/:guildId/feeds
+
+GET /api/guilds/:guildId/analytics
+
+All routes require:
+
+authenticated Discord user
+guild membership/authorization
+appropriate dashboard role
+
+==================================================
+40. SESSION SECURITY
+==================================================
+
+Use secure dashboard sessions.
+
+Requirements:
+
+OAuth state validation
+CSRF protection
+HttpOnly cookies
+Secure cookies in production
+SameSite configuration
+session rotation
+server-side authorization
+
+Never expose:
+
+Discord bot token
+Discord client secret
+database secrets
+API keys
+AI secrets
+future Stripe secrets
+
+==================================================
+41. TESTING
+==================================================
+
+Add tests for:
+
+MULTI-GUILD
+
+Guild A settings isolated from Guild B
+Guild A XP isolated from Guild B
+Guild A moderator cannot access Guild B
+
+OAUTH
+
+login
+state validation
+server list
+unauthorized guild
+
+MODULES
+
+enable/disable
+configuration persistence
+
+DASHBOARD PERMISSIONS
+
+owner
+admin
+moderator
+community manager
+unauthorized user
+
+LEVELING
+
+XP settings
+reward limits
+protected role prevention
+
+ENTITLEMENTS
+
+Free limits
+Pro mocked limits
+Ultimate mocked limits
+feature access
+
+TICKETS
+
+open
+claim
+close
+permission checks
+
+AUDIT
+
+dashboard change stored correctly
+
+MIGRATION
+
+existing Hallowed Core data preserved
+
+==================================================
+42. REPLIT / PRODUCTION
+==================================================
+
+Do not break Agent Smith's stable production runtime.
+
+The bot must remain capable of staying online continuously.
+
+If the web dashboard runs in the same project:
+
+ensure both:
+
+Discord gateway
+HTTP web server
+
+start correctly in production.
+
+Use one reliable production entry point or clearly separated persistent services.
+
+Do NOT reintroduce duplicate Discord login/session-start problems.
+
+There must still be exactly one active Discord client per bot process.
+
+==================================================
+43. IMPLEMENTATION PHASES
+==================================================
+
+PHASE 1
+Audit current Agent Smith architecture.
+
+PHASE 2
+Design and migrate multi-guild database.
+
+PHASE 3
+Build guild configuration service.
+
+PHASE 4
+Build module system.
+
+PHASE 5
+Implement Discord OAuth.
+
+PHASE 6
+Build guild/server selector.
+
+PHASE 7
+Build dashboard shell/navigation.
+
+PHASE 8
+Build overview dashboard.
+
+PHASE 9
+Expose moderation/automod settings.
+
+PHASE 10
+Expose onboarding/role settings.
+
+PHASE 11
+Expose XP/level/reward settings.
+
+PHASE 12
+Add ticket module.
+
+PHASE 13
+Expose feeds.
+
+PHASE 14
+Expose AI settings.
+
+PHASE 15
+Build analytics foundation.
+
+PHASE 16
+Build audit-history system.
+
+PHASE 17
+Build entitlement system.
+
+PHASE 18
+Create public website foundation.
+
+PHASE 19
+Add billing-ready database models.
+
+PHASE 20
+Run migration/testing/security audit.
+
+DO NOT STOP AFTER WRITING A PLAN.
+
+Implement the first production-ready version.
+
+==================================================
+44. THIS PHASE SHOULD NOT YET DO
+==================================================
+
+Do NOT require active Stripe billing yet.
+
+Do NOT aggressively market/install Agent Smith into public servers yet.
+
+Do NOT remove Hallowed Core-specific functionality.
+
+Do NOT turn every planned premium feature on immediately.
+
+Do NOT add sharding unless actually needed.
+
+Do NOT replace the stable bot runtime unnecessarily.
+
+Do NOT weaken security to make dashboard development easier.
+
+==================================================
+45. FINAL IMPLEMENTATION REPORT
+==================================================
+
+When complete provide:
+
+1. Existing architecture discovered
+2. Hallowed Core hardcoded assumptions found
+3. Multi-guild changes
+4. Database migrations
+5. Existing data preservation results
+6. Files created
+7. Files modified
+8. Dashboard routes
+9. Dashboard pages
+10. Discord OAuth implementation
+11. Guild authorization model
+12. Module system
+13. Moderation dashboard
+14. AutoMod dashboard
+15. Onboarding dashboard
+16. Leveling dashboard
+17. Achievement/economy configuration
+18. Tickets implementation
+19. Feed management
+20. AI configuration
+21. Analytics
+22. Dashboard audit history
+23. Entitlement architecture
+24. Billing-ready schema
+25. Public website pages
+26. Required environment variables
+27. Required Discord Developer Portal settings
+28. Required bot permissions
+29. Required intents
+30. Tests run/results
+31. Security audit results
+32. Production deployment changes
+33. Remaining risks
+34. Deferred features
+35. Exact instructions for testing with Hallowed Core
+36. Exact instructions for installing Agent Smith into a SECOND TEST SERVER
+
+Do not claim multi-server support is complete until Agent Smith has successfully
+been tested with at least:
+
+Hallowed Core
+
+AND
+
+one separate test Discord guild.
