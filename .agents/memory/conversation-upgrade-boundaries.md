@@ -37,3 +37,5 @@ silently switch billing accounts or request a personal API key for this layer.
 Dedicated plain chat requires Discord's Message Content authorization: confirm
 it before enabling the SDK intent so the conversation upgrade does not take the
 otherwise stable bot offline.
+Verify this through read-only application metadata, not an additional test
+Gateway connection; the single-instance hosting constraint still applies.

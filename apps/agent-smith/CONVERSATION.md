@@ -10,9 +10,10 @@ The selected provider is **OpenAI through Replit AI Integrations**; no personal
 OpenAI key is required. Usage is billed to Replit credits. A real, minimal request
 to `gpt-5.4-mini` succeeded during verification, without sending member data.
 
-**Plain chat activation is pending:** a read-only Discord application check found
-that Message Content was not authorized. The SDK flag is deliberately left off
-to avoid breaking the working bot with a disallowed privileged intent.
+**Ready for republish:** after the Owner enabled and saved Message Content Intent,
+a read-only application check confirmed authorization. The configured chat channel
+was also verified as a text channel in the authorized guild. Shared
+`SMITH_ENABLE_MESSAGE_CONTENT=true` is now set. No test Gateway was opened.
 
 1. In the Discord Developer Portal, select Agent Smith → **Bot** →
    **Privileged Gateway Intents**, enable **Message Content Intent**, and save.
@@ -25,7 +26,7 @@ to avoid breaking the working bot with a disallowed privileged intent.
    handler and its staff permissions remain intact; conversation status is
    appended privately. Other commands are not replaced.
 
-Until the intent is enabled, slash questions and messages containing a direct
+Without that intent, slash questions and messages containing a direct
 bot mention remain usable; unmentioned dedicated-channel content and some
 unmentioned replies cannot be read. This is not an AI outage.
 
@@ -99,7 +100,7 @@ Configured shared non-secret settings:
 | `AI_COOLDOWN_SECONDS` | `5` |
 | `AGENT_SMITH_CHAT_CHANNEL_IDS` | `1556423231232024689` |
 | `AGENT_SMITH_TRIGGERS` | unset |
-| `SMITH_ENABLE_MESSAGE_CONTENT` | leave off until Discord authorization is confirmed |
+| `SMITH_ENABLE_MESSAGE_CONTENT` | `true`; Discord authorization verified |
 
 GPT-5/6 and o-series reasoning models use their model-default temperature rather
 than sending an unsupported temperature parameter. Supported non-reasoning models
@@ -210,5 +211,5 @@ database migrations or publishing were performed by the agent.
     fail gracefully, while local greetings/help, onboarding, moderation and XP
     remain operational. Restore the setting and republish after the test.
 
-**Live Discord interaction checks are pending activation; offline test success
+**Live Discord interaction checks are pending republish; offline test success
 and a successful AI call are not a claim that this upgrade is already published.**
