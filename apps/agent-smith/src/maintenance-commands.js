@@ -1,5 +1,6 @@
 import { SlashCommandBuilder,PermissionFlagsBits as P } from 'discord.js';
 import { frameworks } from './blueprint.js';
+import { smithCommand } from './conversation-commands.js';
 const c=(n,d)=>new SlashCommandBuilder().setName(n).setDescription(d).setDMPermission(false);
 const staff=c=>c.setDefaultMemberPermissions(P.ModerateMembers);
 const caseId=c=>c.addStringOption(o=>o.setName('id').setDescription('Case number').setRequired(true).setMaxLength(19));
@@ -18,7 +19,7 @@ export const maintenanceCommands=[
  c('interests','Manage saved interests in your approved frameworks'),
  c('onboarding-recover','Admin: reconcile failed onboarding without erasing security history')
   .setDefaultMemberPermissions(P.Administrator).addUserOption(o=>o.setName('user').setDescription('Member to reconcile').setRequired(true)),
- c('smith','Agent Smith health').addSubcommand(s=>s.setName('status').setDescription('Basic health; authorized staff see operational details')),
+ smithCommand,
  c('report','Submit a private report to staff').addUserOption(o=>o.setName('user').setDescription('Reported member')),
  staff(c('cases','Privately list persistent moderation cases')).addUserOption(o=>o.setName('user').setDescription('Filter by member')),
  caseId(staff(c('case','Privately inspect a persistent case and notes'))),

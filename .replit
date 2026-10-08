@@ -75,3 +75,14 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+AGENT_SMITH_CHAT_CHANNEL_IDS = "1556423231232024689"
+AI_CONTEXT_TTL_MINUTES = "20"
+AI_COOLDOWN_SECONDS = "5"
+AI_ENABLED = "true"
+AI_MAX_RESPONSE_TOKENS = "2048"
+AI_MODEL = "gpt-5.4-mini"
+AI_TEMPERATURE = "1"

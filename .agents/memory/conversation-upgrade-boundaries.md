@@ -26,3 +26,14 @@ privileged capabilities. Short-lived conversation context must expire in roughly
 15–30 minutes, not become permanent AI memory. Simple greetings should be local;
 AI outages must not interrupt the rest of Smith. Do not enable unsolicited
 server-wide replies or scheduled conversation messages.
+
+The Owner selected OpenAI through Replit AI Integrations, billed to Replit
+credits rather than a personal OpenAI API key.
+
+**Why:** This billing choice was explicitly confirmed before provisioning.
+
+**How to apply:** Keep provider credentials isolated from model context. Do not
+silently switch billing accounts or request a personal API key for this layer.
+Dedicated plain chat requires Discord's Message Content authorization: confirm
+it before enabling the SDK intent so the conversation upgrade does not take the
+otherwise stable bot offline.

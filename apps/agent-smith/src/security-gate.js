@@ -6,6 +6,7 @@ import { assertPermission, assertHigherRole, assertRoleChannelGrants } from './p
 import { PermissionFlagsBits as P } from 'discord.js';
 import { moderationPermissions, assertTarget } from './moderation-policy.js';
 import { canModerate,canGrantFramework } from './authorization.js';
+import { smithCommand } from './conversation-commands.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -161,6 +162,8 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
     if (/^\/applications\/\d+\/guilds\/\d+\/commands(?:\/\d+)?$/.test(route)) {
       if (!route.startsWith(`/applications/${cfg.clientId}/guilds/${guild.id}/`)) throw new Error('Foreign command management.');
       if (method === 'PUT') assertCommandTree(body);
+      else if (method === 'POST' && route === `/applications/${cfg.clientId}/guilds/${guild.id}/commands`
+        && JSON.stringify(body) === JSON.stringify(smithCommand.toJSON())) assertCommandTree([body]);
       else if (method !== 'DELETE') throw new Error('Unsupported command management.');
       return original(request);
     }

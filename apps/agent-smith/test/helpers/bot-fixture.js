@@ -83,7 +83,7 @@ export async function botFixture() {
   const database = transactionStore(state, cfg.guildId, trip);
   const context = createContext({
     console: { log: () => {}, error: (...args) => state.errors.push(args) },
-    process: { on: () => {} }
+    process: { env: {}, on: () => {} }
   });
   const dbSource = await readFile(new URL('../../src/db.js', import.meta.url), 'utf8');
   const dbModule = new SourceTextModule(dbSource, { context, identifier: 'isolated-db.js' });
@@ -113,6 +113,10 @@ export async function botFixture() {
     // Readiness has independent unit/PostgreSQL coverage; this closed fixture
     // exercises access workflows without a real schema or network connection.
     './feed-schema-check.js': {assertFeedSchema:inert},
+    // Real listener and conversation handling have separate isolated tests.
+    // Access workflow fixtures must never open a port or invoke an AI provider.
+    './worker-status.js': {createWorkerStatus:()=>({listen:inert,close:inert,setPhase(){}})},
+    './conversation-handler.js': {createConversationHandlers:()=>({register:inert,handleInteraction:async()=>false,handleMessage:async()=>false,stop(){}})},
     './maintenance-cases.js': {createCases:()=>({record:inert,restricted:async()=>false})},
     './maintenance.js': {createMaintenance:()=>({handle:async()=>false,scan:inert,join:inert,leave:inert,event(){},handleMessage:inert,ensureMember:inert,enqueue(){},stop(){}})},
     './authorization.js': {canGrantFramework:()=>false},

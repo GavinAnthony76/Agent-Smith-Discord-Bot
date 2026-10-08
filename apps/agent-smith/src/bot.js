@@ -21,6 +21,7 @@ import { canGrantFramework } from './authorization.js';
 import { createFeeds } from './feeds.js';
 import { assertFeedSchema } from './feed-schema-check.js';
 import { createWorkerStatus } from './worker-status.js';
+import { createConversationHandlers } from './conversation-handler.js';
 // Fail before Gateway login rather than entering a Discord-connected crash loop.
 try {
   await assertFeedSchema(pool);
@@ -43,6 +44,14 @@ const { client,guild,cfg } = await connect({
   onStartupState: phase => workerStatus.setPhase(phase),
 });
 connectedClient = client;
+let conversation;
+try {
+ conversation = createConversationHandlers({client,guild,cfg,pool});
+ // Command registration must not delay the existing operational handlers.
+ void conversation.register().catch(() => console.error('Smith conversation command registration failed.'));
+} catch {
+ console.error('Smith conversation configuration unavailable; core bot continues without it.');
+}
 const feeds=createFeeds({guild,client,pool,resource,audit});
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
 const control = createSmithControl({guild,cfg,pool,resource,feeds});
@@ -64,10 +73,15 @@ async function log(actor, action, detail) {
   catch { console.error('Discord audit mirror unavailable; see database audit table.'); }
 }
 client.on('interactionCreate', async i => {
+  if (conversation && await conversation.handleInteraction(i)) return;
   if (i.isChatInputCommand() && i.commandName === 'smith-control' && i.options.getSubcommand()!=='panel') { await control.handle(i); return; }
     // Includes current-member consent and fresh, Owner-only historical recording.
     // These actions deliberately do not enter a Discord role mutation scope.
-    if (await maintenance.handle(i)) return;
+    if (await maintenance.handle(i)) {
+      if (conversation && i.isChatInputCommand() && i.commandName==='smith' && i.options.getSubcommand()==='status')
+        await conversation.appendStatus(i).catch(() => console.error('Conversational status follow-up unavailable.'));
+      return;
+    }
     if (await handleProgression(i)) return;
   if (isModerationInteraction(i)) {
     try { await moderation.handle(i); } catch (error) { console.error('Moderation interaction failed:', error.code ?? error.message); }
@@ -285,6 +299,7 @@ progression.scan().catch(() => console.error('Progression startup scan deferred;
 maintenance.scan().catch(error=>console.error('Maintenance startup scan deferred; periodic recovery remains active:',error.code??error.name));
 client.on('error', error => console.error('Discord client error:', error.code ?? error.name));
 client.on('messageCreate', message => {
+  conversation?.handleMessage(message).catch(() => console.error('Smith conversation handler failed; content omitted.'));
   maintenance.handleMessage(message).catch(error=>console.error('Content rule deferred:',error.code??error.name));
   spam.handleMessage(message).catch(error => console.error('Anti-spam alert failed:', error.message));
 });
@@ -293,7 +308,7 @@ for (const signal of ['SIGINT','SIGTERM']) process.on(signal,async()=>{
  if(shuttingDown)return;
  shuttingDown=true;
  workerStatus.setPhase('stopping');
- requests.stop();native.stop();progression.stop();maintenance.stop();
+ conversation?.stop();requests.stop();native.stop();progression.stop();maintenance.stop();
  await feeds.stop();await client.destroy();await workerStatus.close();await pool.end();
  process.exit(0);
 });
