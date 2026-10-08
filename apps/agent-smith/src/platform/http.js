@@ -22,9 +22,9 @@ async function jsonBody(request) {
   }
   catch { throw new PlatformError('invalid_json'); }
 }
-export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport }) {
+export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport, ticketActions }) {
   const oauth = createOAuth({ pool, env, ...(oauthTransport ? { transport: oauthTransport } : {}) });
-  const service = createPlatformService({ pool, discord, env, legacyActions });
+  const service = createPlatformService({ pool, discord, env, legacyActions, ticketActions });
   const secure = origin.startsWith('https://');
   if (env.NODE_ENV === 'production' && !secure) throw new Error('Platform HTTPS public origin is required.');
   const cookie = (name, value, age) => {
@@ -80,7 +80,9 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
     response.setHeader('Referrer-Policy', 'no-referrer');
     const cookieValues = cookies(request.headers.cookie);
     try {
-      rateLimit(cookieValues.smith_session ?? request.socket.remoteAddress ?? 'anonymous');
+      // Cookies are attacker-controlled until session lookup succeeds. A forged
+      // cookie must not provide an unlimited supply of independent rate buckets.
+      rateLimit(`ip:${request.socket.remoteAddress ?? 'anonymous'}`);
       if (url.pathname === '/api/platform/oauth/login' && request.method === 'GET') {
         if (await callbackRegistered() === false) throw new PlatformError('register_discord_oauth_callback', 503);
         const result = await oauth.begin(origin);
@@ -96,6 +98,7 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
         return true;
       }
       const session = await oauth.session(cookieValues.smith_session);
+      if (session) rateLimit(`user:${session.userId}`);
       if (url.pathname === '/api/platform/session' && request.method === 'GET') {
         send(response, 200, {
           authenticated: !!session, loginUrl: '/api/platform/oauth/login', installUrl,
@@ -126,6 +129,7 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       else if (area === 'collections') capability = COLLECTIONS[key]?.module;
       else if (area === 'actions') {
         const input = await jsonBody(request);
+        if (typeof input.action !== 'string') throw new PlatformError('invalid_action');
         capability = input.action?.startsWith('ticket-') ? 'tickets' : 'moderation';
         request.platformInput = input;
       }

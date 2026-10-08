@@ -111,10 +111,12 @@ export const RECORD_ACTIONS: Record<string, { action: string; label: string; clo
     { action: 'case-close', label: 'Close case', closes: true },
   ],
   reports: [{ action: 'report-review', label: 'Mark reviewed' }],
+  'ticket-panels': [{ action: 'ticket-publish', label: 'Publish panel', closes: true }],
   tickets: [
     { action: 'ticket-claim', label: 'Claim' },
     { action: 'ticket-escalate', label: 'Escalate' },
     { action: 'ticket-close', label: 'Close', closes: true },
+    { action: 'ticket-reconcile', label: 'Reconcile', closes: true },
   ],
 };
 

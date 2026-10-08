@@ -12,6 +12,7 @@ import { communicationGuard, setPlatformTransportGuard, withPlatformCommunicatio
 import { createAIProvider } from '../ai-provider.js';
 import { meterProvider } from './ai-usage.js';
 import { createActivityService } from './activity.js';
+import { createTicketService } from './tickets.js';
 
 /**
  * Shares the existing Discord client. Never logs in, migrates or provisions
@@ -20,7 +21,8 @@ import { createActivityService } from './activity.js';
 export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
   const discord = createDiscordAccess({ client });
   const origin = process.env.PLATFORM_PUBLIC_URL;
-  const web = createPlatformHttp({ pool, discord, origin, legacyActions });
+  const tickets = createTicketService({ client, pool, discord });
+  const web = createPlatformHttp({ pool, discord, origin, legacyActions, ticketActions: tickets.staffAction });
   setPlatformTransportGuard(client, communicationGuard);
   const conversations = new Map();
   const activity = createActivityService(pool);
@@ -127,6 +129,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
       return true;
     },
     async handleInteraction(interaction) {
+      if (interaction.guildId && await tickets.handleInteraction(interaction)) return true;
       if (!interaction.guildId || !(
         interaction.isChatInputCommand?.() && interaction.commandName === 'smith' && interaction.options.getSubcommand() !== 'status' ||
         interaction.isButton?.() && interaction.customId.startsWith('smith:chat:')
@@ -142,6 +145,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
       for (const guild of client.guilds.cache.values()) await web.service.adopt(guild);
     },
     stop() {
+      tickets.stop();
       for (const [event, handler] of Object.entries(events)) client.off(event, handler);
       for (const value of conversations.values()) value.handlers.stop();
       conversations.clear();

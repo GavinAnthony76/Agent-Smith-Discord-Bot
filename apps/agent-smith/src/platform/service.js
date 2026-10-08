@@ -44,7 +44,7 @@ export function defaultModule(key, legacy, env) {
   configuration: settings[key] ?? {}, revision: 0 };
 }
 
-export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null }) {
+export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null, ticketActions }) {
   const configuration = createGuildConfigurationService(pool, { onSave: async (db, change) => {
     if (change.guildId !== TARGET_GUILD_ID) return;
     if (change.key === 'leveling' || change.key === 'economy') {
@@ -119,7 +119,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   function presentModule(row, authority) {
     const base = defaultModule(row.module_key, authority.guild.id === TARGET_GUILD_ID, env);
-    const runtimeStatus = ['ai', 'analytics'].includes(row.module_key) || row.module_key === 'leveling' && authority.guild.id !== TARGET_GUILD_ID ?
+    const runtimeStatus = ['ai', 'analytics'].includes(row.module_key) ||
+      ['leveling', 'tickets'].includes(row.module_key) && authority.guild.id !== TARGET_GUILD_ID ?
       'Platform runtime' : authority.guild.id === TARGET_GUILD_ID ?
       ['moderation', 'automod', 'onboarding', 'roles', 'leveling', 'economy', 'rewards', 'feeds', 'youtube'].includes(row.module_key) ?
         'Existing Hallowed Core service; protected policy retained. Some settings remain draft.' :
@@ -162,10 +163,18 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
       if (field.type === 'select' && !field.options.includes(value)) throw new PlatformError('invalid_option');
       if (field.key === 'personalityAdditions' && safetyReply(value)) throw new PlatformError('unsafe_personality_additions');
       if (field.key === 'mentionOnly' && value !== true) throw new PlatformError('outside_channel_mentions_are_required');
+      if (field.key === 'questions' && (!Array.isArray(value) || value.length > 5 ||
+          new Set(value.map(q => q?.id)).size !== value.length || value.some(q => !q ||
+          typeof q.id !== 'string' || !/^[a-z0-9_-]{1,30}$/.test(q.id) || typeof q.label !== 'string' ||
+          !q.label.trim() || q.label.length > 45 || q.required !== undefined && typeof q.required !== 'boolean' ||
+          q.maxLength !== undefined && (!Number.isSafeInteger(q.maxLength) || q.maxLength < 1 || q.maxLength > 1000)))) {
+        throw new PlatformError('invalid_ticket_questions');
+      }
       if (['roles', 'channels'].includes(field.type) && (!Array.isArray(value) || value.length > 100)) throw new PlatformError('invalid_choices');
       if (['role', 'roles', 'channel', 'channels'].includes(field.type)) {
         for (const id of Array.isArray(value) ? value : [value]) {
           snowflake(id);
+          if (field.key === 'supportRoles' && id === authority.guild.id) throw new PlatformError('everyone_cannot_be_ticket_support');
           if (['role', 'roles'].includes(field.type)) {
             const role = authority.guild.roles.cache.get(id);
             if (!role) throw new PlatformError('role_not_in_guild');
@@ -285,7 +294,11 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     const descriptor = COLLECTIONS[key];
     if (!descriptor?.fields.length) throw new PlatformError('read_only_collection');
     permitScope(authority.permit, descriptor.module, true);
-    const data = await validateFields(input.data, descriptor.fields, authority);
+    const fieldsInput = { ...input.data };
+    if (key === 'ticket-panels') {
+      for (const field of ['publishedChannelId', 'publishedMessageId', 'publishedRevision']) delete fieldsInput[field];
+    }
+    const data = await validateFields(fieldsInput, descriptor.fields, authority);
     if (typeof input.title !== 'string' || !input.title.trim() || input.title.length > 150) throw new PlatformError('invalid_title');
     const id = authority.guild.id;
     if (key === 'managers') {
@@ -424,6 +437,10 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     finally { db.release(); }
   }
   async function action(authority, input) {
+    if (typeof input.action === 'string' && input.action.startsWith('ticket-')) {
+      if (!ticketActions) throw new PlatformError('ticket_runtime_not_available_in_readonly_preview', 409);
+      return ticketActions(authority, input);
+    }
     const actions = legacyActions(authority.guild.id);
     if (input.action === 'case-note') {
       if (!actions?.cases) throw new PlatformError('guarded_runtime_not_available', 503);

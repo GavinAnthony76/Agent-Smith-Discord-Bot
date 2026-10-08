@@ -11,6 +11,9 @@ import pg from 'pg';
 import { createPlatformHttp } from '../src/platform/http.js';
 import { createGuildConfigurationService } from '../src/platform/configuration.js';
 import { authorizeTenant } from '../src/platform/catalog.js';
+import { createTicketService } from '../src/platform/tickets.js';
+import { executeTicketWrite } from '../src/platform/ticket-write.js';
+import { PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
 
 if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1' || !process.env.DATABASE_URL) {
   throw new Error('Development database required; production/default fallback is prohibited.');
@@ -125,6 +128,93 @@ await test('platform HTTP and PostgreSQL isolation', async t => {
       assert.equal((await second).error?.code, 'configuration_changed_reload');
       assert.equal(Number((await pool.query(
         `SELECT count(*) FROM platform_audit WHERE guild_id=$1 AND module='welcome'`, [guildA])).rows[0].count), 1);
+    });
+    await t.test('private tickets reserve once, retain original ACL and recover lost delivery without resending', async () => {
+      const perms = new PermissionsBitField([P.ViewChannel, P.ReadMessageHistory, P.SendMessages, P.ManageChannels]);
+      const actor = { id: userA, pending: false, user: { bot: false }, roles: { cache: new Map() }, permissions: perms };
+      const bot = { id: '90000000000000099', permissions: perms };
+      const channels = new Map([
+        ['81000000000000001', { id: '81000000000000001', type: 0, permissionsFor: () => perms }],
+        ['81000000000000002', { id: '81000000000000002', type: 4, permissionsFor: () => perms }],
+      ]);
+      const guild = { id: guildA, ownerId: userA, roles: { cache: new Map([['81000000000000003', {}], ['81000000000000004', {}]]) },
+        members: { me: bot, fetch: async () => actor }, channels: { cache: channels,
+          fetch: async id => id ? channels.get(id) : channels } };
+      let count = 0, loseCreate = false, duplicateCreate = false;
+      const sdk = { rest: {} };
+      function applyPermissions(channel, rows) {
+        channel.permissionOverwrites = { cache: new Map(rows.map(row => [row.id,
+          { allow: new PermissionsBitField(BigInt(row.allow)), deny: new PermissionsBitField(BigInt(row.deny)) }])) };
+      }
+      function request(method, route, { body }) {
+        return executeTicketWrite(sdk, { method, fullRoute: route, body }, async () => {
+          if (route === `/guilds/${guildA}/channels`) {
+            const channel = { id: String(82000000000000000n + BigInt(++count)), name: body.name,
+              topic: body.topic, permissionsFor: () => perms };
+            applyPermissions(channel, body.permission_overwrites); channels.set(channel.id, channel);
+            if (loseCreate) { loseCreate = false; throw new Error('Synthetic lost acknowledgement'); }
+            if (duplicateCreate) {
+              duplicateCreate = false;
+              const second = { ...channel, id: String(82000000000000000n + BigInt(++count)) };
+              channels.set(second.id, second); return second;
+            }
+            return channel;
+          }
+          if (method === 'PATCH') {
+            const channel = channels.get(route.split('/')[2]);
+            applyPermissions(channel, body.permission_overwrites); return channel;
+          }
+          return { id: '83000000000000001' };
+        });
+      }
+      sdk.rest.post = (route, data) => request('POST', route, data);
+      sdk.rest.patch = (route, data) => request('PATCH', route, data);
+      const tickets = createTicketService({ client: sdk, pool,
+        discord: { freshGuild: async () => guild, memberRolesVerified: () => true } });
+      await pool.query(`INSERT INTO platform_modules(guild_id,module_key,enabled,configuration_json,updated_by)
+        VALUES($1,'tickets',true,'{}',$2) ON CONFLICT(guild_id,module_key) DO UPDATE SET enabled=true`, [guildA, userA]);
+      const panelId = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
+      await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by)
+        VALUES($1,'ticket-panels',$2,'Synthetic Support',$3,$4)`,
+        [guildA, panelId, { enabled: true, publishChannelId: '81000000000000001', categoryId: '81000000000000002',
+          supportRoles: ['81000000000000003'], questions: [] }, userA]);
+      const permit = await authorizeTenant({ userId: userA, guildId: guildA, capability: 'tickets', write: true,
+        resolve: async () => ({ installed: true, member: true, role: 'OWNER' }) });
+      const authority = { permit };
+      await tickets.publish(authority, panelId);
+      const args = { guildId: guildA, actorId: userA, panelId,
+        channelId: '81000000000000001', messageId: '83000000000000001' };
+      const attempts = await Promise.allSettled([tickets.open(args), tickets.open(args)]);
+      assert.equal(attempts.filter(value => value.status === 'fulfilled').length, 1);
+      assert.equal(count, 1);
+      const opened = attempts.find(value => value.status === 'fulfilled').value;
+      await tickets.staffAction(authority, { action: 'ticket-claim', target: opened.ticketId });
+      await tickets.staffAction(authority, { action: 'ticket-escalate', target: opened.ticketId });
+      await pool.query(`UPDATE platform_records SET data=jsonb_set(data,'{supportRoles}',$3::jsonb)
+        WHERE guild_id=$1 AND record_id=$2`, [guildA, panelId, JSON.stringify(['81000000000000004'])]);
+      await tickets.staffAction(authority, { action: 'ticket-close', target: opened.ticketId, confirmed: true });
+      assert.equal((await pool.query('SELECT status FROM platform_ticket_channels WHERE guild_id=$1 AND ticket_id=$2',
+        [guildA, opened.ticketId])).rows[0].status, 'closed');
+      assert.ok(channels.get(opened.channelId).permissionOverwrites.cache.has('81000000000000003'));
+      assert.ok(!channels.get(opened.channelId).permissionOverwrites.cache.has('81000000000000004'));
+      loseCreate = true;
+      await assert.rejects(tickets.open(args), /Synthetic lost acknowledgement/);
+      assert.equal(count, 2);
+      await assert.rejects(tickets.open(args), /ticket_already_open/);
+      assert.equal(count, 2);
+      const uncertain = (await pool.query(`SELECT ticket_id FROM platform_ticket_channels WHERE guild_id=$1 AND status='uncertain'`, [guildA])).rows[0];
+      await tickets.staffAction(authority, { action: 'ticket-reconcile', target: uncertain.ticket_id, confirmed: true });
+      assert.equal(count, 2);
+      await tickets.staffAction(authority, { action: 'ticket-close', target: uncertain.ticket_id, confirmed: true });
+      duplicateCreate = true;
+      await assert.rejects(tickets.open(args), /ticket_creation_requires_reconciliation/);
+      assert.equal(count, 4);
+      const duplicate = (await pool.query(`SELECT ticket_id FROM platform_ticket_channels WHERE guild_id=$1 AND status='uncertain'`, [guildA])).rows[0];
+      await assert.rejects(tickets.staffAction(authority, { action: 'ticket-reconcile', target: duplicate.ticket_id,
+        confirmed: true }), /ticket_requires_manual_discord_inspection/);
+      await assert.rejects(tickets.open(args), /ticket_already_open/);
+      assert.equal(count, 4); // Multiple live matches remain held; no automatic deletion/retry.
+      tickets.stop();
     });
     await t.test('OAuth ciphertext and schema remain isolated, logout invalidates the session', async () => {
       const row = (await pool.query('SELECT token_ciphertext FROM platform_sessions')).rows[0];

@@ -30,10 +30,38 @@ Discord OAuth nor two-guild behavior has passed live acceptance.
 - Per-server monthly paid-model request/token accounting and a request cap in the
   new platform conversation adapter, alongside the existing daily budget.
 
+## Ticket adapter implemented; live activation not verified
+
+Standard-server panels now have a publishing channel, ticket type and up to five
+validated intake questions. Published buttons and forms bind to the actual
+message, channel and record revision. Private channel creation is reserved once
+in PostgreSQL, with a fixed access snapshot, a unique marker and audited SDK
+intent/result. Claim, escalation and closing are wired to dashboard actions.
+Closing keeps the channel private and read-only for participants, preserving its
+messages for future transcript export. Full transcript-file export/storage is
+not implemented.
+
+An uncertain creation is held, not automatically retried. The Owner can reconcile
+a unique live private channel without resending anything. Interrupted closing
+requires review of its executor before clearing an in-flight marker: the Owner
+must stop/review the executor and use CONFIRM_EXECUTOR_STOPPED as the reconciliation
+note. Never use that confirmation merely because a browser request timed out.
+
+The SDK gate permits only one exact ticket request with a durable audit intent;
+it cannot grant roles, moderate members, delete channels or alter Hallowed Core.
+Ticket activation in Hallowed Core still requires its separate policy review.
+The read-only preview cannot publish panels or create channels.
+
+The isolated PostgreSQL test covers concurrent opens, status transitions,
+unchanged original support ACL after a panel edit, lost acknowledgement and
+reconciliation without another creation. These use simulated Discord operations,
+not live Gateway events. Real SDK REST encoding is also checked against a local
+synthetic server, never Discord.
+
 ## Not finished
 
-- Private ticket execution/publishing/transcripts. Ticket definitions and schema
-  exist, but are not a working member ticket journey.
+- Real browser OAuth and live ticket flow on LMOC TEST, plus policy-reviewed
+  Hallowed Core ticket activation. No new runtime version has been published.
 - Standard-guild onboarding, role assignment/human-review adapters, moderation
   command registration/execution, AutoMod and economy adapters.
 - Achievement trigger execution and automatic reward assignment.

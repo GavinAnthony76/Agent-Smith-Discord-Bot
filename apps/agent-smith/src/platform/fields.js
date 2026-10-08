@@ -40,6 +40,8 @@ export const COLLECTIONS = {
  rewards: { module: 'rewards', fields: [f('level', 'Required level', 'number', { min: 1, max: 100 }),
   f('roleId', 'Reward role', 'role'), f('enabled', 'Enabled', 'boolean')] },
  'ticket-panels': { module: 'tickets', fields: [f('description', 'Description', 'text'), f('buttonLabel', 'Button label', 'text'),
+  f('publishChannelId', 'Publish panel in channel', 'channel'),
+  f('ticketType', 'Ticket type', 'select', { options: ['Support', 'Report User', 'Appeal', 'Access Request', 'Other'] }),
   f('categoryId', 'Ticket category', 'channel'), f('supportRoles', 'Support roles', 'roles'),
   f('questions', 'Questions', 'json'), f('enabled', 'Enabled', 'boolean')] },
  tickets: { module: 'tickets', fields: [] },

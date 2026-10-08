@@ -35,10 +35,8 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
     try {
       const guild = await freshGuild(guildId);
       const member = await guild.members.fetch({ user: userId, force: true });
-      const roles = roleSnapshots.get(guild);
-      if (member.user.bot || member.pending !== false || !roles ||
-          [member, guild.members.me].some(actor => !actor ||
-            [...actor.roles.cache.keys()].some(id => !roles.has(id)))) return null;
+      if (member.user.bot || member.pending !== false ||
+          !memberRolesVerified(guild, member) || !memberRolesVerified(guild, guild.members.me)) return null;
       let role;
       if (guild.ownerId === userId) role = 'OWNER';
       else if (hasPermission(member, P.Administrator) || hasPermission(member, P.ManageGuild)) role = 'ADMIN';
@@ -47,6 +45,10 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
         [guildId, userId])).rows[0]?.dashboard_role;
       return role ? { installed: true, member: true, role, guild, actor: member } : null;
     } catch { return null; }
+  }
+  function memberRolesVerified(guild, actor) {
+    const roles = roleSnapshots.get(guild);
+    return !!roles && !!actor && [...actor.roles.cache.keys()].every(id => roles.has(id));
   }
   function protectedRole(role, guild) {
     const me = guild.members.me;
@@ -68,6 +70,6 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
     assertHigherRole(guild.members.me, target, guild.ownerId);
     return target;
   }
-  return { client, freshGuild, authority, protectedRole, assertRewardRole, assertTarget,
+  return { client, freshGuild, authority, memberRolesVerified, protectedRole, assertRewardRole, assertTarget,
     close() { if (ownsClient) client.destroy(); } };
 }
