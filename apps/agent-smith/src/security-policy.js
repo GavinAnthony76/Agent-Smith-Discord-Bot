@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { PermissionFlagsBits as P } from 'discord.js';
 import { categories, roleNames } from './blueprint.js';
 import { assertBotCapabilities, capabilities } from './permissions.js';
+import { isLookupWarningContent } from './lookup-warning-policy.js';
 
 const scope = new AsyncLocalStorage();
 const configurations = new WeakMap();
@@ -67,6 +68,11 @@ export function mutationScope() { return scope.getStore(); }
 export function withRequestNotification(subject, fn) {
   if (!/^\d{17,20}$/.test(subject ?? '')) throw new Error('Invalid notification recipient.');
   return scope.run(Object.freeze({kind:'notification',source:'request-expiry',subject}),fn);
+}
+export function withLookupWarningNotification(subject, content, authorize, fn) {
+  if (!/^\d{17,20}$/.test(subject ?? '') || !isLookupWarningContent(content) || typeof authorize !== 'function')
+    throw new Error('Invalid lookup warning scope.');
+  return scope.run(Object.freeze({ kind: 'notification', source: 'conversation-lookups', subject, content, authorize }), fn);
 }
 export function assertSafeBot(bot) {
   assertBotCapabilities(bot);

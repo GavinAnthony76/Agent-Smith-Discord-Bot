@@ -51,3 +51,13 @@ plus a cache hit is not proof that the object is still in the authoritative list
 **How to apply:** Keep caller/bot roles, recorded approvals and private-thread
 membership freshly read. Use returned listings and reject missing parents or
 roles. Reserve TTL reuse for explicitly public, non-authorizing metadata.
+
+Operational lookup warnings and paid-AI allowance notices require separate
+opt-in policies; neither authorizes unsolicited community conversation.
+
+**Why:** The Owner specifically required slow-lookup warnings to remain separate
+from paid-AI allowance notices and to contain only aggregate fixed-label counts.
+
+**How to apply:** Keep operational notification consent specific to its purpose
+and to the current human Owner. Do not treat another allowlisted account, an
+ownership transfer, or enabling AI as consent to receive these notices.

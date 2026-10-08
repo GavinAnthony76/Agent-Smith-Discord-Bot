@@ -10,6 +10,8 @@ import { splitDiscord, unavailable } from './ai-safety.js';
 import { createConversationBudget, budgetStatusText } from './conversation-budget.js';
 import { createBudgetStore } from './conversation-budget-store.js';
 import { createConversationLookups } from './conversation-lookups.js';
+import { createLookupWarnings } from './lookup-warnings.js';
+import { registerSmithControlCommand } from './smith-control.js';
 
 export async function conversationTrigger(message, { clientId, channelIds, triggers = [] }) {
   if (!message.guildId || message.author?.bot || message.author?.id === clientId || message.webhookId) return null;
@@ -35,6 +37,8 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
   });
   const service = dependencies.service ?? createConversationService({ settings, provider, budget });
   const lookups = createConversationLookups({ client, guild, ...dependencies.lookupOptions });
+  const lookupWarnings = createLookupWarnings({ client, guild, cfg, pool,
+    snapshot: () => lookups.snapshot(), ...dependencies.warningOptions });
   const contextBuilder = dependencies.buildContext ?? (args => buildConversationContext({ guild, cfg, pool, ...args }));
   const build = args => lookups.run(async scope => ({
     ...await contextBuilder({ ...args, lookups: scope }), lookupVersion: scope.version,
@@ -48,7 +52,7 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
     const status = service.status();
     const lookupStatus = lookups.snapshot();
     return `Conversation AI: ${status.enabled ? 'enabled' : 'disabled'} · provider ${status.configured ? 'configured' : 'not configured'} · availability ${status.available === null ? 'not yet checked' : status.available ? 'last request succeeded' : 'unavailable'}.\nModel: ${status.model}. Slash registration: ${registrationReady ? 'ready' : 'pending'}.\nContext: ${settings.ttlMs / 60000} minutes. Plain dedicated-channel chat: ${cfg.contentEnabled ? 'Message Content enabled' : 'Message Content disabled'}.${
-      owner(userId) ? `\nRequests: ${status.requests}; AI: ${status.aiRequests}; errors: ${status.errors}; rate limits: ${status.rateLimits}; cumulative AI latency: ${status.latencyMs}ms.\nLookup metrics (counts and cumulative milliseconds only): ${JSON.stringify(lookupStatus)}` : ''}`;
+      owner(userId) && userId === cfg.ownerDiscordId ? `\nRequests: ${status.requests}; AI: ${status.aiRequests}; errors: ${status.errors}; rate limits: ${status.rateLimits}; cumulative AI latency: ${status.latencyMs}ms.\nLookup metrics (counts and cumulative milliseconds only): ${JSON.stringify(lookupStatus)}\nLookup warning health: ${JSON.stringify(lookupWarnings.status())}` : ''}`;
   }
   function sweep() {
     const time = Date.now();
@@ -224,13 +228,17 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
   }
   async function register() {
     attempts++;
-    try { await registerSmithCommand({ client, cfg, guild }); registrationReady = true; }
+    try {
+      await registerSmithCommand({ client, cfg, guild });
+      await registerSmithControlCommand({ client, cfg, guild });
+      registrationReady = true;
+    }
     catch {
       console.error('Smith conversational slash registration unavailable; existing commands remain unchanged.');
       if (attempts < 5) { registrationTimer = setTimeout(register, 60000); registrationTimer.unref?.(); }
     }
   }
-  return { handleMessage, handleInteraction, register,
+  return { handleMessage, handleInteraction, register, lookupWarnings,
     appendStatus: interaction => interaction.followUp({ content: statusText(interaction.user.id), flags: 64, allowedMentions }),
-    stop() { clearTimeout(registrationTimer); clearInterval(cleanupTimer); lookups.stop(); service.stop(); pending.clear(); seen.clear(); } };
+    stop() { clearTimeout(registrationTimer); clearInterval(cleanupTimer); lookupWarnings.stop(); lookups.stop(); service.stop(); pending.clear(); seen.clear(); } };
 }

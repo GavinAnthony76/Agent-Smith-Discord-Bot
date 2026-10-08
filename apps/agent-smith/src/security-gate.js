@@ -7,6 +7,8 @@ import { PermissionFlagsBits as P } from 'discord.js';
 import { moderationPermissions, assertTarget } from './moderation-policy.js';
 import { canModerate,canGrantFramework } from './authorization.js';
 import { smithCommand } from './conversation-commands.js';
+import { isLookupWarningContent } from './lookup-warning-policy.js';
+import { smithControlCommand } from './smith-control.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -17,6 +19,13 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
     const method = request.method.toUpperCase(), route = request.fullRoute, body = request.body ?? {};
     if (['GET', 'HEAD'].includes(method)) return original(request);
     const context = mutationScope();
+    async function lookupWarningOwner(recipientId) {
+      if (recipientId !== cfg.ownerDiscordId || recipientId !== context.subject)
+        throw new Error('Lookup warnings require the exact configured Owner.');
+      await guild.fetch();
+      assertOwnerConfiguration(cfg, guild.ownerId);
+      await context.authorize();
+    }
     const privileged = (validate = async () => {}) => withPrivilegedPipeline({
       action: { operation: context?.operation ?? method.toLowerCase(), source: context?.source ?? context?.kind,
         target: context?.subject, channel: context?.channel,
@@ -139,8 +148,23 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
       if (!/^\/messages(?:\/|$)|^\/threads(?:\/|$)|^\/typing$/.test(suffix)) throw new Error('Unknown channel write disabled.');
       const target = await client.channels.fetch(channelId);
       if (target.guildId && target.guildId !== guild.id) throw new Error('Foreign channel write.');
+      if (target.guildId && context?.kind === 'notification' && context.source === 'conversation-lookups')
+        throw new Error('Lookup warnings are Owner DM only.');
       if (!target.guildId) {
         const recipientId = target.recipientId ?? target.recipient?.id;
+        if (context?.kind === 'notification' && context.source === 'conversation-lookups') {
+          await lookupWarningOwner(recipientId);
+          if (method !== 'POST' || suffix !== '/messages' || body.content !== context.content ||
+              !isLookupWarningContent(body.content) ||
+              !Array.isArray(body.allowed_mentions?.parse) || body.allowed_mentions.parse.length ||
+              body.embeds?.length || body.components?.length || body.attachments?.length || request.files?.length ||
+              body.allowed_mentions.users?.length || body.allowed_mentions.roles?.length ||
+              body.allowed_mentions.replied_user || body.message_reference || body.poll || body.sticker_ids?.length ||
+              body.tts || body.username || body.avatar_url) {
+            throw new Error('Only fixed-label lookup warnings may be sent to the Owner.');
+          }
+          return original(request);
+        }
         if (context?.kind === 'notification' && context.source === 'request-expiry' && recipientId === context.subject
           && method === 'POST' && suffix === '/messages') return original(request);
         if (context?.kind !== 'moderation' || context.operation !== 'warn'
@@ -153,6 +177,11 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
       return !target.guildId ? privileged() : original(request);
     }
     if (route === '/users/@me/channels' && method === 'POST'
+      && context?.kind === 'notification' && context.source === 'conversation-lookups') {
+      await lookupWarningOwner(body.recipient_id);
+      return original(request);
+    }
+    if (route === '/users/@me/channels' && method === 'POST'
       && context?.kind === 'notification' && context.source === 'request-expiry' && body.recipient_id === context.subject) return original(request);
     if (/^\/users\/@me\/channels$/.test(route) && method === 'POST'
       && context?.kind === 'moderation' && context.operation === 'warn' && body.recipient_id === context.subject) {
@@ -163,7 +192,8 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
       if (!route.startsWith(`/applications/${cfg.clientId}/guilds/${guild.id}/`)) throw new Error('Foreign command management.');
       if (method === 'PUT') assertCommandTree(body);
       else if (method === 'POST' && route === `/applications/${cfg.clientId}/guilds/${guild.id}/commands`
-        && JSON.stringify(body) === JSON.stringify(smithCommand.toJSON())) assertCommandTree([body]);
+        && [smithCommand, smithControlCommand].some(command => JSON.stringify(body) === JSON.stringify(command.toJSON())))
+        assertCommandTree([body]);
       else if (method !== 'DELETE') throw new Error('Unsupported command management.');
       return original(request);
     }

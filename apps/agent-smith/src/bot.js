@@ -54,7 +54,7 @@ try {
 }
 const feeds=createFeeds({guild,client,pool,resource,audit});
 const requests = createRequestLifecycle({guild,client,cfg,pool,locked});
-const control = createSmithControl({guild,cfg,pool,resource,feeds});
+const control = createSmithControl({guild,cfg,pool,resource,feeds,lookupWarnings:conversation?.lookupWarnings});
 const spam = await createAntiSpam({ guild, cfg, pool, resource });
 const cases=createCases({guild,client,cfg,pool,locked,audit});
 const moderation = createModeration({ guild, cfg, pool, resource, spam, recordCase:cases.record });

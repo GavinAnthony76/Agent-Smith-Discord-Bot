@@ -22,10 +22,11 @@ was also verified as a text channel in the authorized guild. Shared
    Never enable the SDK intent while the application's authorization is absent.
 3. Publish the upgrade to the existing Reserved VM. Keep the workspace Gateway
    stopped; production is the only bot instance.
-4. At startup, Smith upserts the single static `/smith` definition using its
+4. At startup, Smith upserts the static `/smith` and `/smith-control` definitions using its
    existing authenticated client. The original `/smith status` operational
    handler and its staff permissions remain intact; conversation status is
-   appended privately. Other commands are not replaced.
+   appended privately. `/smith-control` retains all existing controls and adds
+   the opt-in lookup warning setting. Other commands are not replaced.
 
 Without that intent, slash questions and messages containing a direct
 bot mention remain usable; unmentioned dedicated-channel content and some
@@ -227,6 +228,68 @@ private status response: attempted reads, failures and cumulative latency by
 fixed operation type; coalesced reads, public-cache hits, admission refusals,
 timeouts, invalidations and REST backoffs. No user/channel/guild identifiers,
 SQL, prompts, names, error bodies or generated content enter those metrics.
+
+### Opt-in private Owner lookup warnings
+
+Warnings are **off by default**. In the existing private `#smith-controls`,
+the configured human Server Owner may explicitly run:
+
+`/smith-control lookup-warnings enabled:true threshold:5 cooldown:60`
+
+Disable with `/smith-control lookup-warnings enabled:false`. The enabled option
+is mandatory; omitted threshold/cooldown options use the defaults of five
+failures and 60 minutes. Thresholds are restricted to 5–100; cooldowns to
+15–1,440 minutes. Settings are persisted and audited in existing `bot_settings`
+and `audit` tables; no migration is needed. No settings are enabled by installing
+or publishing this change.
+
+Every minute, a separate operational monitor aggregates **lookup timeouts** and
+**conversation lookups refused or aborted because of REST backoff/headroom**.
+Five-minute rolling buckets contain only these two fixed-label counters.
+SDK rate-limit events that do not stop a conversation lookup, ordinary
+concurrency/start-budget refusals and provider/paid-AI errors do not trigger this
+warning. This monitor does not tune reply capacity or change lookup deadlines.
+At most six minute buckets exist; stale buckets expire. A polling gap over two
+minutes discards unsampled failures rather than reporting old incidents.
+Enabling, changing settings or restarting starts a new observation baseline;
+historical counters do not immediately trigger a warning.
+
+Once the combined threshold is reached, Smith attempts **one private DM to the
+configured, current Server Owner**, never a staff/community channel or another
+allowlisted account. Consent is bound to the Owner who saved it. Current Owner
+identity and enabled consent are rechecked before delivery and at both DM REST
+writes through the existing security gate. Owner changes, missing consent,
+database/read failures, stopping the monitor or disabling during delivery
+preparation suppress the warning. There is no fallback destination.
+
+The fixed warning contains only timeout and backoff-refusal counts, an
+explanation that generated replies were safely suppressed, and directions to
+private `/smith status` and the explicit warning control. It contains no
+prompts, member/channel/guild identifiers, SQL, provider payloads, private
+answers, embeddings, attachments or mentions. The configured Owner's private
+status also shows last-checked enablement and fixed-label attempt/success/failure
+counts. Failed checks and failed/uncertain sends do not expose error bodies.
+
+Cooldown is reserved atomically in PostgreSQL **before attempting delivery**.
+It survives bot restarts and competing processes; disabled/enabled toggles and
+settings edits do not reset an existing cooldown. Failed or uncertain sends
+consume it too, with no automatic retry queue. Further warnings require fresh
+failures after the cooldown, not just an old threshold crossing. If DMs are
+blocked, inspect the failure count in private status. A DM already submitted to
+Discord cannot be recalled by subsequently disabling the setting.
+
+These are operational lookup warnings, **not daily paid-AI allowance notices**.
+They do not call the AI provider, generate community conversation, change roles,
+grant access, retry paid answers, punish members or bypass authorization.
+The existing bot remains the only Gateway; publishing/activation is Owner-controlled.
+
+Offline tests: `node --test test/lookup-warnings.test.js`.
+Optional disposable **development-only** PostgreSQL checks:
+`SMITH_PG_TESTS=1 node --test test/lookup-warnings-postgres.test.js`.
+They verify persistent cooldown, actually overlapping reservations, lost
+acknowledgements and audited opt-in/out without writing to live settings.
+
+### Shared read behavior
 
 Before changing reuse behavior, an offline instrumented baseline for three
 answers (six context builds) measured six member, six role-list, six channel-list,

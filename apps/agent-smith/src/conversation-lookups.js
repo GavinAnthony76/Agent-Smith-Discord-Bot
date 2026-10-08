@@ -3,8 +3,10 @@ import { performance } from 'node:perf_hooks';
 /** Fixed labels only: never retain IDs, names, SQL, prompts or error bodies. */
 export function createLookupMetrics() {
   const counters = {};
+  const kinds = new Set(['database', 'member', 'botMember', 'roles', 'channels', 'channel', 'threadMember', 'events', 'rewards']);
   return {
     async read(kind, operation) {
+      if (!kinds.has(kind)) throw new Error('Unknown conversation lookup label.');
       const metric = counters[kind] ??= { requests: 0, failures: 0, latencyMs: 0 };
       metric.requests++;
       const start = performance.now();
@@ -42,17 +44,18 @@ export function createConversationLookups({
   const publicCache = new Map();
   const listeners = [];
   let epoch = 0, stopped = false, active = 0, windowStart = now(), starts = 0, backoffUntil = 0;
-  const counts = { coalesced: 0, cacheHits: 0, rejected: 0, timeouts: 0, invalidations: 0, backoffs: 0 };
+  const counts = { coalesced: 0, cacheHits: 0, rejected: 0, timeouts: 0, invalidations: 0, backoffs: 0, backoffRefusals: 0 };
+  function restBusy() {
+    const rest = client?.rest;
+    return !!(rest?.globalDelay || (rest?.globalReset > now() && rest.globalRemaining < 10) ||
+      [...(rest?.handlers?.values?.() ?? [])].some(handler => handler.limited === true) || now() < backoffUntil);
+  }
   function ready() {
     // Leave global REST headroom for permission audits, reconciliation and
     // moderation. These checks affect conversation reads only.
-    const rest = client?.rest;
-    const globalBusy = rest?.globalDelay ||
-      (rest?.globalReset > now() && rest.globalRemaining < 10);
     // The SDK knows exhausted route buckets before it emits rateLimited
     // (that event occurs only when a later request tries to use the bucket).
-    const routeBusy = [...(rest?.handlers?.values?.() ?? [])].some(handler => handler.limited === true);
-    return !stopped && !globalBusy && !routeBusy && now() >= backoffUntil &&
+    return !stopped && !restBusy() &&
       guild.available !== false && (typeof client?.isReady !== 'function' || client.isReady());
   }
   const rateLimited = data => {
@@ -112,15 +115,21 @@ export function createConversationLookups({
       if (time - windowStart >= windowMs) { windowStart = time; starts = 0; }
       if (!ready() || active >= maxActive || starts >= maxStarts) {
         counts.rejected++;
+        if (!stopped && restBusy()) counts.backoffRefusals++;
         throw new Error('Conversation lookup budget unavailable.');
       }
       active++; starts++;
       const version = epoch, expires = time + timeoutMs;
-      let expired = false, timer;
+      let expired = false, backoffCounted = false, timer;
       const outstanding = new Set();
+      const expire = () => { if (!expired) { expired = true; counts.timeouts++; } };
       const check = () => {
+        if (expired || now() >= expires) {
+          expire();
+          throw new Error('Conversation lookup deadline exceeded.');
+        }
+        if (restBusy() && !backoffCounted) { backoffCounted = true; counts.backoffRefusals++; }
         assertFresh(version);
-        if (expired || now() >= expires) throw new Error('Conversation lookup deadline exceeded.');
       };
       const track = promise => {
         outstanding.add(promise);
@@ -161,7 +170,7 @@ export function createConversationLookups({
         });
       const deadline = new Promise((_, reject) => {
         timer = setTimeout(() => {
-          expired = true; counts.timeouts++;
+          expire();
           reject(new Error('Conversation lookup deadline exceeded.'));
         }, timeoutMs);
       });

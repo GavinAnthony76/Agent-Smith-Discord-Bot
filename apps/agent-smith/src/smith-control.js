@@ -1,12 +1,17 @@
-import { SlashCommandBuilder, PermissionFlagsBits as P } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits as P, Routes } from 'discord.js';
 import { assertModerator } from './moderation-policy.js';
 import { assertStaffChannel } from './permissions.js';
 import { CONTENT_ACTIONS } from './content-automod.js';
 import { assertOwnerConfiguration } from './security-policy.js';
+import { LOOKUP_WARNING_DEFAULTS, LOOKUP_WARNING_KEY, lookupWarningSettings } from './lookup-warning-policy.js';
 
 export const AUTOMOD_ACTIONS = Object.freeze(['log-only','escalate']);
 export const smithControlCommand = new SlashCommandBuilder().setName('smith-control')
   .setDescription('Owner-only audited operational settings').setDMPermission(false).setDefaultMemberPermissions(P.Administrator)
+  .addSubcommand(s=>s.setName('lookup-warnings').setDescription('Opt in/out of private Owner lookup health warnings')
+    .addBooleanOption(o=>o.setName('enabled').setDescription('Explicit opt-in; defaults off').setRequired(true))
+    .addIntegerOption(o=>o.setName('threshold').setDescription('Failures in five minutes, default 5').setMinValue(5).setMaxValue(100))
+    .addIntegerOption(o=>o.setName('cooldown').setDescription('Minutes between attempts, default 60').setMinValue(15).setMaxValue(1440)))
   .addSubcommand(s=>s.setName('feed-save').setDescription('Save a disabled public RSS/Atom source; edits require fresh approval')
     .addStringOption(o=>o.setName('id').setDescription('Lowercase source ID').setRequired(true).setMaxLength(40))
     .addStringOption(o=>o.setName('url').setDescription('Public HTTPS feed, port 443 only').setRequired(true).setMaxLength(2048))
@@ -61,7 +66,12 @@ export const smithControlCommand = new SlashCommandBuilder().setName('smith-cont
 export function assertAutomodAction(action) {
   if (!AUTOMOD_ACTIONS.includes(action)) throw new Error('Automod is alerts-only: delete, warn, timeout, kick and ban are disabled.');
 }
-export function createSmithControl({guild,cfg,pool,resource,feeds}) {
+// Refresh this one static command through the existing authenticated Gateway.
+// Do not bulk-register commands or replace unrelated definitions on startup.
+export function registerSmithControlCommand({ client, guild, cfg }) {
+  return client.rest.post(Routes.applicationGuildCommands(cfg.clientId, guild.id), { body: smithControlCommand.toJSON() });
+}
+export function createSmithControl({guild,cfg,pool,resource,feeds,lookupWarnings}) {
   return {async handle(i) {
     try {
       if(i.guildId!==guild.id || i.user.bot) throw new Error('Authorized server and human owners only.');
@@ -70,6 +80,20 @@ export function createSmithControl({guild,cfg,pool,resource,feeds}) {
       await i.deferReply({flags:64});
       await guild.fetch();assertOwnerConfiguration(cfg,guild.ownerId);
       const sub=i.options.getSubcommand();
+      if(sub==='lookup-warnings') {
+        if(i.user.id!==guild.ownerId || i.user.id!==cfg.ownerDiscordId)throw new Error('Only the actual configured human Owner can change lookup warnings.');
+        if(!lookupWarnings)throw new Error('Lookup warning service unavailable.');
+        const selected=lookupWarningSettings({
+          enabled:i.options.getBoolean('enabled',true),
+          threshold:i.options.getInteger('threshold')??LOOKUP_WARNING_DEFAULTS.threshold,
+          cooldownMinutes:i.options.getInteger('cooldown')??LOOKUP_WARNING_DEFAULTS.cooldownMinutes,
+        });
+        let value;
+        try { value=await lookupWarnings.configure(selected,i.user.id); }
+        catch { throw new Error('Lookup warning storage or authorization unavailable; no change is confirmed. Warnings fail closed.'); }
+        await i.editReply({content:`Lookup warnings ${value.enabled?'enabled: private Owner DM only':'disabled'}. Threshold: ${value.threshold} failed lookups in five minutes; cooldown: ${value.cooldownMinutes} minutes between attempts, including failures. No paid-AI allowance or community conversation settings changed.`,allowedMentions:{parse:[]}});
+        return;
+      }
       if(sub.startsWith('feed-')) {
         if(!feeds)throw new Error('Integrated feed worker unavailable.');
         let content;
@@ -94,7 +118,7 @@ export function createSmithControl({guild,cfg,pool,resource,feeds}) {
       }
       if(sub==='status') {
         const rows=(await pool.query('SELECT key,value FROM bot_settings WHERE guild_id=$1 ORDER BY key',[guild.id])).rows;
-        await i.editReply({content:`**Operational settings**\nFeeds: integrated polling; /smith-control feed-status for approval and delivery health.\n${rows.map(r=>`${r.key}: ${JSON.stringify(r.value)}`).join('\n')||'Defaults: request expiry 14 days; automod alerts-only.'}\nAutomatic punishments and AI execution remain disabled.`.slice(0,1900),allowedMentions:{parse:[]}});return;
+        await i.editReply({content:`**Operational settings**\nFeeds: integrated polling; /smith-control feed-status for approval and delivery health.\n${rows.map(r=>`${r.key}: ${JSON.stringify(r.key===LOOKUP_WARNING_KEY?lookupWarningSettings(r.value):r.value)}`).join('\n')||'Defaults: request expiry 14 days; automod alerts-only.'}\nAutomatic punishments and AI execution remain disabled.`.slice(0,1900),allowedMentions:{parse:[]}});return;
       }
       let key,value;
       if(sub==='text-xp') {
