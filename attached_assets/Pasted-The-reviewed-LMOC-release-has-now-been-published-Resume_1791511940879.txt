@@ -1,0 +1,191 @@
+The reviewed LMOC release has now been published.
+
+Resume the controlled LMOC TEST live acceptance from LIVE-ACCEPTANCE.md.
+
+IMPORTANT:
+- Authorized mutation target: LMOC TEST guild ID 1555330318569971743 ONLY.
+- Hallowed Core guild ID 1556423230590423042 must remain read-only for comparison.
+- Reuse the single existing production Discord Gateway/client.
+- Do NOT start a second bot/Gateway process.
+- Do NOT reset, replace, clone, or overwrite the production database.
+- Do NOT rerun destructive migrations.
+- Do NOT publish again unless an actual code change is required.
+
+Perform the post-release prerequisites first.
+
+1. Verify production readiness:
+   - /api/readyz
+   - /api/healthz
+   - confirm the existing Gateway is connected and ready.
+
+2. Verify the new platform runtime endpoint is now published:
+   GET /api/platform/runtime-status?guildId=1555330318569971743
+
+   Confirm:
+   - botConnected = true
+   - platformEnabled = true
+   - guildConfigured = true
+   - runtimeActive = true where expected
+   - fresh lastSeenAt
+   - activatedAt exists
+   - moduleStates are present
+
+3. Verify the production schema now contains the intended platform tables,
+   including platform_runtime_state.
+
+   Do NOT modify schema if the expected reviewed additive schema is already present.
+
+4. Verify/import the exact staged LMOC TEST configuration using the previously
+   approved digest:
+
+   7142c8ad7810cbf5a58c69d7c52a4ba15227871bf4d4bec2f6255a1291e71ce4
+
+   Refuse:
+   - any different digest
+   - Hallowed Core
+   - unrelated guilds
+   - unrelated member/history/session data
+   - overwrite/reset behavior
+
+5. Confirm the LMOC TEST-only allowlist is active:
+   PLATFORM_ENABLED_GUILD_IDS=1555330318569971743
+
+   Confirm Hallowed Core is excluded from standard platform adapters.
+
+6. After runtime/configuration verification, prepare the disposable LMOC TEST
+   live-test resources using the existing Owner-confirmed preparation flow:
+   - one zero-permission cosmetic role
+   - one private disposable category
+   - one public read-only test-panel channel
+   - ticket panel
+   - onboarding entry
+   - 5-credit disposable shop item
+
+7. Then run the live acceptance tests using genuine Discord member interactions.
+
+Test these modules:
+
+WELCOME
+- New member receives the intended welcome.
+- Start-onboarding control is present.
+
+ONBOARDING
+- Start onboarding.
+- Complete all six steps.
+- Verify rules/consent persistence.
+- Verify restart-safe state where possible.
+
+COSMETIC ROLES
+- Use an eligible non-owner human test member.
+- Select approved disposable cosmetic role.
+- Remove it.
+- Verify audit entry.
+- Do not weaken owner/protected-role safeguards.
+
+LEVELING
+- Send an eligible real Discord message.
+- Verify LMOC TEST-only XP write.
+- Verify configured 5 XP/message and daily cap behavior.
+- Confirm no Hallowed Core XP/activity contamination.
+
+ECONOMY
+- Test:
+  /smith-community daily
+  /smith-community shop
+  /smith-community buy
+  /smith-community inventory
+- Verify database writes are LMOC TEST-specific.
+
+TICKETS
+- Open a real test ticket from the published panel.
+- Verify permissions.
+- Close it.
+- Verify audit/history.
+
+AI
+- Interact with the LMOC TEST AI in an allowed test location.
+- Verify it uses LMOC TEST identity/personality.
+- Confirm it does NOT identify itself as Hallowed Core.
+- Confirm privileged actions remain statically protected.
+
+ANALYTICS
+- Generate one controlled post-activation event.
+- Verify only post-activation activity is recorded.
+- Confirm no pre-activation history/backfill occurs.
+
+8. Hallowed Core safety comparison
+
+Before and after the LMOC live tests, verify Hallowed Core:
+
+- member count
+- progression row count
+- key content fingerprints
+- onboarding behavior
+- AI behavior
+- roles
+- economy
+- tickets
+
+Do not mutate Hallowed Core merely to test it.
+
+Use the pre-release fingerprints from LIVE-ACCEPTANCE.md where applicable:
+
+Members:
+ab694580ee36c9363dfee3c12dff7eb4
+
+Progression:
+af0d8e4e6bded5e784879a8b5e08b4c5
+
+Report whether these remain equivalent after release.
+
+9. Do NOT activate unsupported modules yet.
+
+Keep these inactive until separately implemented and accepted:
+
+- Moderation
+- AutoMod
+- Achievements
+- Rewards
+- Feeds
+- YouTube
+- Events
+
+Saved enabled flags alone are NOT proof of runtime support.
+
+10. Update LIVE-ACCEPTANCE.md with actual measured live results.
+
+For every test record:
+
+- PASS / FAIL / BLOCKED
+- exact Discord action performed
+- database writes observed
+- Discord writes observed
+- module state
+- timestamps
+- relevant warnings
+- Hallowed Core before/after status
+
+Do not mark overall acceptance PASSED unless all required supported-module tests
+pass and Hallowed Core behavior is proven unaffected.
+
+When finished, provide:
+
+1. production readiness result
+2. runtime-status result
+3. production schema result
+4. configuration import result
+5. LMOC TEST activation result
+6. Welcome test
+7. Onboarding test
+8. Cosmetic Roles test
+9. Leveling test
+10. Economy test
+11. Tickets test
+12. AI test
+13. Analytics test
+14. production database writes
+15. Discord writes
+16. Hallowed Core before/after comparison
+17. test counts
+18. warnings
+19. final verdict: PASS / FAIL / BLOCKED

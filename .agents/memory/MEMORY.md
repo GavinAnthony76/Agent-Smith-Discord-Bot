@@ -19,3 +19,4 @@
 - [Platform productization](platform-productization.md) — multi-server commercial scope preserves Hallowed Core; no billing activation or completion claim before two-guild verification.
 - [Ticket rollout safety](ticket-rollout-safety.md) — preserve opening-time access and private evidence; uncertain writes require review, never automatic retries or cleanup.
 - [Standard onboarding](standard-onboarding-boundaries.md) — cosmetic self-assignment only; questions are transient, private access and human-reviewed extras need separate policy.
+- [Acceptance fingerprint evidence](acceptance-fingerprint-evidence.md) — keep failed full hashes visible; later normalization cannot replace a missing historical semantic baseline.
