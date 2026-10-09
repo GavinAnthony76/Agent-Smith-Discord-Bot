@@ -55,6 +55,7 @@ function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: Platfor
     },
   });
   const ro = !mod.editable;
+  const locked = mod.entitlement?.state === 'LOCKED_BY_PLAN';
   return (
     <section className="panel" data-testid={`panel-module-${mod.moduleKey}`}>
       <div className="panel-head">
@@ -65,24 +66,28 @@ function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: Platfor
         <RuntimeBadge status={mod.runtimeStatus} />
         <label className="ml-auto flex items-center gap-2 text-sm">
           Module enabled
-          <Switch checked={enabled} disabled={ro} onCheckedChange={setEnabled} data-testid="switch-module-enabled" />
+          <Switch checked={enabled} disabled={ro || !!locked && !enabled} onCheckedChange={setEnabled} data-testid="switch-module-enabled" />
         </label>
       </div>
+      {locked && <div className="notice notice-warn m-4" data-testid="notice-module-plan-locked">
+        {mod.entitlement?.reason ?? 'This feature is not enabled for this community.'} Configuration is preserved.
+        Billing is not currently enabled. Plans are currently being finalized.
+      </div>}
       <div className="p-4 space-y-4">
         {ro && <p className="notice notice-info" data-testid="text-read-only">Read only. Your role or this server's policy does not allow editing this module.</p>}
         {mod.fields.length === 0
           ? <EmptyState title="No configurable fields" body="This module exposes no settings yet. Its status above shows what the runtime currently does." />
-          : <FieldForm fields={mod.fields} values={config} onChange={setConfig} resources={resources} disabled={ro} />}
+          : <FieldForm fields={mod.fields} values={config} onChange={setConfig} resources={resources} disabled={ro || !!locked} />}
       </div>
       {!ro && (
         <div className="flex justify-end gap-2 border-t border-white/10 p-4">
           {mod.moduleKey === 'onboarding' && mod.runtimeStatus === 'Platform runtime' && <Button variant="outline"
-            disabled={dirty || !mod.enabled || publish.isPending} data-testid="button-publish-onboarding"
+            disabled={dirty || !mod.enabled || publish.isPending || !!locked} data-testid="button-publish-onboarding"
             onClick={() => publish.mutate({ guildId, data: { action: 'onboarding-publish', target: 'onboarding' } })}>
             {publish.isPending ? 'Publishing' : 'Publish start / resume button'}
           </Button>}
           <Button variant="ghost" disabled={!dirty} onClick={() => { setEnabled(mod.enabled); setConfig({ ...mod.configuration }); }} data-testid="button-reset-module">Discard</Button>
-          <Button disabled={!dirty || save.isPending} data-testid="button-save-module"
+          <Button disabled={!dirty || save.isPending || !!locked && enabled} data-testid="button-save-module"
             onClick={() => save.mutate({ guildId, moduleKey: mod.moduleKey, data: { enabled, configuration: config, revision: mod.revision } })}>
             {save.isPending ? 'Saving' : 'Save changes'}
           </Button>

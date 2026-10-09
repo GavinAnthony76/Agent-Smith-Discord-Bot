@@ -22,6 +22,8 @@ import { createActivation, STANDARD_MODULES } from './activation.js';
 import { createSelfRoleService } from './roles.js';
 import { loadReviewedConfiguration, seedReviewedConfiguration } from './release-config.js';
 import { createAcceptanceResources } from './acceptance-resources.js';
+import { createEntitlementService } from './entitlements.js';
+import { entitlementMemberMessage } from './entitlement-policy.js';
 
 /**
  * Shares the existing Discord client. Never logs in, migrates or provisions
@@ -31,7 +33,8 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
   const discord = createDiscordAccess({ client });
   const origin = env.PLATFORM_PUBLIC_URL;
   const activation = createActivation({ pool, client, env });
-  const tickets = createTicketService({ client, pool, discord });
+  const entitlements = createEntitlementService(pool, { env });
+  const tickets = createTicketService({ client, pool, discord, entitlements });
   async function requireActive(guildId) {
     if (!await activation.active(guildId)) throw new PlatformError('standard_guild_runtime_not_active', 409);
   }
@@ -94,11 +97,11 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
   setPlatformTransportGuard(client, communicationGuard);
   const conversations = new Map();
   let heartbeat;
-  const activity = createActivityService(pool);
-  const welcome = createWelcomeService({ pool, discord, moduleConfig });
-  const onboarding = createOnboardingService({ client, pool, discord, moduleConfig });
-  const economy = createEconomyService({ pool, moduleConfig });
-  const selfRoles = createSelfRoleService({ client, pool, discord, moduleConfig });
+  const activity = createActivityService(pool, { entitlements });
+  const welcome = createWelcomeService({ pool, discord, moduleConfig, entitlements });
+  const onboarding = createOnboardingService({ client, pool, discord, moduleConfig, entitlements });
+  const economy = createEconomyService({ pool, moduleConfig, entitlements });
+  const selfRoles = createSelfRoleService({ client, pool, discord, moduleConfig, entitlements });
   async function moduleConfig(guildId, key) {
     if (!STANDARD_MODULES.includes(key) || !await activation.active(guildId))
       return { enabled: false, configuration: {}, revision: 0 };
@@ -140,7 +143,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
   }
   async function conversation(guildId) {
     const value = await moduleConfig(guildId, 'ai');
-    if (!value.enabled) {
+    if (!value.enabled || !await entitlements.hasFeature(guildId, 'ai')) {
       conversations.get(guildId)?.handlers.stop();
       conversations.delete(guildId);
       return null;
@@ -160,7 +163,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
       personalityAdditions: config.personalityAdditions, genericServer: guildId !== cfg.guildId };
     const handlers = createConversationHandlers({ client, guild, cfg: guildCfg, pool }, {
       settings,
-      provider: meterProvider({ provider: createAIProvider(settings), pool, guildId }),
+      provider: meterProvider({ provider: createAIProvider(settings), pool, guildId, entitlements }),
       sendScope: withPlatformCommunication,
       ...(guildId === cfg.guildId ? {} : { buildContext: ({ userId, channelId }) => genericContext(guild, userId, channelId) }),
     });
@@ -168,6 +171,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
     return handlers;
   }
   async function recordActivity(kind, guildId, eventKey, userId, channelId, occurredAt = Date.now()) {
+    if (!await entitlements.hasFeature(guildId, 'analytics')) return;
     if (!await activation.acceptsEvent(guildId,occurredAt)) return;
     const row = (await pool.query('SELECT installed FROM platform_guilds WHERE guild_id=$1', [guildId])).rows[0];
     if (!row?.installed) return;
@@ -259,8 +263,8 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
               value.inventory.length?value.inventory.map(row=>row.title).join('\n'):'Your cosmetic inventory is empty.';
           }else throw new PlatformError('community_command_not_available',409);
           await interaction.editReply({content:safeText(content,1900),allowedMentions:{parse:[],repliedUser:false}});
-        }catch(error){await interaction.editReply(error instanceof PlatformError?
-          `Community action refused: ${error.code}.`:'Community action could not be confirmed. Inspect your balance/inventory before trying again.');}
+        }catch(error){await interaction.editReply(entitlementMemberMessage(error) ?? (error instanceof PlatformError?
+          `Community action refused: ${error.code}.`:'Community action could not be confirmed. Inspect your balance/inventory before trying again.'));}
         return true;
       }
       if (!interaction.guildId || !(

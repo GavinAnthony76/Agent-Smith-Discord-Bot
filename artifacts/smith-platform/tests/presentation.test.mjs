@@ -42,7 +42,7 @@ test('live preparation retains Owner, production and runtime gates', () => {
 test('shared forms preserve read-only, revision and dirty-state gates', () => {
   const text = source('components/panels.tsx');
   assert.match(text, /const ro = !mod\.editable/);
-  assert.match(text, /disabled=\{dirty \|\| !mod\.enabled \|\| publish\.isPending\}/);
+  assert.match(text, /disabled=\{dirty \|\| !mod\.enabled \|\| publish\.isPending \|\| !!locked\}/);
   assert.match(text, /revision: mod\.revision/);
   assert.match(text, /c\.editable &&/);
 });

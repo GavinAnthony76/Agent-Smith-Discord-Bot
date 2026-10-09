@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { AuthGate, DashboardTopbar, EmptyState, ErrorState, GuildShell, RuntimeBadge } from '@/components/shell';
 import { CollectionPanel, ModulePanel } from '@/components/panels';
+import { EntitlementsPanel } from '@/components/plans';
 import { FieldInput } from '@/components/fields';
 import { ConsoleEvent, MetricCard, ModuleCard } from '@/components/smith-ui';
 import { SmithMark } from '@/components/branding';
@@ -115,11 +116,12 @@ function ModuleAndCollections({ guildId, page }: { guildId: string; page: string
         </section>
       )}
       {res.isError && <ErrorState message={`Live channel and role lists failed to load: ${errMsg(res.error)}`} onRetry={() => res.refetch()} />}
+      {page === 'settings' && <EntitlementsPanel guildId={guildId} />}
       {def.module && mods.isLoading && <Skeleton className="h-72" />}
       {def.module && mods.isError && <ErrorState message={errMsg(mods.error)} onRetry={() => mods.refetch()} />}
       {def.module && mods.data && !mod && <EmptyState title="Module not reported" body={`The platform did not return a "${def.module}" module for this server.`} />}
       {mod && <ModulePanel guildId={guildId} mod={mod} resources={res.data} />}
-      {def.collections?.map((c) => <CollectionPanel key={c.key} guildId={guildId} collection={c.key} label={c.label} resources={res.data} />)}
+      {def.collections?.filter((c) => !(page === 'settings' && c.key === 'entitlements')).map((c) => <CollectionPanel key={c.key} guildId={guildId} collection={c.key} label={c.label} resources={res.data} />)}
     </div>
   );
 }
@@ -210,7 +212,7 @@ function OverviewPage({ guildId }: { guildId: string }) {
         {mods.isLoading && <Skeleton className="h-32" />}
         {mods.isError && <ErrorState message={errMsg(mods.error)} onRetry={() => mods.refetch()} />}
         <ul className="grid gap-3 md:grid-cols-2">
-          {mods.data?.map((m) => <ModuleCard key={m.moduleKey} guildId={guildId} moduleKey={m.moduleKey} enabled={m.enabled} runtimeStatus={m.runtimeStatus} />)}
+          {mods.data?.map((m) => <ModuleCard key={m.moduleKey} guildId={guildId} moduleKey={m.moduleKey} enabled={m.enabled} runtimeStatus={m.runtimeStatus} entitlement={m.entitlement} />)}
         </ul>
       </section>
       <section className="panel">

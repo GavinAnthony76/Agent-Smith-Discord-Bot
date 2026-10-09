@@ -5,6 +5,110 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type PlatformPlanAssignmentInputPlan = typeof PlatformPlanAssignmentInputPlan[keyof typeof PlatformPlanAssignmentInputPlan];
+
+
+export const PlatformPlanAssignmentInputPlan = {
+  FREE: 'FREE',
+  PRO: 'PRO',
+  ULTIMATE: 'ULTIMATE',
+} as const;
+
+export type PlatformPlanAssignmentInputStatus = typeof PlatformPlanAssignmentInputStatus[keyof typeof PlatformPlanAssignmentInputStatus];
+
+
+export const PlatformPlanAssignmentInputStatus = {
+  ACTIVE: 'ACTIVE',
+  TRIAL: 'TRIAL',
+  MANUAL: 'MANUAL',
+  SUSPENDED: 'SUSPENDED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export interface PlatformPlanAssignmentInput {
+  plan: PlatformPlanAssignmentInputPlan;
+  status: PlatformPlanAssignmentInputStatus;
+  /** @nullable */
+  expiresAt?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+  /** @minimum 0 */
+  revision: number;
+}
+
+export interface PlatformEntitlementLimit {
+  key: string;
+  /** @nullable */
+  value: number | null;
+  /** @nullable */
+  used: number | null;
+  /** @nullable */
+  remaining: number | null;
+  /** @nullable */
+  resetAt: string | null;
+  overLimit: boolean;
+}
+
+export type PlatformFeatureEntitlementState = typeof PlatformFeatureEntitlementState[keyof typeof PlatformFeatureEntitlementState];
+
+
+export const PlatformFeatureEntitlementState = {
+  AVAILABLE: 'AVAILABLE',
+  ENABLED: 'ENABLED',
+  DISABLED: 'DISABLED',
+  LOCKED_BY_PLAN: 'LOCKED_BY_PLAN',
+  LIMIT_REACHED: 'LIMIT_REACHED',
+  UNSUPPORTED: 'UNSUPPORTED',
+} as const;
+
+export interface PlatformFeatureEntitlement {
+  featureKey: string;
+  displayName: string;
+  description: string;
+  module: string;
+  /** @nullable */
+  minimumPlan: string | null;
+  entitled: boolean;
+  enabled: boolean;
+  policyApproved: boolean;
+  state: PlatformFeatureEntitlementState;
+  /** @nullable */
+  reason: string | null;
+  dependencies: string[];
+  limits: PlatformEntitlementLimit[];
+  downgradeBehavior: string;
+}
+
+export interface PlatformEntitlementAssignment {
+  source: string;
+  assignedAt: string;
+  /** @nullable */
+  expiresAt: string | null;
+  revision: number;
+}
+
+export type PlatformEntitlementViewPolicyMode = typeof PlatformEntitlementViewPolicyMode[keyof typeof PlatformEntitlementViewPolicyMode];
+
+
+export const PlatformEntitlementViewPolicyMode = {
+  PRESERVE_ACCESS: 'PRESERVE_ACCESS',
+  REVIEWED_RULES: 'REVIEWED_RULES',
+} as const;
+
+export interface PlatformEntitlementView {
+  plan: string;
+  effectivePlan: string;
+  status: string;
+  policyMode: PlatformEntitlementViewPolicyMode;
+  billingEnabled: boolean;
+  canAssign: boolean;
+  assignment: PlatformEntitlementAssignment | null;
+  features: PlatformFeatureEntitlement[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -135,6 +239,7 @@ export interface PlatformModule {
   editable: boolean;
   fields: PlatformField[];
   runtimeStatus: string;
+  entitlement?: PlatformFeatureEntitlement;
 }
 
 export type PlatformModuleInputConfiguration = { [key: string]: unknown };

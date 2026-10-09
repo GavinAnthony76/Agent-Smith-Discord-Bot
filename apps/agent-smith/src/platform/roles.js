@@ -19,11 +19,13 @@ export function assertSelfRoleSafe(role, guild, protectedIds = []) {
     }
   }
 }
-export function createSelfRoleService({ client, pool, discord, moduleConfig }) {
+export function createSelfRoleService({ client, pool, discord, moduleConfig, entitlements }) {
   async function assign({ guildId, memberId, roleId, operation = 'add' }) {
     if (!['add', 'remove'].includes(operation)) throw new PlatformError('invalid_cosmetic_role_operation');
     if (guildId === TARGET_GUILD_ID) throw new PlatformError('native_role_policy_retained', 409);
     async function validate() {
+      // Member-requested cleanup remains possible; a downgrade never strips rewards.
+      if (operation === 'add') await entitlements?.requireFeature(guildId, 'roles');
       const settings = await moduleConfig(guildId, 'roles');
       if (!settings.enabled || !settings.configuration.selfAssignableRoles?.includes(roleId))
         throw new PlatformError('role_not_self_assignable', 403);

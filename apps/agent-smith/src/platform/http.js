@@ -133,6 +133,7 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       const [, guildId, area, key, recordId] = match;
       let capability = area;
       if (['overview', 'resources', 'modules'].includes(area)) capability = key ?? 'overview';
+      else if (area === 'entitlements') capability = 'settings';
       else if (area === 'setup') capability = 'settings';
       else if (area === 'collections') capability = COLLECTIONS[key]?.module;
       else if (area === 'actions') {
@@ -148,7 +149,9 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
         throw new PlatformError('outside_standard_platform_activation_boundary', 403);
       const authority = await service.authorize(session.userId, guildId, capability, write);
       let data;
-      if (area === 'overview' && request.method === 'GET') data = await service.overview(authority);
+      if (area === 'entitlements' && request.method === 'GET') data = await service.getEntitlements(authority);
+      else if (area === 'entitlements' && request.method === 'PUT') data = await service.assignEntitlements(authority, await jsonBody(request));
+      else if (area === 'overview' && request.method === 'GET') data = await service.overview(authority);
       else if (area === 'resources' && request.method === 'GET') data = await service.resources(authority);
       else if (area === 'modules' && !key && request.method === 'GET') data = await service.modules(authority);
       else if (area === 'modules' && key && request.method === 'PUT') data = await service.updateModule(authority, key, await jsonBody(request));

@@ -19,7 +19,7 @@ export function MetricCard({ label, value, reason, testId }: { label: string; va
   );
 }
 
-export function ModuleCard({ guildId, moduleKey, enabled, runtimeStatus }: { guildId: string; moduleKey: string; enabled: boolean; runtimeStatus: string }) {
+export function ModuleCard({ guildId, moduleKey, enabled, runtimeStatus, entitlement }: { guildId: string; moduleKey: string; enabled: boolean; runtimeStatus: string; entitlement?: { state: string; minimumPlan: string | null } }) {
   const Icon = MODULE_ICONS[moduleKey] ?? Boxes;
   return (
     <li className="mod-card panel flex flex-col gap-3 p-4" data-on={enabled} data-testid={`module-row-${moduleKey}`}
@@ -34,6 +34,9 @@ export function ModuleCard({ guildId, moduleKey, enabled, runtimeStatus }: { gui
       <div className="relative z-10 flex flex-wrap items-center gap-1.5">
         <span className={`chip ${enabled ? 'chip-info' : ''}`}>{enabled ? 'Configured on' : 'Configured off'}</span>
         <RuntimeBadge status={runtimeStatus} />
+        {entitlement && <span className={`chip ${entitlement.state === 'LOCKED_BY_PLAN' ? 'chip-warn' : ''}`}>
+          {entitlement.state.replace(/_/g, ' ').toLowerCase()}{entitlement.minimumPlan ? ` · ${entitlement.minimumPlan}` : ''}
+        </span>}
       </div>
       <div className="relative z-10 mt-auto flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Last event: unavailable</span>

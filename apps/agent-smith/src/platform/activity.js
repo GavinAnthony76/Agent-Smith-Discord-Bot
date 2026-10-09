@@ -13,14 +13,21 @@ export function eligibleText(message, config, now = Date.now()) {
   if (config.excludedChannels?.includes(message.channelId)) return false;
   return !config.eligibleChannels?.length || config.eligibleChannels.includes(message.channelId);
 }
-export function createActivityService(pool) {
+export function createActivityService(pool, { entitlements } = {}) {
   async function awardText(message, config) {
     if (!eligibleText(message, config)) return false;
     const id = message.guildId, userId = message.author.id;
+    await entitlements?.requireFeature(id, 'xp');
     const fingerprint = createHash('sha256').update(`${id}:${userId}:${message.content.trim().toLowerCase()}`).digest('hex');
     const db = await pool.connect();
     try {
       await db.query('BEGIN');
+      if (entitlements?.enforced(id)) {
+        await db.query('SELECT guild_id FROM platform_guilds WHERE guild_id=$1 FOR UPDATE', [id]);
+        const count = Number((await db.query(`SELECT count(*) AS count FROM platform_xp_events
+          WHERE guild_id=$1 AND created_at>=date_trunc('month',now())`, [id])).rows[0].count);
+        await entitlements.requireCapacity(id, 'xp', 'xp_events_monthly', count, 1, db);
+      }
       await db.query('INSERT INTO platform_member_profiles(guild_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [id, userId]);
       const profile = (await db.query(
         'SELECT xp,last_message_hash FROM platform_member_profiles WHERE guild_id=$1 AND user_id=$2 FOR UPDATE', [id, userId])).rows[0];

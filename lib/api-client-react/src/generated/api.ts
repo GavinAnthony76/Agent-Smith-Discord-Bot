@@ -23,10 +23,12 @@ import type {
   HealthStatus,
   PlatformActionInput,
   PlatformCollection,
+  PlatformEntitlementView,
   PlatformGuild,
   PlatformModule,
   PlatformModuleInput,
   PlatformOverview,
+  PlatformPlanAssignmentInput,
   PlatformRecord,
   PlatformRecordInput,
   PlatformResources,
@@ -61,6 +63,160 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetPlatformEntitlementsUrl = (guildId: string,) => {
+
+
+
+
+  return `/api/platform/guilds/${guildId}/entitlements`
+}
+
+export const getPlatformEntitlements = async (guildId: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformEntitlementView> => {
+
+  return customFetch<PlatformEntitlementView>(getGetPlatformEntitlementsUrl(guildId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformEntitlementsQueryKey = (guildId: string,) => {
+    return [
+    `/api/platform/guilds/${guildId}/entitlements`
+    ] as const;
+    }
+
+
+export const getGetPlatformEntitlementsQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformEntitlements>>, TError = ErrorType<unknown>>(guildId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformEntitlements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformEntitlementsQueryKey(guildId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformEntitlements>>> = ({ signal }) => getPlatformEntitlements(guildId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: guildId !== null && guildId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformEntitlements>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformEntitlementsQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformEntitlements>>>
+export type GetPlatformEntitlementsQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformEntitlements<TData = Awaited<ReturnType<typeof getPlatformEntitlements>>, TError = ErrorType<unknown>>(
+ guildId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformEntitlements>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformEntitlementsQueryOptions(guildId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAssignPlatformPlanUrl = (guildId: string,) => {
+
+
+
+
+  return `/api/platform/guilds/${guildId}/entitlements`
+}
+
+export const assignPlatformPlan = async (guildId: string,
+    platformPlanAssignmentInput: PlatformPlanAssignmentInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformEntitlementView> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformEntitlementView>(getAssignPlatformPlanUrl(guildId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformPlanAssignmentInput)
+  }
+);}
+
+
+
+
+
+export const getAssignPlatformPlanMutationKey = () => ['assignPlatformPlan'] as const;
+
+export const getAssignPlatformPlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignPlatformPlan>>, TError,AssignPlatformPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignPlatformPlan>>, TError,AssignPlatformPlanMutationVariables, TContext> => {
+
+const mutationKey = getAssignPlatformPlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignPlatformPlan>>, AssignPlatformPlanMutationVariables> = (props) => {
+          const {guildId,data} = props ?? {};
+
+          return  assignPlatformPlan(guildId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignPlatformPlanMutationResult = NonNullable<Awaited<ReturnType<typeof assignPlatformPlan>>>
+    export type AssignPlatformPlanMutationBody = BodyType<PlatformPlanAssignmentInput>
+    export type AssignPlatformPlanMutationError = ErrorType<unknown>
+    export type AssignPlatformPlanMutationVariables = {guildId: string;data: BodyType<PlatformPlanAssignmentInput>}
+
+    export const useAssignPlatformPlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignPlatformPlan>>, TError,AssignPlatformPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignPlatformPlan>>,
+        TError,
+        AssignPlatformPlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAssignPlatformPlanMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

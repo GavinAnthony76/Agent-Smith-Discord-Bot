@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Routes, PermissionFlagsBits as P, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 import { PlatformError, permitScope } from './catalog.js';
+import { entitlementMemberMessage } from './entitlement-policy.js';
 import { TARGET_GUILD_ID } from '../config.js';
 import { hasPermission } from '../permissions.js';
 import { safeText, splitDiscord } from '../ai-safety.js';
@@ -23,7 +24,7 @@ export function ticketOverwrites(guild, creatorId, supportRoles, closed = false)
   return rows;
 }
 
-export function createTicketService({ client, pool, discord }) {
+export function createTicketService({ client, pool, discord, entitlements }) {
   const forms = new Map();
   async function audit(guildId, actorId, action, data) {
     await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
@@ -66,6 +67,7 @@ export function createTicketService({ client, pool, discord }) {
     return { ...current, channel };
   }
   async function publish(authority, panelId) {
+    await entitlements?.requireFeature(authority.guild.id, 'tickets');
     const scope = permitScope(authority.permit, 'tickets', true);
     if (!['OWNER', 'ADMIN'].includes(scope.role)) throw new PlatformError('ticket_panel_manager_required', 403);
     const item = await panel(scope.guildId, panelId);
@@ -95,6 +97,7 @@ export function createTicketService({ client, pool, discord }) {
     return { ok: true, message: 'Ticket panel published. Earlier or changed panels cannot open new tickets.' };
   }
   async function open({ guildId, actorId, panelId, channelId, messageId, answers = [] }) {
+    await entitlements?.requireFeature(guildId, 'tickets');
     const item = await panel(guildId, panelId);
     if (item.data.publishedRevision !== item.revision || item.data.publishedChannelId !== channelId ||
         item.data.publishedMessageId !== messageId) throw new PlatformError('ticket_panel_changed_republish_required', 409);
@@ -109,6 +112,11 @@ export function createTicketService({ client, pool, discord }) {
     const db = await pool.connect();
     try {
       await db.query('BEGIN');
+      if (entitlements?.enforced(guildId)) {
+        await db.query('SELECT guild_id FROM platform_guilds WHERE guild_id=$1 FOR UPDATE', [guildId]);
+        const count = Number((await db.query('SELECT count(*) AS count FROM platform_ticket_channels WHERE guild_id=$1', [guildId])).rows[0].count);
+        await entitlements.requireCapacity(guildId, 'tickets', 'ticket_count', count, 1, db);
+      }
       const reserved = await db.query(`INSERT INTO platform_ticket_channels(guild_id,ticket_id,creator_id,panel_id)
         VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING ticket_id`, [guildId, ticketId, actorId, panelId]);
       if (!reserved.rows.length) throw new PlatformError('ticket_already_open_or_awaiting_reconciliation', 409);
@@ -124,6 +132,7 @@ export function createTicketService({ client, pool, discord }) {
         body: { name: `ticket-${ticketId.slice(0, 8)}`, type: 0, parent_id: category.id,
           topic: `smith-ticket:${ticketId}`, permission_overwrites: ticketOverwrites(guild, actorId, supportRoles) },
         validate: async () => {
+          await entitlements?.requireFeature(guildId, 'tickets');
           const current = await fresh(guildId, actorId);
           const currentPanel = await panel(guildId, panelId);
           if (currentPanel.revision !== item.revision ||
@@ -279,8 +288,8 @@ export function createTicketService({ client, pool, discord }) {
       await interaction.editReply(`Your private ticket is ready: <#${result.channelId}>.${result.intakeDelivered ? '' :
         ' Intake delivery was not confirmed; please enter your answers there. No duplicate ticket was created.'}`);
     } catch (error) {
-      const content = error instanceof PlatformError ? `Ticket request refused: ${error.code}.` :
-        'Ticket delivery is unconfirmed. Staff must inspect the saved request before retrying.';
+      const content = entitlementMemberMessage(error) ?? (error instanceof PlatformError ? `Ticket request refused: ${error.code}.` :
+        'Ticket delivery is unconfirmed. Staff must inspect the saved request before retrying.');
       if (interaction.deferred || interaction.replied) await interaction.editReply(content);
       else await interaction.reply({ content, flags: 64 });
     }

@@ -3,6 +3,8 @@ import { PermissionFlagsBits as P } from 'discord.js';
 import { MODULE_KEYS, PlatformError, authorizeTenant, dashboardCan, permitScope, snowflake } from './catalog.js';
 import { createGuildConfigurationService, validateConfiguration } from './configuration.js';
 import { createEntitlementService } from './entitlements.js';
+import { COLLECTION_FEATURES, MODULE_FEATURES } from './feature-catalog.js';
+import { assignPlan, canAssignPlan } from './plan-administration.js';
 import { MODULE_FIELDS, COLLECTIONS } from './fields.js';
 import { thresholds } from '../progression-config.js';
 import { hasPermission } from '../permissions.js';
@@ -52,7 +54,15 @@ export function defaultModule(key, legacy, env) {
 }
 
 export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null, ticketActions, onboardingActions, runtimeStatus, acceptanceActions }) {
-  const configuration = createGuildConfigurationService(pool, { onSave: async (db, change) => {
+  const configuration = createGuildConfigurationService(pool, {
+    beforeSave: async (db, change) => {
+      if (change.enabled) {
+        await entitlements.requireModule(change.guildId, change.key, db);
+        await entitlements.checkModuleCapacity(change.guildId, change.key, db);
+        await entitlements.checkConfiguration(change.guildId, change.key, change.configuration, db);
+      }
+    },
+    onSave: async (db, change) => {
     if (change.guildId !== TARGET_GUILD_ID) return;
     if (change.key === 'leveling' || change.key === 'economy') {
       const key = change.key === 'leveling' ? 'text-xp' : 'economy-enabled';
@@ -69,7 +79,15 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
         [change.guildId, key, JSON.stringify(next)]);
     }
   } });
-  const entitlements = createEntitlementService(pool);
+  const entitlements = createEntitlementService(pool, { env });
+  async function getEntitlements(authority) {
+    permitScope(authority.permit, 'settings');
+    return entitlements.getGuildEntitlements(authority.guild.id, canAssignPlan(authority, env));
+  }
+  async function assignEntitlements(authority, input) {
+    await assignPlan(pool, authority, input, env);
+    return getEntitlements(authority);
+  }
   async function adopt(guild) {
     const legacy = guild.id === TARGET_GUILD_ID;
     // Merely viewing Hallowed Core must not create or alter its platform data.
@@ -145,12 +163,15 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     const rows = (await pool.query(
       'SELECT module_key,enabled,configuration_json,revision FROM platform_modules WHERE guild_id=$1',
       [authority.guild.id])).rows;
+    const view = entitlements.enforced(authority.guild.id) ? await entitlements.getGuildEntitlements(authority.guild.id) : null;
     return MODULE_KEYS.filter(key => dashboardCan(authority.role, key)).map(key => {
       const row = rows.find(row => row.module_key === key);
-      return row ? presentModule(row, authority) : presentModule({
+      const result = row ? presentModule(row, authority) : presentModule({
         module_key: key, enabled: defaultModule(key, authority.guild.id === TARGET_GUILD_ID, env).enabled,
         configuration_json: {}, revision: 0,
       }, authority);
+      const feature = view?.features.find(f => f.featureKey === MODULE_FEATURES[key]);
+      return feature ? { ...result, entitlement: feature } : result;
     });
   }
   async function validateFields(data, fields, authority) {
@@ -219,6 +240,10 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   async function updateModule(authority, key, input) {
     const fields = MODULE_FIELDS[key];
     if (!fields) throw new PlatformError('unknown_module');
+    if (input.enabled) {
+      await entitlements.requireModule(authority.guild.id, key);
+      await entitlements.checkConfiguration(authority.guild.id, key, input.configuration);
+    }
     const sanitized = await validateFields(input.configuration, fields, authority);
     // No dashboard replacement of stable native access or staff safety.
     if (authority.guild.id === TARGET_GUILD_ID && ['onboarding', 'roles', 'moderation', 'automod'].includes(key) &&
@@ -293,10 +318,15 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     else if (key === 'entitlements') {
       const data = await entitlements.getPlan(authority.permit);
       records = [record({ record_id: 'plan', title: data.plan, data })]; editable = false;
-    } else if (key === 'tickets') records = (await pool.query(
-      'SELECT ticket_id,creator_id,channel_id,claimed_by,status,created_at FROM platform_ticket_channels WHERE guild_id=$1 ORDER BY created_at DESC LIMIT 100', [id])).rows
+    } else if (key === 'tickets') {
+      const retention = entitlements.enforced(id) && await entitlements.hasFeature(id, 'tickets') ?
+        await entitlements.getFeatureLimit(id, 'tickets', 'ticket_retention_days') : null;
+      records = (await pool.query(
+      `SELECT ticket_id,creator_id,channel_id,claimed_by,status,created_at FROM platform_ticket_channels
+       WHERE guild_id=$1 AND ($2::integer IS NULL OR $2=-1 OR created_at>=now()-make_interval(days=>$2))
+       ORDER BY created_at DESC LIMIT 100`, [id, retention])).rows
       .map(row => record({ record_id: row.ticket_id, title: `Ticket ${row.ticket_id.slice(0, 8)}`, data: row, created_at: row.created_at }));
-    else if (key === 'managers') {
+    } else if (key === 'managers') {
       editable = authority.role === 'OWNER';
       records = (await pool.query('SELECT user_id,dashboard_role,created_at FROM platform_managers WHERE guild_id=$1', [id])).rows
         .map(row => record({ record_id: row.user_id, title: row.user_id, data: { userId: row.user_id, role: row.dashboard_role }, created_at: row.created_at }));
@@ -306,6 +336,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     else records = (await pool.query(
       'SELECT record_id,title,data,revision,created_at FROM platform_records WHERE guild_id=$1 AND collection=$2 ORDER BY created_at DESC LIMIT 100',
       [id, key])).rows.map(record);
+    if (COLLECTION_FEATURES[key] && entitlements.enforced(id) && !await entitlements.hasFeature(id, COLLECTION_FEATURES[key]))
+      editable = false; // Historical data remains visible, not marked as broken.
     return { records, editable, fields: descriptor.fields,
       description: descriptions[key] ?? 'Configuration records belong only to this server. Changes are audited.' };
   }
@@ -313,6 +345,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     const descriptor = COLLECTIONS[key];
     if (!descriptor?.fields.length) throw new PlatformError('read_only_collection');
     permitScope(authority.permit, descriptor.module, true);
+    if (COLLECTION_FEATURES[key]) await entitlements.requireFeature(authority.guild.id, COLLECTION_FEATURES[key]);
     const fieldsInput = { ...input.data };
     if (key === 'ticket-panels') {
       for (const field of ['publishedChannelId', 'publishedMessageId', 'publishedRevision']) delete fieldsInput[field];
@@ -336,6 +369,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     try {
       await db.query('BEGIN');
       await db.query('SELECT guild_id FROM platform_guilds WHERE guild_id=$1 FOR UPDATE', [id]);
+      if (COLLECTION_FEATURES[key]) await entitlements.requireFeature(id, COLLECTION_FEATURES[key], db);
       const old = recordId ? (await db.query(
         'SELECT title,data,revision FROM platform_records WHERE guild_id=$1 AND collection=$2 AND record_id=$3 FOR UPDATE', [id, key, recordId])).rows[0] : null;
       if (recordId && !['shop', 'managers'].includes(key) && !old) throw new PlatformError('record_not_found', 404);
@@ -343,13 +377,15 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
       if (!recordId && ['feeds', 'ticket-panels'].includes(key)) {
         const count = Number((await db.query(
           'SELECT count(*) AS count FROM platform_records WHERE guild_id=$1 AND collection=$2', [id, key])).rows[0].count);
-        const scopedPlan = (await db.query(
-          'SELECT plan,limit_overrides FROM platform_entitlements WHERE guild_id=$1', [id])).rows[0];
-        const { DEFAULT_PLANS } = await import('./catalog.js');
-        const feature = key === 'feeds' ? 'feeds' : 'ticket_panels';
-        const plan = Object.hasOwn(DEFAULT_PLANS, scopedPlan?.plan) ? scopedPlan.plan : 'FREE';
-        const limit = scopedPlan?.limit_overrides?.[feature] ?? DEFAULT_PLANS[plan][feature];
-        if (limit !== -1 && count >= limit) throw new PlatformError('plan_limit_reached', 409);
+        await entitlements.requireCapacity(id, key === 'feeds' ? 'feeds' : 'tickets',
+          key === 'feeds' ? 'feed_source_count' : 'ticket_panel_count', count, 1, db);
+      }
+      if (!recordId && entitlements.enforced(id) && ['shop', 'achievements', 'rewards', 'youtube', 'events'].includes(key)) {
+        const count = Number((await db.query(
+          'SELECT count(*) AS count FROM platform_records WHERE guild_id=$1 AND collection=$2', [id, key])).rows[0].count);
+        const limit = { shop: 'shop_item_count', achievements: 'achievement_count', rewards: 'level_reward_count',
+          youtube: 'youtube_source_count', events: 'event_count' }[key];
+        await entitlements.requireCapacity(id, COLLECTION_FEATURES[key], limit, count, 1, db);
       }
       recordId ??= randomUUID();
       if (key === 'shop') await db.query(
@@ -397,6 +433,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   async function overview(authority) {
     const id = authority.guild.id;
+    const analyticsDays = entitlements.enforced(id) && await entitlements.hasFeature(id, 'analytics') ?
+      await entitlements.retentionWindow(id, 'analytics', 1) : 1;
     const status = runtimeStatus ? await runtimeStatus(id) :
       { botConnected: env.NODE_ENV === 'production' ? discord.client.isReady() : null,
         platformEnabled: false, guildConfigured: false, runtimeActive: false,
@@ -409,11 +447,11 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
        (SELECT count(*) FROM member_reports WHERE guild_id=$1 AND status='open') AS reports,
         CASE WHEN $1=$2 THEN (SELECT COALESCE(sum(xp),0) FROM progression_balances WHERE guild_id=$1)
          ELSE (SELECT COALESCE(sum(xp),0) FROM platform_member_profiles WHERE guild_id=$1) END AS xp,
-       (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='message' AND occurred_at>=date_trunc('day',now())) AS messages,
-       (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='join' AND occurred_at>=date_trunc('day',now())) AS joins,
-       (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='leave' AND occurred_at>=date_trunc('day',now())) AS leaves,
-       (SELECT count(DISTINCT user_hash) FROM platform_activity WHERE guild_id=$1 AND occurred_at>=date_trunc('day',now())) AS active`,
-       [id, TARGET_GUILD_ID])).rows[0];
+       (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='message' AND occurred_at>=GREATEST(date_trunc('day',now()),now()-make_interval(days=>$3))) AS messages,
+       (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='join' AND occurred_at>=GREATEST(date_trunc('day',now()),now()-make_interval(days=>$3))) AS joins,
+       (SELECT count(*) FROM platform_activity WHERE guild_id=$1 AND kind='leave' AND occurred_at>=GREATEST(date_trunc('day',now()),now()-make_interval(days=>$3))) AS leaves,
+       (SELECT count(DISTINCT user_hash) FROM platform_activity WHERE guild_id=$1 AND occurred_at>=GREATEST(date_trunc('day',now()),now()-make_interval(days=>$3))) AS active`,
+       [id, TARGET_GUILD_ID, analyticsDays])).rows[0];
     const data = [
       ['members', id === TARGET_GUILD_ID ? 'Recorded members' : 'Recorded XP profiles', result.members], ['messages', 'Messages today (UTC)', result.messages],
       ['active', 'Active today (UTC)', result.active], ['joins', 'New members today (UTC)', result.joins],
@@ -422,6 +460,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     if (dashboardCan(authority.role, 'moderation')) data.push(['cases', 'Open moderation cases', result.cases], ['reports', 'Pending reports', result.reports]);
     const row = (await pool.query('SELECT setup_complete,policy_key FROM platform_guilds WHERE guild_id=$1', [id])).rows[0];
     const planRow = (await pool.query('SELECT plan FROM platform_entitlements WHERE guild_id=$1', [id])).rows[0];
+    const effectivePlan = entitlements.enforced(id) ? (await entitlements.getGuildPlan(id)).effectivePlan : planRow?.plan ?? 'FREE';
     const recentActions = dashboardCan(authority.role, 'audit') ? (await pool.query(
       'SELECT id,action,module,created_at FROM platform_audit WHERE guild_id=$1 ORDER BY id DESC LIMIT 6', [id])).rows.map(row => record({ ...row, data: { module: row.module } })) : [];
     return { guild: guildDTO(authority, row), metrics: [
@@ -431,11 +470,12 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     ], recentActions, warnings: ['Activity counts begin when collection is enabled; they are not a backfill of Discord history.',
       id === TARGET_GUILD_ID ? 'Hallowed Core access, Owner protection and native onboarding remain guarded.' :
         'Second-server runtime verification is required before broader installation.'],
-    botOnline: status.botConnected === true, runtimeStatus: status, plan: planRow?.plan ?? 'FREE' };
+    botOnline: status.botConnected === true, runtimeStatus: status, plan: effectivePlan };
   }
   async function setup(authority, input) {
     if (authority.role !== 'OWNER') throw new PlatformError('owner_required', 403);
     if (!Array.isArray(input.modules) || input.modules.some(key => !MODULE_KEYS.includes(key))) throw new PlatformError('unknown_module');
+    for (const key of input.modules) await entitlements.requireModule(authority.guild.id, key);
     for (const id of [input.logChannelId, input.welcomeChannelId].filter(Boolean)) {
       const channel = authority.guild.channels.cache.get(snowflake(id));
       if (!channel || !hasPermission(authority.actor, P.ViewChannel, channel)) throw new PlatformError('channel_not_authorized');
@@ -444,6 +484,15 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     try {
       await db.query('BEGIN');
       await db.query('SELECT guild_id FROM platform_guilds WHERE guild_id=$1 FOR UPDATE', [authority.guild.id]);
+      if (entitlements.enforced(authority.guild.id)) {
+        // Setup may enable several modules at once; its aggregate capacity must
+        // be checked inside the same lock as their insertion.
+        const existing = (await db.query('SELECT module_key,enabled FROM platform_modules WHERE guild_id=$1',
+          [authority.guild.id])).rows;
+        const additions = [...new Set(input.modules)].filter(key => !existing.some(row => row.module_key === key)).length;
+        if (additions) await entitlements.requireCapacity(authority.guild.id, 'configuration', 'module_configuration_count',
+          existing.filter(row => row.enabled).length, additions, db);
+      }
       await db.query('UPDATE platform_guilds SET setup_complete=true,settings=settings||$2::jsonb,updated_at=now() WHERE guild_id=$1',
         [authority.guild.id, { logChannelId: input.logChannelId, welcomeChannelId: input.welcomeChannelId }]);
       for (const key of MODULE_KEYS) {
@@ -460,6 +509,9 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     finally { db.release(); }
   }
   async function action(authority, input) {
+    if (input.action === 'onboarding-publish') await entitlements.requireFeature(authority.guild.id, 'onboarding');
+    if (input.action === 'ticket-publish') await entitlements.requireFeature(authority.guild.id, 'tickets');
+    // Existing ticket cleanup and historical moderation remain usable after downgrades.
     if (input.action === 'acceptance-prepare') {
       if (input.confirmed !== true || authority.role !== 'OWNER') throw new PlatformError('owner_confirmation_required', 403);
       if (!acceptanceActions) throw new PlatformError('acceptance_setup_requires_production_gateway', 409);
@@ -488,5 +540,5 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     return { ok: true, message: 'Guarded action completed. Existing restrictions are unchanged.' };
   }
   return { authorize, adopt, listGuilds, modules, updateModule, resources, collection,
-    saveRecord, deleteRecord, overview, setup, action, entitlements };
+    saveRecord, deleteRecord, overview, setup, action, entitlements, getEntitlements, assignEntitlements };
 }

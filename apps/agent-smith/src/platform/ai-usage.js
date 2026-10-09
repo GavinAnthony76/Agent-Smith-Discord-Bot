@@ -1,14 +1,12 @@
-import { DEFAULT_PLANS } from './catalog.js';
+import { createEntitlementService } from './entitlements.js';
 
 // Per-server reservation is atomic across instances; no paid checkout involved.
-export function meterProvider({ provider, pool, guildId }) {
+export function meterProvider({ provider, pool, guildId, entitlements = createEntitlementService(pool) }) {
   return {
     configured: provider.configured,
     async complete(messages, signal, { onUsage = () => {} } = {}) {
-      const row = (await pool.query(
-        'SELECT plan,limit_overrides FROM platform_entitlements WHERE guild_id=$1', [guildId])).rows[0];
-      const plan = Object.hasOwn(DEFAULT_PLANS, row?.plan) ? row.plan : 'FREE';
-      const limit = row?.limit_overrides?.ai_monthly_requests ?? DEFAULT_PLANS[plan].ai_monthly_requests;
+      await entitlements.requireFeature(guildId, 'ai');
+      const limit = await entitlements.getFeatureLimit(guildId, 'ai', 'ai_requests_monthly');
       const reserved = await pool.query(
         `INSERT INTO platform_ai_periods(guild_id,period,requests)
          SELECT $1,date_trunc('month',now())::date,1 WHERE $2=-1 OR $2>0

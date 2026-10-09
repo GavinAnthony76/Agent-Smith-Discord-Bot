@@ -78,3 +78,14 @@ Smith application there after the production server was initially supplied.
 
 **How to apply:** Recheck the actual server identity and permissions before
 controlled tests. Installation alone does not prove unpublished adapters work.
+
+Preserve all current production access while implementing the entitlement
+architecture. Do not infer or enforce final FREE/PRO/ULTIMATE restrictions from
+the proposed marketing page yet. Use isolated fixtures to test tier gating until
+the Owner explicitly approves the production feature matrix.
+
+**Why:** The Owner explicitly selected this production-access boundary.
+
+**How to apply:** Separate configurable entitlement mechanics from an approved
+production policy. Do not assign live plans, enable restrictive production rules,
+activate modules or publish merely to demonstrate fixture gating.

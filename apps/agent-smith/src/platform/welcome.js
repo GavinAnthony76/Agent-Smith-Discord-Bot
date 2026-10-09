@@ -28,8 +28,9 @@ export function welcomePayload(configuration, member, guild) {
     ...(Object.keys(embed).length ? { embeds: [embed] } : {}),
     ...(buttons.length ? { components: [{ type: 1, components: buttons }] } : {}) };
 }
-export function createWelcomeService({ pool, discord, moduleConfig }) {
+export function createWelcomeService({ pool, discord, moduleConfig, entitlements }) {
   async function target(guildId, userId, channelId) {
+    await entitlements?.requireFeature(guildId, 'welcome');
     const guild = await discord.freshGuild(guildId);
     const member = await guild.members.fetch({ user: userId, force: true });
     const channel = guild.channels.cache.get(channelId);
@@ -45,6 +46,7 @@ export function createWelcomeService({ pool, discord, moduleConfig }) {
   async function join(member) {
     const guildId = member.guild.id;
     if (guildId === TARGET_GUILD_ID || member.user.bot || !member.joinedTimestamp) return { skipped: true };
+    if (entitlements && !await entitlements.hasFeature(guildId, 'welcome')) return { skipped: true };
     const settings = await moduleConfig(guildId, 'welcome');
     if (!settings.enabled || !settings.configuration.channelId) return { skipped: true };
     const id = welcomeRecordId(guildId, member.id, member.joinedTimestamp);

@@ -1,7 +1,7 @@
 import { PlatformError } from './catalog.js';
 import { TARGET_GUILD_ID } from '../config.js';
 
-export function createEconomyService({ pool, moduleConfig, onWalletLocked }) {
+export function createEconomyService({ pool, moduleConfig, onWalletLocked, entitlements }) {
   async function settings(guildId) {
     if (guildId === TARGET_GUILD_ID) throw new PlatformError('existing_economy_service_retained', 409);
     const c = await moduleConfig(guildId, 'economy');
@@ -16,6 +16,7 @@ export function createEconomyService({ pool, moduleConfig, onWalletLocked }) {
       inventory: row?.data.inventory ?? [], noRealMoneyValue: true };
   }
   async function shop(guildId) {
+    await entitlements?.requireFeature(guildId, 'shop');
     const c = await settings(guildId);
     return (await pool.query(`SELECT record_id,title,data FROM platform_records WHERE guild_id=$1
       AND collection='shop' AND data->>'enabled'='true' ORDER BY title LIMIT 100`,[guildId])).rows
@@ -24,9 +25,15 @@ export function createEconomyService({ pool, moduleConfig, onWalletLocked }) {
   async function change({ guildId, userId, interactionId, kind, itemId, expectedPrice }) {
     if (!['daily','buy'].includes(kind) || !/^\d{17,20}$/.test(interactionId))
       throw new PlatformError('invalid_economy_operation');
+    await entitlements?.requireFeature(guildId, 'economy');
+    if (kind === 'buy') await entitlements?.requireFeature(guildId, 'shop');
     const c = await settings(guildId), db = await pool.connect();
     try {
       await db.query('BEGIN');
+      if (entitlements?.enforced(guildId)) {
+        await db.query('SELECT guild_id FROM platform_guilds WHERE guild_id=$1 FOR UPDATE', [guildId]);
+        await entitlements.requireFeature(guildId, kind === 'buy' ? 'shop' : 'economy', db);
+      }
       await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`economy:${guildId}:${userId}`]);
       if(onWalletLocked)await onWalletLocked();
       const duplicate=(await db.query(`SELECT data FROM platform_records WHERE guild_id=$1

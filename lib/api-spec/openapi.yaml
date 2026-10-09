@@ -11,6 +11,32 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /platform/guilds/{guildId}/entitlements:
+    get:
+      operationId: getPlatformEntitlements
+      parameters:
+        - { name: guildId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Read-only entitlement and usage view; billing is disabled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformEntitlementView" }
+    put:
+      operationId: assignPlatformPlan
+      parameters:
+        - { name: guildId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformPlanAssignmentInput" }
+      responses:
+        "200":
+          description: Audited manual test assignment; never activates modules or policy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformEntitlementView" }
   /healthz:
     get:
       operationId: healthCheck
@@ -190,6 +216,65 @@ paths:
               schema: { $ref: "#/components/schemas/PlatformResult" }
 components:
   schemas:
+    PlatformPlanAssignmentInput:
+      type: object
+      required: [plan, status, reason, revision]
+      properties:
+        plan: { type: string, enum: [FREE, PRO, ULTIMATE] }
+        status: { type: string, enum: [ACTIVE, TRIAL, MANUAL, SUSPENDED, EXPIRED] }
+        expiresAt: { type: ["string", "null"], format: date-time }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        revision: { type: integer, minimum: 0 }
+    PlatformEntitlementLimit:
+      type: object
+      required: [key, value, used, remaining, resetAt, overLimit]
+      properties:
+        key: { type: string }
+        value: { type: ["integer", "null"] }
+        used: { type: ["integer", "null"] }
+        remaining: { type: ["integer", "null"] }
+        resetAt: { type: ["string", "null"] }
+        overLimit: { type: boolean }
+    PlatformFeatureEntitlement:
+      type: object
+      required: [featureKey, displayName, description, module, minimumPlan, entitled, enabled, policyApproved, state, reason, dependencies, limits, downgradeBehavior]
+      properties:
+        featureKey: { type: string }
+        displayName: { type: string }
+        description: { type: string }
+        module: { type: string }
+        minimumPlan: { type: ["string", "null"] }
+        entitled: { type: boolean }
+        enabled: { type: boolean }
+        policyApproved: { type: boolean }
+        state: { type: string, enum: [AVAILABLE, ENABLED, DISABLED, LOCKED_BY_PLAN, LIMIT_REACHED, UNSUPPORTED] }
+        reason: { type: ["string", "null"] }
+        dependencies: { type: array, items: { type: string } }
+        limits: { type: array, items: { $ref: "#/components/schemas/PlatformEntitlementLimit" } }
+        downgradeBehavior: { type: string }
+    PlatformEntitlementAssignment:
+      type: object
+      required: [source, assignedAt, expiresAt, revision]
+      properties:
+        source: { type: string }
+        assignedAt: { type: string }
+        expiresAt: { type: ["string", "null"] }
+        revision: { type: integer }
+    PlatformEntitlementView:
+      type: object
+      required: [plan, effectivePlan, status, policyMode, billingEnabled, canAssign, assignment, features]
+      properties:
+        plan: { type: string }
+        effectivePlan: { type: string }
+        status: { type: string }
+        policyMode: { type: string, enum: [PRESERVE_ACCESS, REVIEWED_RULES] }
+        billingEnabled: { type: boolean }
+        canAssign: { type: boolean }
+        assignment:
+          oneOf:
+            - { $ref: "#/components/schemas/PlatformEntitlementAssignment" }
+            - { type: "null" }
+        features: { type: array, items: { $ref: "#/components/schemas/PlatformFeatureEntitlement" } }
     HealthStatus:
       type: object
       properties:
@@ -290,6 +375,7 @@ components:
         editable: { type: boolean }
         fields: { type: array, items: { $ref: "#/components/schemas/PlatformField" } }
         runtimeStatus: { type: string }
+        entitlement: { $ref: "#/components/schemas/PlatformFeatureEntitlement" }
     PlatformModuleInput:
       type: object
       required: [enabled, configuration, revision]

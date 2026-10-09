@@ -5,6 +5,7 @@ import { hasPermission } from '../permissions.js';
 import { safeText } from '../ai-safety.js';
 import { PlatformError, permitScope } from './catalog.js';
 import { createSelfRoleService } from './roles.js';
+import { entitlementMemberMessage } from './entitlement-policy.js';
 import { withPlatformCommunication } from './transport.js';
 import { withPrivilegedPipeline } from '../privileged-pipeline.js';
 import { LMOC_TEST_ID } from './activation.js';
@@ -42,11 +43,12 @@ function progressId(guildId, memberId) {
   const hex = createHash('sha256').update(`onboarding:${guildId}:${memberId}`).digest('hex');
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
 }
-export function createOnboardingService({ client, pool, discord, moduleConfig }) {
+export function createOnboardingService({ client, pool, discord, moduleConfig, entitlements }) {
   const forms = new Map();
-  const roles = createSelfRoleService({ client, pool, discord, moduleConfig });
+  const roles = createSelfRoleService({ client, pool, discord, moduleConfig, entitlements });
   async function publish(authority, { confirmedOwnerRetry = false } = {}) {
     const scope = permitScope(authority.permit, 'onboarding', true);
+    await entitlements?.requireFeature(scope.guildId, 'onboarding');
     if (scope.guildId === TARGET_GUILD_ID) throw new PlatformError('existing_native_onboarding_retained', 409);
     const settings = await moduleConfig(scope.guildId, 'onboarding');
     if (!settings.enabled || !settings.configuration.entryChannelId || !settings.configuration.steps?.length)
@@ -67,6 +69,7 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
       action: { operation: 'onboarding.publish', source: 'platform-onboarding', guildId: scope.guildId,
         entryId, channelId: settings.configuration.entryChannelId },
       validate: async () => {
+        await entitlements?.requireFeature(scope.guildId, 'onboarding');
         guild = await discord.freshGuild(scope.guildId);
         const actor = await guild.members.fetch({ user: scope.userId, force: true });
         channel = guild.channels.cache.get(settings.configuration.entryChannelId);
@@ -95,6 +98,7 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
     return { ok: true, message: `Onboarding entry published in channel ${channel.id} (message ${message.id}).` };
   }
   async function context(interaction) {
+    if (interaction.guildId) await entitlements?.requireFeature(interaction.guildId, 'onboarding');
     if (!interaction.guildId || interaction.guildId === TARGET_GUILD_ID)
       throw new PlatformError('existing_native_onboarding_retained', 409);
     const guild = await discord.freshGuild(interaction.guildId);
@@ -220,8 +224,8 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
       const next = await advance(c, row, roleId);
       await i.editReply(await display(c, next));
     } catch (error) {
-      const content = error instanceof PlatformError ? `Onboarding paused: ${error.code}. Start again to resume.` :
-        'Onboarding could not be confirmed. No question answer was retained. Start again to inspect current progress.';
+      const content = entitlementMemberMessage(error) ?? (error instanceof PlatformError ? `Onboarding paused: ${error.code}. Start again to resume.` :
+        'Onboarding could not be confirmed. No question answer was retained. Start again to inspect current progress.');
       if (i.deferred || i.replied) await i.editReply({ content, components: [] });
       else await i.reply({ content, flags: 64 });
     }

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlatformFeatureEntitlement } from './platformFeatureEntitlement';
 import type { PlatformField } from './platformField';
 import type { PlatformModuleConfiguration } from './platformModuleConfiguration';
 
@@ -16,4 +17,5 @@ export interface PlatformModule {
   editable: boolean;
   fields: PlatformField[];
   runtimeStatus: string;
+  entitlement?: PlatformFeatureEntitlement;
 }

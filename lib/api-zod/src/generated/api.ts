@@ -8,6 +8,104 @@
 import * as zod from 'zod';
 
 
+export const GetPlatformEntitlementsParams = zod.object({
+  "guildId": zod.coerce.string()
+})
+
+export const GetPlatformEntitlementsResponse = zod.object({
+  "plan": zod.string(),
+  "effectivePlan": zod.string(),
+  "status": zod.string(),
+  "policyMode": zod.enum(['PRESERVE_ACCESS', 'REVIEWED_RULES']),
+  "billingEnabled": zod.boolean(),
+  "canAssign": zod.boolean(),
+  "assignment": zod.union([zod.object({
+  "source": zod.string(),
+  "assignedAt": zod.string(),
+  "expiresAt": zod.string().nullable(),
+  "revision": zod.number().int()
+}),zod.null()]),
+  "features": zod.array(zod.object({
+  "featureKey": zod.string(),
+  "displayName": zod.string(),
+  "description": zod.string(),
+  "module": zod.string(),
+  "minimumPlan": zod.string().nullable(),
+  "entitled": zod.boolean(),
+  "enabled": zod.boolean(),
+  "policyApproved": zod.boolean(),
+  "state": zod.enum(['AVAILABLE', 'ENABLED', 'DISABLED', 'LOCKED_BY_PLAN', 'LIMIT_REACHED', 'UNSUPPORTED']),
+  "reason": zod.string().nullable(),
+  "dependencies": zod.array(zod.string()),
+  "limits": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.number().int().nullable(),
+  "used": zod.number().int().nullable(),
+  "remaining": zod.number().int().nullable(),
+  "resetAt": zod.string().nullable(),
+  "overLimit": zod.boolean()
+})),
+  "downgradeBehavior": zod.string()
+}))
+})
+
+
+export const AssignPlatformPlanParams = zod.object({
+  "guildId": zod.coerce.string()
+})
+
+export const assignPlatformPlanBodyReasonMax = 500;
+
+export const assignPlatformPlanBodyRevisionMin = 0;
+
+
+
+export const AssignPlatformPlanBody = zod.object({
+  "plan": zod.enum(['FREE', 'PRO', 'ULTIMATE']),
+  "status": zod.enum(['ACTIVE', 'TRIAL', 'MANUAL', 'SUSPENDED', 'EXPIRED']),
+  "expiresAt": zod.coerce.date().nullish(),
+  "reason": zod.string().min(1).max(assignPlatformPlanBodyReasonMax),
+  "revision": zod.number().int().min(assignPlatformPlanBodyRevisionMin)
+})
+
+export const AssignPlatformPlanResponse = zod.object({
+  "plan": zod.string(),
+  "effectivePlan": zod.string(),
+  "status": zod.string(),
+  "policyMode": zod.enum(['PRESERVE_ACCESS', 'REVIEWED_RULES']),
+  "billingEnabled": zod.boolean(),
+  "canAssign": zod.boolean(),
+  "assignment": zod.union([zod.object({
+  "source": zod.string(),
+  "assignedAt": zod.string(),
+  "expiresAt": zod.string().nullable(),
+  "revision": zod.number().int()
+}),zod.null()]),
+  "features": zod.array(zod.object({
+  "featureKey": zod.string(),
+  "displayName": zod.string(),
+  "description": zod.string(),
+  "module": zod.string(),
+  "minimumPlan": zod.string().nullable(),
+  "entitled": zod.boolean(),
+  "enabled": zod.boolean(),
+  "policyApproved": zod.boolean(),
+  "state": zod.enum(['AVAILABLE', 'ENABLED', 'DISABLED', 'LOCKED_BY_PLAN', 'LIMIT_REACHED', 'UNSUPPORTED']),
+  "reason": zod.string().nullable(),
+  "dependencies": zod.array(zod.string()),
+  "limits": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.number().int().nullable(),
+  "used": zod.number().int().nullable(),
+  "remaining": zod.number().int().nullable(),
+  "resetAt": zod.string().nullable(),
+  "overLimit": zod.boolean()
+})),
+  "downgradeBehavior": zod.string()
+}))
+})
+
+
 /**
  * Returns server health status
  * @summary Health check
@@ -113,7 +211,29 @@ export const GetPlatformModulesResponseItem = zod.object({
   "min": zod.number().optional(),
   "max": zod.number().optional()
 })),
-  "runtimeStatus": zod.string()
+  "runtimeStatus": zod.string(),
+  "entitlement": zod.object({
+  "featureKey": zod.string(),
+  "displayName": zod.string(),
+  "description": zod.string(),
+  "module": zod.string(),
+  "minimumPlan": zod.string().nullable(),
+  "entitled": zod.boolean(),
+  "enabled": zod.boolean(),
+  "policyApproved": zod.boolean(),
+  "state": zod.enum(['AVAILABLE', 'ENABLED', 'DISABLED', 'LOCKED_BY_PLAN', 'LIMIT_REACHED', 'UNSUPPORTED']),
+  "reason": zod.string().nullable(),
+  "dependencies": zod.array(zod.string()),
+  "limits": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.number().int().nullable(),
+  "used": zod.number().int().nullable(),
+  "remaining": zod.number().int().nullable(),
+  "resetAt": zod.string().nullable(),
+  "overLimit": zod.boolean()
+})),
+  "downgradeBehavior": zod.string()
+}).optional()
 })
 export const GetPlatformModulesResponse = zod.array(GetPlatformModulesResponseItem)
 
@@ -148,7 +268,29 @@ export const UpdatePlatformModuleResponse = zod.object({
   "min": zod.number().optional(),
   "max": zod.number().optional()
 })),
-  "runtimeStatus": zod.string()
+  "runtimeStatus": zod.string(),
+  "entitlement": zod.object({
+  "featureKey": zod.string(),
+  "displayName": zod.string(),
+  "description": zod.string(),
+  "module": zod.string(),
+  "minimumPlan": zod.string().nullable(),
+  "entitled": zod.boolean(),
+  "enabled": zod.boolean(),
+  "policyApproved": zod.boolean(),
+  "state": zod.enum(['AVAILABLE', 'ENABLED', 'DISABLED', 'LOCKED_BY_PLAN', 'LIMIT_REACHED', 'UNSUPPORTED']),
+  "reason": zod.string().nullable(),
+  "dependencies": zod.array(zod.string()),
+  "limits": zod.array(zod.object({
+  "key": zod.string(),
+  "value": zod.number().int().nullable(),
+  "used": zod.number().int().nullable(),
+  "remaining": zod.number().int().nullable(),
+  "resetAt": zod.string().nullable(),
+  "overLimit": zod.boolean()
+})),
+  "downgradeBehavior": zod.string()
+}).optional()
 })
 
 

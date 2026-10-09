@@ -32,7 +32,7 @@ export function validateConfiguration(configuration) {
   return JSON.parse(encoded);
 }
 
-export function createGuildConfigurationService(pool, { onSave = async () => {} } = {}) {
+export function createGuildConfigurationService(pool, { onSave = async () => {}, beforeSave = async () => {} } = {}) {
   async function getGuildSettings(permit) {
     const { guildId } = permitScope(permit, 'settings');
     const result = await pool.query(
@@ -67,6 +67,7 @@ export function createGuildConfigurationService(pool, { onSave = async () => {} 
         'SELECT enabled,configuration_json,revision FROM platform_modules WHERE guild_id=$1 AND module_key=$2 FOR UPDATE',
         [guildId, key])).rows[0] ?? { enabled: false, configuration_json: {}, revision: 0 };
       if (old.revision !== revision) throw new PlatformError('configuration_changed_reload', 409);
+      await beforeSave(db, { guildId, userId, key, enabled, configuration: sanitized });
       const next = (await db.query(
         `INSERT INTO platform_modules(guild_id,module_key,enabled,configuration_json,updated_by,revision)
          VALUES($1,$2,$3,$4,$5,$6)
