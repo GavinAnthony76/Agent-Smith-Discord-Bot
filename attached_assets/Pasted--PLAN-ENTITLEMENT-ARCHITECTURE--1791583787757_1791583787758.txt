@@ -1,0 +1,895 @@
+==================================================
+PLAN / ENTITLEMENT ARCHITECTURE
+==================================================
+
+IMPORTANT:
+
+The LMOC / Agent Smith platform is being designed as a multi-tier product.
+
+Features, limits, modules, Discord capabilities, analytics, AI usage, economy
+features, role automation, channel automation and other capabilities may be
+gated behind plans.
+
+Current proposed plans are:
+
+FREE
+PRO
+ULTIMATE
+
+Billing is NOT currently enabled.
+
+There is no checkout and no finalized pricing.
+
+Do NOT implement payment processing simply because plan tiers exist.
+
+Plan gating must work independently from billing so plans can currently be
+assigned manually for testing/development.
+
+==================================================
+PLAN MODEL
+==================================================
+
+Each Discord guild/server must have a platform entitlement record.
+
+Suggested:
+
+guild_entitlements
+  guild_id
+  plan
+  status
+  assigned_at
+  expires_at nullable
+  source
+  metadata
+  updated_at
+
+Possible plan values:
+
+FREE
+PRO
+ULTIMATE
+
+Possible status values:
+
+ACTIVE
+TRIAL
+SUSPENDED
+EXPIRED
+MANUAL
+
+Current development/testing assignments may use:
+
+source = MANUAL
+
+Do not require Stripe or checkout to determine a plan yet.
+
+==================================================
+CURRENT PROPOSED PLAN POSITIONING
+==================================================
+
+FREE
+
+Intended for a single/basic community.
+
+Includes at minimum:
+
+- core moderation
+- onboarding
+- basic roles
+- audit log
+- standard limits
+
+PRO
+
+Includes everything in FREE plus:
+
+- higher usage / record limits
+- expanded modules
+- larger community allowances
+- AI usage allowance
+- additional configuration features
+
+ULTIMATE
+
+Includes everything in PRO plus:
+
+- highest supported limits
+- advanced modules
+- priority/new feature access where configured
+- larger-scale community capabilities
+
+These tier definitions are PROPOSED.
+
+Do not hardcode the marketing copy as permanent business rules.
+
+Create a configurable entitlement matrix.
+
+==================================================
+ENTITLEMENT MATRIX
+==================================================
+
+Create a centralized feature catalog.
+
+Example conceptual structure:
+
+FEATURE                         FREE      PRO       ULTIMATE
+
+onboarding                      YES       YES       YES
+basic_roles                     YES       YES       YES
+basic_moderation                YES       YES       YES
+audit_log                       YES       YES       YES
+
+xp                              config    YES       YES
+levels                          config    YES       YES
+advanced_level_rewards          NO        config    YES
+achievements                    limited   YES       YES
+economy                         limited   YES       YES
+shop                            limited   YES       YES
+
+tickets                         limited   YES       YES
+ai                              NO/limit  YES       YES
+advanced_ai                     NO        limited   YES
+
+analytics                       basic     expanded  full
+feeds                           limited   expanded  full
+youtube                         limited   expanded  full
+events                          limited   expanded  full
+
+advanced_automod                NO        YES       YES
+advanced_role_automation        NO        YES       YES
+advanced_channel_automation     NO        YES       YES
+
+Do NOT treat this example as finalized product policy.
+
+Create the system so these values can be changed through configuration/database
+without rewriting command logic.
+
+==================================================
+FEATURE REGISTRY
+==================================================
+
+Create a feature registry such as:
+
+platform_features
+  feature_key
+  display_name
+  description
+  module
+  minimum_plan
+  enabled
+  configuration
+
+Examples:
+
+onboarding
+moderation
+automod
+xp
+levels
+achievements
+reward_roles
+economy
+shop
+tickets
+ai
+analytics
+feeds
+youtube
+events
+patreon_perks
+advanced_roles
+advanced_channels
+
+Every gated feature must reference a feature key.
+
+==================================================
+CENTRALIZED ENTITLEMENT SERVICE
+==================================================
+
+Create a single entitlement service.
+
+Suggested helpers:
+
+getGuildPlan(guildId)
+
+getGuildEntitlements(guildId)
+
+hasFeature(guildId, featureKey)
+
+requireFeature(guildId, featureKey)
+
+getFeatureLimit(guildId, featureKey, limitKey)
+
+canUseModule(guildId, module)
+
+Do NOT scatter checks such as:
+
+if plan === "PRO"
+
+throughout hundreds of command files.
+
+All plan logic should pass through one central service.
+
+==================================================
+BACKEND ENFORCEMENT
+==================================================
+
+PLAN GATING MUST NOT BE UI-ONLY.
+
+A hidden button or disabled menu does not secure a feature.
+
+Check entitlements inside:
+
+- Discord commands
+- interaction handlers
+- API endpoints
+- background workers
+- reconciliation workers
+- scheduled tasks
+- feed workers
+- AI services
+- role automation
+- channel automation
+- economy operations
+
+Example:
+
+/shop
+
+→ guild entitlement check
+→ economy feature available?
+→ shop feature available?
+→ member permission check
+→ execute
+
+==================================================
+DISCORD COMMAND GATING
+==================================================
+
+Commands must respond gracefully when unavailable.
+
+Example:
+
+Member:
+/achievements
+
+If unavailable:
+
+"This feature is not enabled for this community."
+
+Do NOT expose internal billing or implementation details to ordinary users.
+
+Server Owners/Admins may receive:
+
+"Achievements requires the Pro plan."
+
+where appropriate.
+
+==================================================
+MODULE STATUS UI
+==================================================
+
+The admin dashboard must distinguish:
+
+AVAILABLE
+ENABLED
+DISABLED
+LOCKED BY PLAN
+LIMIT REACHED
+UNSUPPORTED
+
+Example:
+
+ACHIEVEMENTS
+Locked
+Requires Pro
+
+XP
+Active
+4,821 XP events this month
+
+AI
+Limit reached
+Resets next period
+
+Do not label a plan-locked feature as broken.
+
+==================================================
+PLAN-LOCKED UI
+==================================================
+
+Show locked modules in the dashboard where appropriate.
+
+Use premium-looking lock states rather than hiding everything.
+
+Example:
+
+ACHIEVEMENTS
+
+Advanced member achievement system.
+
+PRO
+
+[Upgrade required]
+
+Because billing is currently disabled:
+
+the control should NOT lead to a fake checkout.
+
+Instead:
+
+"Plans are currently being finalized."
+
+==================================================
+SERVER PLAN VS MEMBER ROLE
+==================================================
+
+These are completely different concepts.
+
+SERVER PLAN:
+
+FREE
+PRO
+ULTIMATE
+
+determines which platform capabilities the Discord server has.
+
+MEMBER ROLE:
+
+Member
+Moderator
+Ministry Lead
+Gaming role
+Faith role
+Tech role
+XP reward role
+Supporter role
+
+determines the member's Discord/community permissions.
+
+A server plan MUST NOT automatically make a member:
+
+Administrator
+Moderator
+Ministry Lead
+Owner
+
+==================================================
+SERVER PLAN VS MEMBER LEVEL
+==================================================
+
+Member XP/level progression is separate from the server's subscription plan.
+
+Example:
+
+Guild plan:
+PRO
+
+Member:
+Level 22
+
+The guild's plan determines whether advanced rewards are available.
+
+The member's level determines whether that individual qualifies for the reward.
+
+Required flow:
+
+guild entitled to reward feature?
+↓
+reward configured?
+↓
+member qualifies?
+↓
+role safe?
+↓
+grant reward
+
+==================================================
+XP PLAN LIMITS
+==================================================
+
+Support configurable XP limits by plan.
+
+Potential examples:
+
+monthly XP events
+voice XP
+custom XP rules
+number of level milestones
+number of reward roles
+leaderboard history
+
+Do not hardcode final limits yet.
+
+Store them in entitlement configuration.
+
+Example:
+
+plan_limits
+  plan
+  limit_key
+  value
+
+Possible keys:
+
+xp_events_monthly
+level_reward_count
+achievement_count
+shop_item_count
+ticket_retention_days
+analytics_retention_days
+ai_requests_monthly
+feed_source_count
+youtube_source_count
+event_count
+custom_role_count
+
+==================================================
+ROLE PRIVILEGES AND PLAN GATING
+==================================================
+
+Some role automation capabilities may be plan-gated.
+
+Examples:
+
+FREE:
+basic member roles
+basic onboarding role
+basic self-assign role system
+
+PRO:
+additional automated roles
+expanded reward roles
+more role mappings
+
+ULTIMATE:
+highest role limits
+advanced conditional role automation
+
+However plan gating NEVER overrides security.
+
+No plan may allow automatic assignment of:
+
+Owner
+Administrator
+Moderator
+MannaBot/Agent Smith
+protected security roles
+
+unless explicit human authorization architecture separately permits it.
+
+==================================================
+CHANNEL PRIVILEGES AND PLAN GATING
+==================================================
+
+Channel automation may also depend on plan.
+
+Examples:
+
+FREE:
+standard onboarding/community channels
+
+PRO:
+expanded module channels
+additional private community areas
+automatic forum/thread tools
+
+ULTIMATE:
+advanced channel automation
+larger channel mappings
+additional automation policies
+
+These limits must be configuration-driven.
+
+Do not delete channels simply because a plan changes.
+
+==================================================
+PLAN DOWNGRADES
+==================================================
+
+Downgrades must be SAFE.
+
+If:
+
+ULTIMATE → PRO
+or
+PRO → FREE
+
+do not:
+
+- delete user data
+- delete Discord channels automatically
+- delete earned achievements
+- remove moderation history
+- destroy member XP
+- erase inventory
+- delete existing configuration
+
+Instead:
+
+preserve the data
+disable new usage where required
+mark features read-only/inactive
+show Owner/Admin what exceeds the new entitlement
+
+Example:
+
+Guild has 10 feed sources.
+Free permits 2.
+
+After downgrade:
+
+- preserve all 10 records
+- keep 2 active according to configured policy
+- mark 8 inactive/over-limit
+- do not silently delete them
+
+==================================================
+MEMBER REWARD DOWNGRADES
+==================================================
+
+Do NOT automatically strip every member reward because the guild's plan changes.
+
+Reward behavior must have explicit policy.
+
+Possible policies:
+
+PRESERVE_EARNED
+DISABLE_NEW_GRANTS
+REMOVE_AUTOMATED_ROLE
+
+Default to the safest non-destructive option:
+
+PRESERVE_EARNED
++
+DISABLE_NEW_GRANTS
+
+unless product policy explicitly says otherwise.
+
+==================================================
+PLAN UPGRADES
+==================================================
+
+When a plan is upgraded:
+
+do NOT blindly activate every feature.
+
+Example:
+
+FREE → PRO
+
+Newly available modules should become:
+
+AVAILABLE
+
+not automatically:
+
+ENABLED
+
+unless the feature explicitly supports auto-activation.
+
+Owner/Admin should decide whether to enable major modules.
+
+==================================================
+RESOURCE LIMITS
+==================================================
+
+Enforce usage limits centrally.
+
+Examples:
+
+number of:
+
+- custom roles
+- reward roles
+- achievements
+- shop items
+- ticket records
+- feeds
+- YouTube sources
+- automated events
+- analytics retention
+- AI calls
+- custom onboarding steps
+- module configurations
+
+Use limit helpers such as:
+
+getLimit(guildId, "feed_source_count")
+
+checkLimit(guildId, "feed_source_count", currentCount)
+
+==================================================
+AI ALLOWANCE
+==================================================
+
+AI usage is especially important for plan limits.
+
+Track:
+
+guild_id
+requests
+tokens/input
+tokens/output
+period
+
+Do not expose provider costs or secret implementation details to normal members.
+
+If allowance is exhausted:
+
+MannaBot/Agent Smith should remain operational.
+
+Only conversational AI should degrade gracefully.
+
+Example response:
+
+"Conversational AI is temporarily unavailable for this community."
+
+Onboarding, moderation, roles, XP and other non-AI systems must continue working.
+
+==================================================
+ANALYTICS RETENTION
+==================================================
+
+Different plans may eventually have different analytics retention windows.
+
+Example concept:
+
+FREE:
+basic/current metrics
+
+PRO:
+longer history
+
+ULTIMATE:
+maximum configured history
+
+Do not finalize the values yet.
+
+Build the retention system so these limits can be configured.
+
+==================================================
+FEATURE DEPENDENCIES
+==================================================
+
+Support dependencies.
+
+Example:
+
+reward_roles requires:
+levels
+
+shop requires:
+economy
+
+advanced_ai requires:
+ai
+
+youtube may require:
+feeds
+
+Before enabling a feature:
+
+check plan
+check dependencies
+check configuration
+
+==================================================
+OWNER CONTROL PANEL
+==================================================
+
+Add a PLANS / ENTITLEMENTS section.
+
+Show:
+
+Current Plan
+Status
+Included Features
+Usage
+Limits
+Locked Features
+Over-limit configuration
+
+Since billing is disabled:
+
+show:
+
+"Billing is not currently enabled."
+
+Do not show a functioning checkout.
+
+==================================================
+PLAN ADMINISTRATION DURING DEVELOPMENT
+==================================================
+
+Until billing exists:
+
+allow authorized platform administrators to manually assign a plan for test
+guilds.
+
+This must be protected.
+
+Discord server Owners must NOT be able to arbitrarily promote themselves to
+ULTIMATE simply through a Discord command unless specifically permitted for test
+environments.
+
+Use a controlled platform-admin mechanism.
+
+Audit every plan change.
+
+==================================================
+TEST GUILDS
+==================================================
+
+Allow development/test guilds to use explicit entitlement overrides.
+
+Example:
+
+LMOC TEST
+plan = ULTIMATE
+source = MANUAL_TEST
+
+Hallowed Core
+use its explicitly configured plan
+
+Do not apply test overrides globally.
+
+==================================================
+BILLING FOUNDATION
+==================================================
+
+The database may contain dormant billing-foundation tables.
+
+Do NOT activate billing.
+
+Do NOT build checkout.
+
+Do NOT process payments.
+
+Do NOT require Stripe.
+
+Only make the entitlement architecture compatible with future billing.
+
+Future billing can later update:
+
+guild_entitlements
+
+without changing feature authorization architecture.
+
+==================================================
+FEATURE DEVELOPMENT REQUIREMENT
+==================================================
+
+For EVERY remaining feature implemented from this point forward:
+
+document:
+
+FEATURE KEY
+MINIMUM PLAN
+LIMITS
+DEPENDENCIES
+ROLE PRIVILEGES
+CHANNEL PRIVILEGES
+BACKGROUND WORKERS
+DATABASE RECORDS
+DOWNGRADE BEHAVIOR
+
+Do this before marking the feature complete.
+
+Example:
+
+FEATURE:
+achievements
+
+feature_key:
+achievements
+
+minimum_plan:
+PRO
+
+dependencies:
+xp
+levels
+
+limits:
+achievement_count
+
+role privilege:
+may grant only bot_rewardable roles
+
+downgrade:
+preserve earned achievements
+disable new unlocks if no longer entitled
+
+==================================================
+PLAN ACCEPTANCE TESTING
+==================================================
+
+Test features at multiple plan levels.
+
+At minimum:
+
+FREE guild
+PRO guild
+ULTIMATE guild
+
+Verify:
+
+FREE cannot use PRO-only feature
+
+PRO cannot use ULTIMATE-only feature
+
+ULTIMATE receives intended maximum entitlement
+
+UI matches backend behavior
+
+direct API call cannot bypass plan
+
+Discord slash command cannot bypass plan
+
+background worker cannot bypass plan
+
+role automation cannot bypass plan
+
+channel automation cannot bypass plan
+
+downgrade preserves data
+
+upgrade makes feature available without unsafe auto-activation
+
+==================================================
+PLAN REGRESSION TESTS
+==================================================
+
+Add automated tests for:
+
+entitlement resolution
+feature minimum plan
+usage limits
+role limits
+channel limits
+XP limits
+AI allowance
+analytics retention
+feature dependencies
+manual plan assignment
+unauthorized plan change
+upgrade
+downgrade
+over-limit resources
+locked UI state
+backend bypass attempts
+
+==================================================
+CRITICAL DISTINCTION
+==================================================
+
+Always evaluate access in this order:
+
+1. Is the guild/server entitled to the feature?
+2. Is the feature enabled for this guild?
+3. Is the feature configured correctly?
+4. Does the individual user have permission?
+5. Does the user's role/level/status qualify?
+6. Is the requested resource within the plan limit?
+7. Is the requested action safe?
+
+Only then execute.
+
+Conceptually:
+
+SERVER PLAN
+     ↓
+FEATURE ENTITLEMENT
+     ↓
+MODULE ENABLED
+     ↓
+USER AUTHORIZATION
+     ↓
+MEMBER QUALIFICATION
+     ↓
+RESOURCE LIMIT
+     ↓
+SECURITY CHECK
+     ↓
+ACTION
