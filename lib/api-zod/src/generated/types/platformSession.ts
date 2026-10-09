@@ -17,6 +17,8 @@ export interface PlatformSession {
   oauthCallbackRegistered?: boolean | null;
   runtimeMode?: PlatformSessionRuntimeMode;
   botOnline: boolean;
+  /** @nullable */
+  botConnected?: boolean | null;
   csrfToken?: string;
   user?: PlatformSessionUser;
 }

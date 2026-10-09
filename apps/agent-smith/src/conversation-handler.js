@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { conversationIdentity } from './conversation-identity.js';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits as P } from 'discord.js';
 import { hasPermission } from './permissions.js';
 import { conversationSettings } from './conversation-settings.js';
@@ -209,7 +210,7 @@ export function createConversationHandlers({ client, guild, cfg, pool }, depende
         service.clear(interaction.user.id);
         await interaction.editReply('Your temporary conversation context has been cleared.');
       } else if (action === 'about') {
-        await interaction.editReply('I am Agent Smith, Hallowed Core’s conversational and operational assistant—not the Owner. I help with Gaming, Tech and respectful Faith questions; human-only server decisions remain with authorized people.');
+        await interaction.editReply(conversationIdentity(guild, settings));
       } else if (action === 'help') {
         await interaction.editReply('Mention me, reply to one of my messages, or use /smith ask (private by default). Configured Smith channels support plain conversation when Message Content is enabled. Use /smith clear-context to forget your short-lived history. Conversation never changes access or moderation.');
       } else if (action === 'ask') {

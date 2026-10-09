@@ -21,6 +21,16 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
     const settings = await moduleConfig(scope.guildId, 'onboarding');
     if (!settings.enabled || !settings.configuration.entryChannelId || !settings.configuration.steps?.length)
       throw new PlatformError('enabled_onboarding_and_entry_channel_required', 409);
+    const entryId = `entry:${settings.revision}`;
+    const reserved = await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by)
+      VALUES($1,'onboarding-entry',$2,'Onboarding entry','{"status":"creating"}',$3)
+      ON CONFLICT DO NOTHING RETURNING record_id`, [scope.guildId,entryId,scope.userId]);
+    if (!reserved.rowCount) {
+      const old = (await pool.query(`SELECT data FROM platform_records WHERE guild_id=$1
+        AND collection='onboarding-entry' AND record_id=$2`, [scope.guildId,entryId])).rows[0];
+      if (old?.data.status === 'confirmed') return {ok:true,message:'This onboarding revision already has an entry.'};
+      throw new PlatformError('onboarding_entry_uncertain_inspect_before_retry',409);
+    }
     let guild, channel;
     const message = await withPrivilegedPipeline({
       action: { operation: 'onboarding.publish', source: 'platform-onboarding', guildId: scope.guildId },
@@ -42,6 +52,9 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
       allowedMentions: { parse: [], repliedUser: false },
       components: [{ type: 1, components: [{ type: 2, style: 1, custom_id: 'smith:onboarding:start', label: 'Start / resume' }] }],
     })));
+    await pool.query(`UPDATE platform_records SET data=$3,updated_at=now()
+      WHERE guild_id=$1 AND collection='onboarding-entry' AND record_id=$2`,
+    [scope.guildId,entryId,{status:'confirmed',messageId:message.id,channelId:channel.id}]);
     return { ok: true, message: `Onboarding entry published in channel ${channel.id} (message ${message.id}).` };
   }
   async function context(interaction) {

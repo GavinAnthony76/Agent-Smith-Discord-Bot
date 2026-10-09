@@ -59,8 +59,11 @@ export function createWelcomeService({ pool, discord, moduleConfig }) {
       const fresh = await target(guildId, member.id, settings.configuration.channelId);
       const current = await moduleConfig(guildId, 'welcome');
       if (!current.enabled || current.revision !== settings.revision) throw new PlatformError('welcome_configuration_changed', 409);
+      const onboarding = await moduleConfig(guildId, 'onboarding');
+      const configuration = onboarding.enabled ?
+        { ...current.configuration, roleBehavior: 'ONBOARDING' } : current.configuration;
       const result = await withPlatformCommunication({ guild: fresh.guild, userId: member.id, channelId: fresh.channel.id },
-        () => fresh.channel.send({ ...welcomePayload(current.configuration, fresh.member, fresh.guild),
+        () => fresh.channel.send({ ...welcomePayload(configuration, fresh.member, fresh.guild),
           nonce: id.replaceAll('-', '').slice(0,24), enforceNonce: true }));
       await pool.query(`UPDATE platform_records SET data=data||$3::jsonb,updated_at=now()
         WHERE guild_id=$1 AND collection='welcome-delivery' AND record_id=$2`,

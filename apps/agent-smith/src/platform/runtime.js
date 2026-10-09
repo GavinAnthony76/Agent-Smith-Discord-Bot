@@ -18,24 +18,94 @@ import { createOnboardingService } from './onboarding.js';
 import { createEconomyService } from './economy.js';
 import { registerPlatformCommands } from './commands.js';
 import { PlatformError } from './catalog.js';
+import { createActivation, STANDARD_MODULES } from './activation.js';
+import { createSelfRoleService } from './roles.js';
+import { loadReviewedConfiguration, seedReviewedConfiguration } from './release-config.js';
+import { createAcceptanceResources } from './acceptance-resources.js';
 
 /**
  * Shares the existing Discord client. Never logs in, migrates or provisions
  * Discord resources. Hallowed Core's guarded modules remain the legacy adapter.
  */
-export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
+export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = process.env }) {
   const discord = createDiscordAccess({ client });
-  const origin = process.env.PLATFORM_PUBLIC_URL;
+  const origin = env.PLATFORM_PUBLIC_URL;
+  const activation = createActivation({ pool, client, env });
   const tickets = createTicketService({ client, pool, discord });
-  const web = createPlatformHttp({ pool, discord, origin, legacyActions, ticketActions: tickets.staffAction,
-    onboardingActions: authority => onboarding.publish(authority) });
+  async function requireActive(guildId) {
+    if (!await activation.active(guildId)) throw new PlatformError('standard_guild_runtime_not_active', 409);
+  }
+  const web = createPlatformHttp({ pool, discord, origin, env, legacyActions,
+    runtimeStatus: activation.status,
+    acceptanceActions: async authority => {
+      const ids = await acceptanceResources.prepare(authority);
+      const roleAuthority = await web.service.authorize(authority.actor.id,authority.guild.id,'roles',true);
+      const roleSettings = await moduleConfig(authority.guild.id,'roles');
+      if (!roleSettings.configuration.selfAssignableRoles.includes(ids.roleId)) {
+        await web.service.updateModule(roleAuthority,'roles',{enabled:roleSettings.enabled,revision:roleSettings.revision,
+          configuration:{...roleSettings.configuration,
+            selfAssignableRoles:[...roleSettings.configuration.selfAssignableRoles,ids.roleId]}});
+      }
+      const ticketAuthority = await web.service.authorize(authority.actor.id,authority.guild.id,'tickets',true);
+      const existing = (await pool.query(`SELECT record_id FROM platform_records WHERE guild_id=$1
+        AND collection='ticket-panels' AND title='LMOC TEST disposable acceptance panel'`, [authority.guild.id])).rows;
+      if (existing.length > 1) throw new PlatformError('acceptance_panel_duplicates_require_review',409);
+      const panel = existing[0] ?? await web.service.saveRecord(ticketAuthority,'ticket-panels',{
+        title:'LMOC TEST disposable acceptance panel',
+        data:{description:'Disposable live acceptance ticket. No real support evidence.',buttonLabel:'Open test ticket',
+          publishChannelId:ids.channelId,categoryId:ids.categoryId,ticketType:'Other',supportRoles:[],questions:[],enabled:true},
+      });
+      const panelId = panel.record_id ?? panel.id;
+      const stored = (await pool.query(`SELECT data,revision FROM platform_records WHERE guild_id=$1
+        AND collection='ticket-panels' AND record_id=$2`, [authority.guild.id,panelId])).rows[0];
+      if (!stored || stored.data.categoryId !== ids.categoryId || stored.data.publishChannelId !== ids.channelId ||
+          stored.data.supportRoles?.length || stored.data.publishedMessageId &&
+          stored.data.publishedRevision !== stored.revision)
+        throw new PlatformError('acceptance_panel_drift_requires_review',409);
+      // No automatic duplicate message publication on repeated setup.
+      if (!stored?.data.publishedMessageId) {
+        const reserved = await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by)
+          VALUES($1,'acceptance-publication','ticket-panel','Test panel publication','{"status":"creating"}',$2)
+          ON CONFLICT DO NOTHING RETURNING record_id`, [authority.guild.id,authority.actor.id]);
+        if (!reserved.rowCount) throw new PlatformError('acceptance_panel_publication_uncertain_inspect_before_retry',409);
+        await tickets.staffAction(ticketAuthority,{action:'ticket-publish',target:panelId});
+        await pool.query(`UPDATE platform_records SET data='{"status":"confirmed"}' WHERE guild_id=$1
+          AND collection='acceptance-publication' AND record_id='ticket-panel'`, [authority.guild.id]);
+      }
+      const onboardingAuthority = await web.service.authorize(authority.actor.id,authority.guild.id,'onboarding',true);
+      const onboardingConfig = await moduleConfig(authority.guild.id,'onboarding');
+      const entry = (await pool.query(`SELECT data FROM platform_records WHERE guild_id=$1
+        AND collection='onboarding-entry' AND record_id=$2`,
+      [authority.guild.id,`entry:${onboardingConfig.revision}`])).rows[0];
+      if (entry && entry.data.status !== 'confirmed')
+        throw new PlatformError('acceptance_onboarding_entry_uncertain_inspect_before_retry',409);
+      if (!entry) await onboarding.publish(onboardingAuthority);
+      const economyAuthority = await web.service.authorize(authority.actor.id,authority.guild.id,'economy',true);
+      const shop = (await pool.query(`SELECT 1 FROM platform_records WHERE guild_id=$1
+        AND collection='shop' AND title='LMOC TEST disposable acceptance token'`, [authority.guild.id])).rowCount;
+      if (!shop) await web.service.saveRecord(economyAuthority,'shop',{
+        title:'LMOC TEST disposable acceptance token',data:{price:5,enabled:true},
+      });
+      return {ok:true,message:`Disposable LMOC TEST role/category/panel prepared. Cosmetic role ${ids.roleId}; panel channel ${ids.channelId}.`};
+    },
+    ticketActions: async (authority, input) => {
+      await requireActive(authority.guild.id); return tickets.staffAction(authority, input);
+    },
+    onboardingActions: async authority => {
+      await requireActive(authority.guild.id); return onboarding.publish(authority);
+    } });
+  const acceptanceResources = createAcceptanceResources({client,pool,discord,env,requireActive});
   setPlatformTransportGuard(client, communicationGuard);
   const conversations = new Map();
+  let heartbeat;
   const activity = createActivityService(pool);
   const welcome = createWelcomeService({ pool, discord, moduleConfig });
   const onboarding = createOnboardingService({ client, pool, discord, moduleConfig });
   const economy = createEconomyService({ pool, moduleConfig });
+  const selfRoles = createSelfRoleService({ client, pool, discord, moduleConfig });
   async function moduleConfig(guildId, key) {
+    if (!STANDARD_MODULES.includes(key) || !await activation.active(guildId))
+      return { enabled: false, configuration: {}, revision: 0 };
     const row = (await pool.query(
       'SELECT enabled,configuration_json,revision FROM platform_modules WHERE guild_id=$1 AND module_key=$2',
       [guildId, key])).rows[0];
@@ -101,33 +171,46 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
     conversations.set(guildId, { revision: value.revision, handlers });
     return handlers;
   }
-  async function recordActivity(kind, guildId, eventKey, userId, channelId) {
+  async function recordActivity(kind, guildId, eventKey, userId, channelId, occurredAt = Date.now()) {
+    if (!await activation.acceptsEvent(guildId,occurredAt)) return;
     const row = (await pool.query('SELECT installed FROM platform_guilds WHERE guild_id=$1', [guildId])).rows[0];
     if (!row?.installed) return;
     const settings = await moduleConfig(guildId, 'analytics');
     if (!settings.enabled || settings.configuration.collectActivity === false) return;
     // Hash identity; never retain message body, voice audio or moderation evidence.
     await pool.query(
-      `INSERT INTO platform_activity(guild_id,event_key,kind,channel_id,user_hash) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+       `INSERT INTO platform_activity(guild_id,event_key,kind,channel_id,user_hash,occurred_at)
+        SELECT $1,$2,$3,$4,$5,to_timestamp($6 / 1000.0) FROM platform_runtime_state WHERE guild_id=$1
+        AND runtime_active AND activated_at<=to_timestamp($6 / 1000.0) AND last_seen_at>now()-interval '90 seconds'
+        ON CONFLICT DO NOTHING`,
       [guildId, eventKey, kind, channelId ?? null,
-        userId ? createHash('sha256').update(`${guildId}:${userId}`).digest('hex') : null]);
+         userId ? createHash('sha256').update(`${guildId}:${userId}`).digest('hex') : null, occurredAt]);
   }
   const events = {
     guildCreate: guild => {
-      void web.service.adopt(guild).then(()=>registerPlatformCommands({client,pool,discord,
+      if (!activation.allowed.has(guild.id)) return;
+      void activation.refresh(guild.id).then(active => active && registerPlatformCommands({client,pool,discord,
         guildId:guild.id,applicationId:cfg.clientId})).catch(() => console.error('Platform guild initialization/command registration deferred.'));
     },
-    guildDelete: guild => { void pool.query('UPDATE platform_guilds SET installed=false,updated_at=now() WHERE guild_id=$1', [guild.id]).catch(() => {}); },
+    guildDelete: guild => {
+      if (!activation.allowed.has(guild.id)) return;
+      void pool.query('UPDATE platform_guilds SET installed=false,updated_at=now() WHERE guild_id=$1', [guild.id]).catch(() => {});
+    },
     guildMemberAdd: member => {
+      if (!activation.allowed.has(member.guild.id)) return;
       void recordActivity('join', member.guild.id, `join:${member.id}:${Date.now()}`, member.id).catch(() => {});
       void welcome.join(member).catch(() => console.error('Welcome delivery held; no automatic resend.'));
     },
-    guildMemberRemove: member => { void recordActivity('leave', member.guild.id, `leave:${member.id}:${Date.now()}`, member.id).catch(() => {}); },
+    guildMemberRemove: member => {
+      if (activation.allowed.has(member.guild.id)) void recordActivity('leave', member.guild.id, `leave:${member.id}:${Date.now()}`, member.id).catch(() => {});
+    },
     messageCreate: message => {
-      if (!message.guildId || message.author.bot || message.webhookId) return;
-      void recordActivity('message', message.guildId, message.id, message.author.id, message.channelId).catch(() => {});
+      if (!activation.allowed.has(message.guildId) || message.author.bot || message.webhookId) return;
+      void recordActivity('message', message.guildId, message.id, message.author.id, message.channelId,
+        message.createdTimestamp).catch(() => {});
       if (message.guildId !== cfg.guildId) void moduleConfig(message.guildId, 'leveling').then(async settings => {
-        if (settings.enabled) await activity.awardText(message, settings.configuration);
+        if (settings.enabled && await activation.acceptsEvent(message.guildId,message.createdTimestamp))
+          await activity.awardText(message, settings.configuration);
       }).catch(() => console.error('Platform XP unavailable; no message content logged.'));
     },
   };
@@ -135,7 +218,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
   return {
     handler: web.handler, service: web.service,
     async handleMessage(message) {
-      if (!message.guildId) return false;
+      if (!activation.allowed.has(message.guildId) || !await activation.active(message.guildId)) return false;
       if (message.guildId === cfg.guildId && !(await pool.query(
         `SELECT 1 FROM platform_modules WHERE guild_id=$1 AND module_key='ai'`, [cfg.guildId])).rows.length) return false;
       const handlers = await conversation(message.guildId);
@@ -144,6 +227,7 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
       return true;
     },
     async handleInteraction(interaction) {
+      if (!activation.allowed.has(interaction.guildId) || !await activation.active(interaction.guildId)) return false;
       if (interaction.guildId && await tickets.handleInteraction(interaction)) return true;
       if (interaction.guildId && await onboarding.handleInteraction(interaction)) return true;
       if (interaction.isChatInputCommand?.() && interaction.commandName === 'smith-community' &&
@@ -158,7 +242,14 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
             throw new PlatformError('community_member_not_eligible',403);
           const command=interaction.options.getSubcommand();
           let content;
-          if(command==='daily'||command==='buy'){
+          if(command==='role-select'||command==='role-remove'){
+            const result = await selfRoles.assign({guildId:guild.id,memberId:member.id,
+              roleId:interaction.options.getRole('role',true).id,
+              operation:command==='role-remove'?'remove':'add'});
+            content = result.alreadyAssigned ? 'That cosmetic role is already selected.' :
+              result.alreadyRemoved ? 'That cosmetic role is already removed.' :
+                command==='role-remove'?'Cosmetic role removed.':'Cosmetic role selected.';
+          }else if(command==='daily'||command==='buy'){
             const result=await economy.change({guildId:guild.id,userId:member.id,interactionId:interaction.id,kind:command,
               ...(command==='buy'?{itemId:interaction.options.getString('item',true),
                 expectedPrice:interaction.options.getInteger('price',true)}:{})});
@@ -189,12 +280,22 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions }) {
       return true;
     },
     async initialize() {
+      if (env.PLATFORM_LMOC_CONFIG_SHA256) await seedReviewedConfiguration({
+        pool,client,env,bundle:await loadReviewedConfiguration(),
+      });
       for (const guild of client.guilds.cache.values()) {
-        await web.service.adopt(guild);
+        if (!activation.allowed.has(guild.id) || !await activation.refresh(guild.id)) continue;
         await registerPlatformCommands({client,pool,discord,guildId:guild.id,applicationId:cfg.clientId});
       }
+      heartbeat = setInterval(() => {
+        for (const guildId of activation.allowed.ids)
+          void activation.refresh(guildId).catch(() => console.error('Platform heartbeat unavailable.'));
+      }, 20000);
+      heartbeat.unref();
     },
     stop() {
+      clearInterval(heartbeat);
+      void activation.stop().catch(() => {});
       tickets.stop();
       onboarding.stop();
       for (const [event, handler] of Object.entries(events)) client.off(event, handler);

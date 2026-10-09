@@ -32,6 +32,20 @@ boundary, including startup adoption and analytics, rather than assuming a share
 runtime's defaults are harmless. Keep one Gateway; never use the read-only
 preview client as a second mutation authority.
 
+Configuration promotion must be limited to LMOC TEST's reviewed configuration,
+never a copy/reset of the development database or member/consent/activity history.
+Previously imported configuration must not be reset over later production Owner
+edits when the bot restarts.
+
+**Why:** The Owner explicitly authorized copying only the test guild's setup and
+15 configurations while requiring Hallowed Core, real records and production
+behavior to remain intact.
+
+**How to apply:** Separate the supported publish-time schema review from
+configuration data transfer. Refuse conflicting production configuration rather
+than silently replacing it; require real post-release per-guild acknowledgment
+and live human actions before declaring acceptance.
+
 Private previews must distinguish stored configuration from active runtime
 behavior and credential availability from successful Discord authentication.
 

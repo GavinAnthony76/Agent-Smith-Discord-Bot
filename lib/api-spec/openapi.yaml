@@ -203,6 +203,18 @@ components:
       properties:
         ok: { type: boolean }
         message: { type: string }
+    PlatformRuntimeStatus:
+      type: object
+      required: [botConnected, platformEnabled, guildConfigured, runtimeActive, lastSeenAt, activatedAt, moduleStates]
+      properties:
+        botConnected: { type: ["boolean", "null"] }
+        platformEnabled: { type: boolean }
+        guildConfigured: { type: boolean }
+        runtimeActive: { type: boolean }
+        lastSeenAt: { type: ["string", "null"] }
+        activatedAt: { type: ["string", "null"] }
+        moduleStates: { type: object, additionalProperties: { type: boolean } }
+        statusUnavailable: { type: boolean }
     PlatformSession:
       type: object
       required: [authenticated, loginUrl, installUrl, oauthConfigured, botOnline]
@@ -214,6 +226,7 @@ components:
         oauthCallbackRegistered: { type: ["boolean", "null"] }
         runtimeMode: { type: string, enum: [preview, production] }
         botOnline: { type: boolean }
+        botConnected: { type: ["boolean", "null"] }
         csrfToken: { type: string }
         user:
           type: object
@@ -253,6 +266,7 @@ components:
           items: { $ref: "#/components/schemas/PlatformRecord" }
         warnings: { type: array, items: { type: string } }
         botOnline: { type: boolean }
+        runtimeStatus: { $ref: "#/components/schemas/PlatformRuntimeStatus" }
         plan: { type: string }
     PlatformField:
       type: object

@@ -1,0 +1,391 @@
+Proceed with the next prerequisite for Agent Smith live acceptance.
+
+Current state:
+
+- The persistent production bot is online and healthy.
+- LMOC TEST setup/configuration exists only in the development database.
+- Production platform tables currently contain no LMOC TEST platform configuration.
+- The production platform session endpoint is unavailable.
+- No live platform module has yet been accepted.
+- Hallowed Core must remain unchanged.
+- LIVE-ACCEPTANCE.md contains the current findings.
+
+Do NOT broaden the release.
+
+Do NOT activate pending modules globally.
+
+Do NOT alter Hallowed Core behavior.
+
+The goal is to create a reviewed, LMOC TEST-only production activation boundary so
+the already-built standard-server modules can be tested live.
+
+==================================================
+1. REVIEW LIVE-ACCEPTANCE.md
+==================================================
+
+Read:
+
+apps/agent-smith/LIVE-ACCEPTANCE.md
+
+Treat it as the acceptance baseline.
+
+Do not overwrite findings without evidence.
+
+==================================================
+2. PRODUCTION DATABASE READINESS
+==================================================
+
+Inspect the production database schema.
+
+Determine whether the platform tables needed for standard-server support exist.
+
+If missing:
+
+create safe migrations only for the platform tables required by:
+
+- guild configuration
+- guild modules
+- onboarding
+- role configuration
+- XP/leveling
+- economy
+- tickets
+- AI personality/settings
+- analytics/activity
+
+Do not modify or destroy existing Hallowed Core data.
+
+Do not rewrite legacy Hallowed Core progression tables.
+
+==================================================
+3. MIGRATE LMOC TEST CONFIGURATION
+==================================================
+
+Move/copy ONLY LMOC TEST platform configuration into production.
+
+Guild ID:
+
+1555330318569971743
+
+Do not copy unrelated development data.
+
+Preserve:
+
+- setup completion
+- 15 saved module rows
+- welcome settings
+- onboarding settings
+- leveling settings
+- economy settings
+- AI settings
+- analytics settings
+- ticket configuration where present
+- role configuration where present
+
+Do not alter Hallowed Core platform or legacy settings.
+
+==================================================
+4. EXPLICIT GUILD ACTIVATION BOUNDARY
+==================================================
+
+Add a production runtime allowlist for standard-platform guilds.
+
+Example:
+
+PLATFORM_ENABLED_GUILD_IDS
+
+Initially include ONLY:
+
+1555330318569971743
+
+Do NOT include Hallowed Core.
+
+The production runtime must behave as follows:
+
+if guildId is in PLATFORM_ENABLED_GUILD_IDS:
+    use standard platform adapters
+
+else:
+    preserve existing legacy/custom behavior
+
+This boundary must be enforced server-side.
+
+==================================================
+5. PRESERVE HALLOWED CORE
+==================================================
+
+Hallowed Core must remain on its existing custom runtime path.
+
+Do not route Hallowed Core through:
+
+- standard onboarding
+- standard role assignment
+- standard economy
+- standard tickets
+- standard AI identity
+- standard analytics
+
+unless explicitly approved later.
+
+Regression-test this boundary.
+
+==================================================
+6. FIX AI IDENTITY LEAK
+==================================================
+
+Remove the hardcoded Hallowed Core identity from generic AI responses.
+
+The standard platform AI must derive identity from:
+
+guild settings
+guild name
+saved AI personality
+server-specific configuration
+
+A generic server must never say it is Hallowed Core unless that guild is actually
+Hallowed Core.
+
+Test:
+
+LMOC TEST whoami
+Hallowed Core whoami
+
+Expected:
+
+LMOC TEST → LMOC TEST-specific/generic Smith identity
+Hallowed Core → current Hallowed Core identity
+
+==================================================
+7. WELCOME / ONBOARDING READINESS
+==================================================
+
+LMOC TEST currently has welcome configured without an onboarding start button.
+
+Fix the configuration/runtime so the standard-server welcome flow can include:
+
+START ONBOARDING
+
+when onboarding is enabled.
+
+Do not force this behavior on Hallowed Core.
+
+==================================================
+8. COSMETIC ROLE TEST READINESS
+==================================================
+
+LMOC TEST currently has no cosmetic self-assignable roles.
+
+Create or configure ONLY disposable LMOC TEST roles suitable for live validation.
+
+Requirements:
+
+- below Agent Smith
+- no privileged permissions
+- clearly test-only
+- safe to add/remove
+
+Do not use Admin, Moderator, ministry leadership, or protected roles.
+
+==================================================
+9. TICKET TEST READINESS
+==================================================
+
+LMOC TEST has no ticket panel configured.
+
+Create a safe test ticket configuration ONLY in LMOC TEST.
+
+Use:
+
+- disposable test category
+- disposable test channel/panel
+- no Hallowed Core resources
+
+Ticket actions should be available only for the live acceptance test.
+
+==================================================
+10. PRODUCTION PLATFORM STATUS
+==================================================
+
+Fix or implement the production platform status/session endpoint required by the
+dashboard.
+
+The dashboard must distinguish:
+
+- bot gateway online
+- platform runtime enabled for this guild
+- platform configuration present
+- guild adapter active
+- module runtime active
+
+Do not label the bot "offline" merely because preview REST state is missing.
+
+Suggested status fields:
+
+botConnected
+platformEnabled
+guildConfigured
+runtimeActive
+lastSeenAt
+
+==================================================
+11. ANALYTICS ACTIVATION
+==================================================
+
+Enable analytics collection ONLY for LMOC TEST.
+
+Do not fabricate history.
+
+Collection begins at activation time.
+
+Store activation timestamp.
+
+Do not backfill Discord history.
+
+==================================================
+12. LIVE MODULE ACTIVATION
+==================================================
+
+Activate ONLY modules already marked as having platform runtime support:
+
+- Welcome
+- Onboarding
+- Cosmetic Roles
+- Leveling
+- Economy
+- Tickets
+- AI
+- Analytics
+
+Do NOT activate:
+
+- Moderation
+- AutoMod
+- Achievements
+- Rewards
+- Feeds
+- YouTube
+- Events
+
+unless their runtime adapters are separately completed and approved.
+
+==================================================
+13. NO SECOND GATEWAY CONNECTION
+==================================================
+
+Do not start another Discord client.
+
+Use the existing persistent Agent Smith production Gateway connection.
+
+There must remain exactly one production bot connection.
+
+==================================================
+14. LIVE ACCEPTANCE TEST
+==================================================
+
+After release, perform controlled LMOC TEST-only validation.
+
+Test:
+
+A. Welcome
+- trigger standard welcome safely
+- verify correct guild-specific content
+
+B. Onboarding
+- start onboarding
+- save progress
+- accept rules
+- complete six-step flow
+
+C. Cosmetic Roles
+- select disposable role
+- remove disposable role
+- verify allowlist
+
+D. Leveling
+- generate legitimate XP
+- verify LMOC TEST-only write
+
+E. Economy
+- daily claim
+- shop purchase
+- inventory check
+
+F. Tickets
+- open ticket
+- claim if applicable
+- close ticket
+- verify private permissions
+
+G. AI
+- ask whoami
+- verify no Hallowed Core identity leak
+- verify saved LMOC TEST personality
+
+H. Analytics
+- verify activity begins after activation
+- confirm no fabricated historical counts
+
+==================================================
+15. CROSS-GUILD ISOLATION
+==================================================
+
+Before and after live tests compare Hallowed Core.
+
+Verify unchanged:
+
+- member records
+- progression records
+- onboarding behavior
+- AI behavior
+- role behavior
+- economy behavior
+- tickets
+- platform configuration
+
+Any Hallowed Core mutation fails acceptance.
+
+==================================================
+16. ACCEPTANCE CRITERIA
+==================================================
+
+Live two-server acceptance passes only if:
+
+- LMOC TEST config exists in production
+- LMOC TEST is explicitly platform-enabled
+- Hallowed Core remains on legacy/custom path
+- one production Gateway connection remains
+- Welcome works
+- Onboarding works
+- cosmetic roles work
+- XP works
+- economy works
+- tickets work
+- AI guild identity is correct
+- analytics collect only after activation
+- all writes are scoped to LMOC TEST
+- Hallowed Core is unchanged
+
+==================================================
+17. FINAL REPORT
+==================================================
+
+Update:
+
+apps/agent-smith/LIVE-ACCEPTANCE.md
+
+Report:
+
+1. production schema changes
+2. LMOC TEST config migrated
+3. platform allowlist state
+4. runtime status endpoint result
+5. modules activated
+6. live test results
+7. database writes observed
+8. Discord writes observed
+9. Hallowed Core before/after comparison
+10. test counts
+11. failures/warnings
+12. live two-server acceptance PASS or FAIL
+
+Do not mark complete unless all acceptance criteria are measured.

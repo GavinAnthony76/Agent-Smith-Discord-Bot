@@ -8,6 +8,7 @@
 import type { PlatformGuild } from './platformGuild';
 import type { PlatformMetric } from './platformMetric';
 import type { PlatformRecord } from './platformRecord';
+import type { PlatformRuntimeStatus } from './platformRuntimeStatus';
 
 export interface PlatformOverview {
   guild: PlatformGuild;
@@ -15,5 +16,6 @@ export interface PlatformOverview {
   recentActions: PlatformRecord[];
   warnings: string[];
   botOnline: boolean;
+  runtimeStatus?: PlatformRuntimeStatus;
   plan: string;
 }

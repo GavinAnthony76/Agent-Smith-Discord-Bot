@@ -133,7 +133,8 @@ export function Status() {
         <p className="mt-2 text-sm text-muted-foreground">Live readings from this deployment, taken when the page loaded.</p>
         <ul className="mt-6 divide-y rounded-xl border bg-card">
           {row('API', h.isLoading ? 'load' : h.isError ? 'bad' : 'ok', h.isError ? 'unreachable' : 'active')}
-          {row('Discord bot', s.isLoading ? 'load' : 'ok', s.data?.runtimeMode === 'preview' ? 'REST-only preview; no Gateway started' : s.data?.botOnline ? 'active' : 'inactive: offline')}
+          {row('Discord bot', s.isLoading ? 'load' : 'ok', s.data?.botConnected === true ? 'Production Gateway connected' :
+            s.data?.botConnected === false ? 'Production Gateway disconnected' : 'Production Gateway unverified; preview is REST-only')}
           {row('Discord OAuth', s.isLoading ? 'load' : 'ok', !s.data?.oauthConfigured ? 'credentials not configured' : s.data?.oauthCallbackRegistered === true ? 'callback registered; Discord sign-in available' : s.data?.oauthCallbackRegistered === false ? 'callback registration required' : 'callback not verified')}
         </ul>
       </div>

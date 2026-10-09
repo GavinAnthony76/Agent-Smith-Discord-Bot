@@ -19,6 +19,9 @@ import { createOnboardingService } from '../src/platform/onboarding.js';
 import { executeSelfRoleWrite } from '../src/platform/role-write.js';
 import { communicationGuard } from '../src/platform/transport.js';
 import { createEconomyService } from '../src/platform/economy.js';
+import { LMOC_TEST_ID, createActivation, STANDARD_MODULES } from '../src/platform/activation.js';
+import { loadReviewedConfiguration, configurationDigest, seedReviewedConfiguration } from '../src/platform/release-config.js';
+import { TARGET_GUILD_ID } from '../src/config.js';
 
 if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1' || !process.env.DATABASE_URL) {
   throw new Error('Development database required; production/default fallback is prohibited.');
@@ -358,6 +361,41 @@ await test('platform HTTP and PostgreSQL isolation', async t => {
       assert.equal((await economy.wallet(guildA,userA)).balance,0);
       settings.enabled=false;
       await assert.rejects(economy.wallet(guildA,userB),/economy_disabled/);
+    });
+    await t.test('reviewed seed imports only LMOC configuration, refuses drift, and activation excludes Hallowed Core', async () => {
+      const bundle=await loadReviewedConfiguration();
+      const env={PLATFORM_ENABLED_GUILD_IDS:LMOC_TEST_ID,PLATFORM_LMOC_CONFIG_SHA256:configurationDigest(bundle)};
+      const client={isReady:()=>true,user:{id:userA},guilds:{cache:new Map([[LMOC_TEST_ID,{id:LMOC_TEST_ID}]])}};
+      await pool.query(`INSERT INTO platform_guilds(guild_id,policy_key,settings,setup_complete)
+        VALUES($1,'hallowed-core','{"sentinel":"unchanged"}',true)`,[TARGET_GUILD_ID]);
+      const coreBefore=JSON.stringify((await pool.query('SELECT * FROM platform_guilds WHERE guild_id=$1',[TARGET_GUILD_ID])).rows);
+      assert.equal((await seedReviewedConfiguration({pool,client,env,bundle})).imported,true);
+      assert.equal((await pool.query('SELECT 1 FROM platform_modules WHERE guild_id=$1',[LMOC_TEST_ID])).rowCount,15);
+      assert.equal((await seedReviewedConfiguration({pool,client,env,bundle})).alreadyImported,true);
+      assert.equal((await pool.query('SELECT 1 FROM platform_modules WHERE guild_id=$1',[TARGET_GUILD_ID])).rowCount,0);
+      assert.equal(JSON.stringify((await pool.query('SELECT * FROM platform_guilds WHERE guild_id=$1',[TARGET_GUILD_ID])).rows),coreBefore);
+      const changed=structuredClone(bundle);
+      changed.modules.find(m=>m.moduleKey==='ai').configuration.personalityAdditions='Different reviewed snapshot';
+      await assert.rejects(seedReviewedConfiguration({pool,client,
+        env:{...env,PLATFORM_LMOC_CONFIG_SHA256:configurationDigest(changed)},bundle:changed}),
+      /existing_production_configuration_requires_review/);
+      const activation=createActivation({pool,client,env});
+      assert.equal(await activation.active(LMOC_TEST_ID),false);
+      assert.equal(await activation.refresh(TARGET_GUILD_ID),false);
+      assert.equal(await activation.refresh(LMOC_TEST_ID),true);
+      const first=await activation.status(LMOC_TEST_ID);
+      assert.equal(first.runtimeActive,true);
+      assert.deepEqual(Object.keys(first.moduleStates).sort(),[...STANDARD_MODULES].sort());
+      assert.ok(first.activatedAt);
+      assert.equal(await activation.acceptsEvent(LMOC_TEST_ID,new Date(first.activatedAt).getTime()-1000),false);
+      assert.equal(await activation.acceptsEvent(LMOC_TEST_ID,Date.now()),true);
+      assert.equal(await activation.acceptsEvent(TARGET_GUILD_ID,Date.now()),false);
+      assert.equal((await pool.query('SELECT 1 FROM platform_activity WHERE guild_id=$1',[LMOC_TEST_ID])).rowCount,0);
+      await activation.refresh(LMOC_TEST_ID);
+      assert.equal((await activation.status(LMOC_TEST_ID)).activatedAt,first.activatedAt);
+      await activation.stop();
+      assert.equal(await activation.active(LMOC_TEST_ID),false);
+      assert.equal(JSON.stringify((await pool.query('SELECT * FROM platform_guilds WHERE guild_id=$1',[TARGET_GUILD_ID])).rows),coreBefore);
     });
     await t.test('OAuth ciphertext and schema remain isolated, logout invalidates the session', async () => {
       const row = (await pool.query('SELECT token_ciphertext FROM platform_sessions')).rows[0];

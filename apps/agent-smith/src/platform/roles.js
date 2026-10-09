@@ -20,7 +20,8 @@ export function assertSelfRoleSafe(role, guild, protectedIds = []) {
   }
 }
 export function createSelfRoleService({ client, pool, discord, moduleConfig }) {
-  async function assign({ guildId, memberId, roleId }) {
+  async function assign({ guildId, memberId, roleId, operation = 'add' }) {
+    if (!['add', 'remove'].includes(operation)) throw new PlatformError('invalid_cosmetic_role_operation');
     if (guildId === TARGET_GUILD_ID) throw new PlatformError('native_role_policy_retained', 409);
     async function validate() {
       const settings = await moduleConfig(guildId, 'roles');
@@ -37,11 +38,13 @@ export function createSelfRoleService({ client, pool, discord, moduleConfig }) {
       return { guild, member };
     }
     const { member } = await validate();
-    if (member.roles.cache.has(roleId)) return { alreadyAssigned: true };
-    return withSelfRoleWrite({ client, guildId, memberId, roleId, validate,
+    if (operation === 'add' && member.roles.cache.has(roleId)) return { alreadyAssigned: true };
+    if (operation === 'remove' && !member.roles.cache.has(roleId)) return { alreadyRemoved: true };
+    return withSelfRoleWrite({ client, guildId, memberId, roleId, operation, validate,
       record: (action, data) => pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
         VALUES($1,$2,$3,'roles',$4)`, [guildId, memberId, action, data]) },
-    () => client.rest.put(Routes.guildMemberRole(guildId, memberId, roleId), { body: {} }));
+    () => operation === 'remove' ? client.rest.delete(Routes.guildMemberRole(guildId, memberId, roleId), { body: {} }) :
+      client.rest.put(Routes.guildMemberRole(guildId, memberId, roleId), { body: {} }));
   }
   return { assign };
 }

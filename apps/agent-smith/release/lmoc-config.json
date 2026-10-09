@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "guildId": "1555330318569971743",
+  "setupComplete": true,
+  "settings": {"name":"LMOC TEST","logChannelId":"1555336746537853020","welcomeChannelId":"1555336735301308506"},
+  "modules": [
+    {"moduleKey":"achievements","enabled":true,"configuration":{"announceChannelId":"1555336738392514600"},"revision":2},
+    {"moduleKey":"ai","enabled":true,"configuration":{"model":"gpt-5.4-mini","maxTokens":2048,"ttlMinutes":20,"mentionOnly":true,"allowedChannels":[],"cooldownSeconds":5,"personalityAdditions":""},"revision":1},
+    {"moduleKey":"analytics","enabled":true,"configuration":{"collectActivity":true},"revision":1},
+    {"moduleKey":"automod","enabled":true,"configuration":{"action":"LOG","bannedTerms":[],"maxMentions":5,"inviteFilter":false,"capsThreshold":80,"excludedRoles":[],"blockedDomains":[],"emojiThreshold":20,"excludedChannels":[],"duplicateMessages":true},"revision":1},
+    {"moduleKey":"economy","enabled":true,"configuration":{"dailyAmount":25,"currencyName":"Community credits","cooldownHours":24,"inventoryBehavior":"STACK"},"revision":1},
+    {"moduleKey":"events","enabled":true,"configuration":{"announcementChannelId":"1555337009290289182"},"revision":2},
+    {"moduleKey":"feeds","enabled":true,"configuration":{"pollMinutes":15},"revision":1},
+    {"moduleKey":"leveling","enabled":true,"configuration":{"dailyCap":60,"textAmount":5,"thresholds":[0,1000,3500,9000,22000,50000,100000],"textEnabled":true,"cooldownSeconds":60,"eligibleChannels":[],"excludedChannels":[]},"revision":1},
+    {"moduleKey":"moderation","enabled":true,"configuration":{"logChannelId":"1555336746537853020"},"revision":2},
+    {"moduleKey":"onboarding","enabled":true,"configuration":{"steps":[
+      {"type":"MESSAGE","title":"Welcome","content":"Welcome to the community."},
+      {"type":"RULES_ACCEPTANCE","title":"Rules","content":"Read and accept the community rules."},
+      {"type":"ROLE_SELECT","title":"Choose a primary community","content":""},
+      {"type":"ROLE_SELECT","title":"Choose interests","content":""},
+      {"type":"BUTTON","title":"Ready to finish","content":"Continue to finish the LMOC TEST acceptance onboarding."},
+      {"type":"FINALIZATION","title":"Finish","content":""}
+    ],"entryChannelId":"1555336735301308506","primaryFrameworks":[],"humanApprovalForExtras":true},"revision":3},
+    {"moduleKey":"rewards","enabled":true,"configuration":{"announceChannelId":"1555336751210430564"},"revision":2},
+    {"moduleKey":"roles","enabled":true,"configuration":{"roleGroups":[],"protectedRoles":[],"rewardableRoles":[],"selfAssignableRoles":[]},"revision":1},
+    {"moduleKey":"tickets","enabled":true,"configuration":{"logChannelId":"1555336746537853020"},"revision":2},
+    {"moduleKey":"welcome","enabled":true,"configuration":{"buttons":[],"message":"Welcome {user} to {server}.","imageUrl":"","channelId":"1555336735301308506","embedTitle":"Welcome","description":"","roleBehavior":"NONE"},"revision":2},
+    {"moduleKey":"youtube","enabled":true,"configuration":{"pollMinutes":15},"revision":1}
+  ]
+}

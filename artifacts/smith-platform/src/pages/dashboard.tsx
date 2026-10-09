@@ -12,6 +12,7 @@ import {
   useGetPlatformSession,
   useListPlatformGuilds,
   useSavePlatformSetup,
+  usePerformPlatformAction,
 } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -122,7 +123,19 @@ function ModuleAndCollections({ guildId, page }: { guildId: string; page: string
 }
 
 function OverviewPage({ guildId }: { guildId: string }) {
-  const q = useGetPlatformOverview(guildId);
+  const { request } = useCsrf();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const mode = useGetPlatformSession().data?.runtimeMode;
+  const prepare = usePerformPlatformAction({ request, mutation: {
+    onSuccess: result => {
+      toast({title:'Live-test resources prepared',description:result.message});
+      qc.invalidateQueries({queryKey:getGetPlatformModulesQueryKey(guildId)});
+      qc.invalidateQueries({queryKey:getGetPlatformOverviewQueryKey(guildId)});
+    },
+    onError: error => toast({title:'Preparation held',description:errMsg(error),variant:'destructive'}),
+  }});
+  const q = useGetPlatformOverview(guildId, { query: { queryKey: getGetPlatformOverviewQueryKey(guildId), refetchInterval: 20000 } });
   const mods = useGetPlatformModules(guildId);
   if (q.isLoading) return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-24" />)}</div>;
   if (q.isError || !q.data) return <ErrorState message={errMsg(q.error)} onRetry={() => q.refetch()} />;
@@ -130,10 +143,37 @@ function OverviewPage({ guildId }: { guildId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={o.botOnline ? 'secondary' : 'destructive'} data-testid="badge-bot">{o.botOnline ? 'Bot online' : 'Bot offline'}</Badge>
+        <Badge variant="secondary" data-testid="badge-bot">{o.runtimeStatus?.botConnected === true ? 'Production Gateway online' :
+          o.runtimeStatus?.botConnected === false ? 'Production Gateway disconnected' : 'Production Gateway unverified'}</Badge>
+        <Badge variant="outline">{o.guild.policy === 'hallowed-core' ? 'Legacy/custom runtime' :
+          o.runtimeStatus?.runtimeActive ? 'Guild adapter active' : 'Guild adapter inactive'}</Badge>
+        <Badge variant="outline">{o.runtimeStatus?.platformEnabled ? 'Platform allowlisted' : 'Platform not activated'}</Badge>
         <Badge variant="outline" data-testid="badge-plan">Plan: {o.plan}</Badge>
         {!o.guild.setupComplete && <Button asChild size="sm" data-testid="button-run-setup"><Link href={`/dashboard/${guildId}/setup`}>Finish server setup</Link></Button>}
       </div>
+      {o.guild.policy !== 'hallowed-core' && (
+        <div className="rounded-xl border bg-card p-4 text-sm space-y-2" data-testid="guild-runtime-status">
+          <p>Configuration: {o.runtimeStatus?.guildConfigured ? 'Present in production' : 'Production presence not confirmed'}</p>
+          <p>Last heartbeat: {o.runtimeStatus?.lastSeenAt ? new Date(o.runtimeStatus.lastSeenAt).toLocaleString() : 'Not observed'}</p>
+          <p>Analytics activation: {o.runtimeStatus?.activatedAt ? new Date(o.runtimeStatus.activatedAt).toLocaleString() : 'Not activated'}</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(o.runtimeStatus?.moduleStates ?? {}).map(([key, active]) =>
+              <Badge key={key} variant="outline">{key}: {active ? 'active' : 'inactive'}</Badge>)}
+          </div>
+          <p className="text-xs text-muted-foreground">{mode === 'production' ? 'Counters below use production data.' :
+            'Preview counters below use the development database; production runtime status is reported separately.'}</p>
+          {guildId === '1555330318569971743' && o.guild.role === 'OWNER' && (
+            <div className="border-t pt-3 space-y-2">
+              <p>Create a disposable cosmetic role, private ticket category, public test panel, onboarding entry and 5-credit shop item in LMOC TEST only.</p>
+              <Button disabled={prepare.isPending || mode !== 'production' || !o.runtimeStatus?.runtimeActive}
+                data-testid="button-prepare-live-test" onClick={() => prepare.mutate({
+                  guildId,data:{action:'acceptance-prepare',target:guildId,confirmed:true},
+                })}>{prepare.isPending ? 'Preparing…' : 'Prepare LMOC TEST live-test resources'}</Button>
+              {mode !== 'production' && <p className="text-xs text-muted-foreground">This action requires the published dashboard and its existing Gateway. Preview cannot write to Discord.</p>}
+            </div>
+          )}
+        </div>
+      )}
       {o.warnings.length > 0 && (
         <div className="space-y-2" data-testid="list-warnings">
           {o.warnings.map((w, i) => <div key={i} className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />{w}</div>)}

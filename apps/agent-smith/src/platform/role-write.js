@@ -14,17 +14,18 @@ export function executeSelfRoleWrite(client, request, execute) {
   const scope = writes.getStore();
   if (!scope) return null;
   const p = scope.plan;
-  if (scope.used || client !== p.client || request.method !== 'PUT' ||
+  const method = p.operation === 'remove' ? 'DELETE' : 'PUT';
+  if (scope.used || client !== p.client || request.method !== method ||
       request.fullRoute !== `/guilds/${p.guildId}/members/${p.memberId}/roles/${p.roleId}` ||
       Object.keys(request.body ?? {}).length || request.files?.length || Date.now() > p.expires) {
     throw new PlatformError('self_role_request_not_authorized', 403);
   }
   scope.used = true;
-  return withPrivilegedPipeline({ action: { operation: 'role.self-select', source: 'platform-onboarding',
+  return withPrivilegedPipeline({ action: { operation: p.operation === 'remove' ? 'role.self-remove' : 'role.self-select', source: 'platform-onboarding',
     guildId: p.guildId, target: p.memberId, role: p.roleId },
     validate: async () => {
       await p.validate();
-      if (Date.now() > p.expires || request.method !== 'PUT' ||
+      if (Date.now() > p.expires || request.method !== method ||
           request.fullRoute !== `/guilds/${p.guildId}/members/${p.memberId}/roles/${p.roleId}` ||
           Object.keys(request.body ?? {}).length || request.files?.length)
         throw new PlatformError('self_role_scope_expired_or_changed', 403);

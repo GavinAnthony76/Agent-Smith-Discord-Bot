@@ -14,6 +14,22 @@ export interface PlatformResult {
   message: string;
 }
 
+export type PlatformRuntimeStatusModuleStates = {[key: string]: boolean};
+
+export interface PlatformRuntimeStatus {
+  /** @nullable */
+  botConnected: boolean | null;
+  platformEnabled: boolean;
+  guildConfigured: boolean;
+  runtimeActive: boolean;
+  /** @nullable */
+  lastSeenAt: string | null;
+  /** @nullable */
+  activatedAt: string | null;
+  moduleStates: PlatformRuntimeStatusModuleStates;
+  statusUnavailable?: boolean;
+}
+
 export type PlatformSessionRuntimeMode = typeof PlatformSessionRuntimeMode[keyof typeof PlatformSessionRuntimeMode];
 
 
@@ -38,6 +54,8 @@ export interface PlatformSession {
   oauthCallbackRegistered?: boolean | null;
   runtimeMode?: PlatformSessionRuntimeMode;
   botOnline: boolean;
+  /** @nullable */
+  botConnected?: boolean | null;
   csrfToken?: string;
   user?: PlatformSessionUser;
 }
@@ -77,6 +95,7 @@ export interface PlatformOverview {
   recentActions: PlatformRecord[];
   warnings: string[];
   botOnline: boolean;
+  runtimeStatus?: PlatformRuntimeStatus;
   plan: string;
 }
 

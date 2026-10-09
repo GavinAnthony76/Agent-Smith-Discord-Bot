@@ -14,7 +14,11 @@ export const communityCommand=new SlashCommandBuilder().setName('smith-community
   .addSubcommand(c=>c.setName('buy').setDescription('Buy a cosmetic item using community credits')
     .addStringOption(o=>o.setName('item').setDescription('Item ID shown by shop').setRequired(true).setMaxLength(100))
     .addIntegerOption(o=>o.setName('price').setDescription('Confirm the price shown by shop').setRequired(true).setMinValue(1).setMaxValue(1000000)))
-  .addSubcommand(c=>c.setName('inventory').setDescription('Your cosmetic inventory'));
+  .addSubcommand(c=>c.setName('inventory').setDescription('Your cosmetic inventory'))
+  .addSubcommand(c=>c.setName('role-select').setDescription('Select an allowed cosmetic role')
+    .addRoleOption(o=>o.setName('role').setDescription('Configured cosmetic role').setRequired(true)))
+  .addSubcommand(c=>c.setName('role-remove').setDescription('Remove an allowed cosmetic role')
+    .addRoleOption(o=>o.setName('role').setDescription('Configured cosmetic role').setRequired(true)));
 const context=new AsyncLocalStorage();
 export function executePlatformCommandWrite(client, request, execute){
   const scope=context.getStore();
@@ -39,6 +43,7 @@ export async function registerPlatformCommands({ client,pool,discord,guildId,app
   // delete a conflict or publish global commands.
   for(const builder of [smithCommand,communityCommand]){
     const body=builder.toJSON();
+    if(body.name==='smith') body.description='Talk with Agent Smith or get help for this server';
     if(existing.some(c=>c.name===body.name))continue;
     await context.run({client,guildId,route,body:JSON.stringify(body),used:false,expires:Date.now()+30000,
       validate:async()=>{

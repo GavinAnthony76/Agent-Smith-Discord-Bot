@@ -14,6 +14,16 @@ Live tests were held at that prerequisite; no Gateway/runtime, Discord resources
 Hallowed Core configuration or pending adapter was changed. Exact observations
 and additional release blockers are in `LIVE-ACCEPTANCE.md`.
 
+The subsequent LMOC-only release prerequisite is implemented and verified, not
+published. A fail-closed standard-guild allowlist excludes Hallowed Core; the
+reviewed 15-module configuration snapshot can seed only an absent LMOC production
+setup; activation timestamps/heartbeats distinguish Gateway and adapter readiness.
+Generic identity, welcome onboarding entry, cosmetic removal and Owner-confirmed
+disposable resource preparation are implemented. The publish diff is additive,
+with no legacy-table alteration/data loss. Latest checks: 444 regressions passed,
+six skipped; all ten isolated PostgreSQL checks passed; website/API type checks,
+website build and preflight passed. All eight live tests remain unrun.
+
 ## Built and verified
 
 - Public website and responsive, sign-in-gated dashboard, in the existing Smith

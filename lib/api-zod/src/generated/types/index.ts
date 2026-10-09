@@ -25,6 +25,8 @@ export * from './platformRecordInput';
 export * from './platformRecordInputData';
 export * from './platformResources';
 export * from './platformResult';
+export * from './platformRuntimeStatus';
+export * from './platformRuntimeStatusModuleStates';
 export * from './platformSession';
 export * from './platformSessionRuntimeMode';
 export * from './platformSessionUser';

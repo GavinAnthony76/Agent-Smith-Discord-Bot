@@ -2,6 +2,7 @@ import { createOAuth, cookies, same } from './oauth.js';
 import { createPlatformService } from './service.js';
 import { COLLECTIONS } from './fields.js';
 import { PlatformError } from './catalog.js';
+import { platformAllowlist } from './activation.js';
 
 async function jsonBody(request) {
   if (!String(request.headers['content-type'] ?? '').startsWith('application/json')) {
@@ -22,9 +23,9 @@ async function jsonBody(request) {
   }
   catch { throw new PlatformError('invalid_json'); }
 }
-export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport, ticketActions, onboardingActions }) {
+export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport, ticketActions, onboardingActions, runtimeStatus, acceptanceActions }) {
   const oauth = createOAuth({ pool, env, ...(oauthTransport ? { transport: oauthTransport } : {}) });
-  const service = createPlatformService({ pool, discord, env, legacyActions, ticketActions, onboardingActions });
+  const service = createPlatformService({ pool, discord, env, legacyActions, ticketActions, onboardingActions, runtimeStatus, acceptanceActions });
   const secure = origin.startsWith('https://');
   if (env.NODE_ENV === 'production' && !secure) throw new Error('Platform HTTPS public origin is required.');
   const cookie = (name, value, age) => {
@@ -83,6 +84,11 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       // Cookies are attacker-controlled until session lookup succeeds. A forged
       // cookie must not provide an unlimited supply of independent rate buckets.
       rateLimit(`ip:${request.socket.remoteAddress ?? 'anonymous'}`);
+      if (url.pathname === '/api/platform/runtime-status' && request.method === 'GET' && runtimeStatus) {
+        const guildId = url.searchParams.get('guildId');
+        if (!/^\d{17,20}$/.test(guildId ?? '')) throw new PlatformError('invalid_guild_id');
+        send(response, 200, await runtimeStatus(guildId)); return true;
+      }
       if (url.pathname === '/api/platform/oauth/login' && request.method === 'GET') {
         if (await callbackRegistered() === false) throw new PlatformError('register_discord_oauth_callback', 503);
         const result = await oauth.begin(origin);
@@ -100,11 +106,13 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       const session = await oauth.session(cookieValues.smith_session);
       if (session) rateLimit(`user:${session.userId}`);
       if (url.pathname === '/api/platform/session' && request.method === 'GET') {
+        const operational = runtimeStatus ? await runtimeStatus('1555330318569971743') : null;
         send(response, 200, {
           authenticated: !!session, loginUrl: '/api/platform/oauth/login', installUrl,
           oauthConfigured: oauth.configured, botOnline: discord.client.isReady(),
           oauthCallbackRegistered: await callbackRegistered(),
           runtimeMode: env.NODE_ENV === 'production' ? 'production' : 'preview',
+          botConnected: operational?.botConnected ?? (env.NODE_ENV === 'production' ? discord.client.isReady() : null),
           ...(session ? { user: session.identity, csrfToken: session.csrfToken } : {}),
         }); return true;
       }
@@ -131,10 +139,13 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
         const input = await jsonBody(request);
         if (typeof input.action !== 'string') throw new PlatformError('invalid_action');
         capability = input.action?.startsWith('ticket-') ? 'tickets' :
-          input.action === 'onboarding-publish' ? 'onboarding' : 'moderation';
+          input.action === 'acceptance-prepare' ? 'settings' :
+            input.action === 'onboarding-publish' ? 'onboarding' : 'moderation';
         request.platformInput = input;
       }
       if (!capability) throw new PlatformError('route_not_found', 404);
+      if (write && env.NODE_ENV === 'production' && !platformAllowlist(env).has(guildId))
+        throw new PlatformError('outside_standard_platform_activation_boundary', 403);
       const authority = await service.authorize(session.userId, guildId, capability, write);
       let data;
       if (area === 'overview' && request.method === 'GET') data = await service.overview(authority);

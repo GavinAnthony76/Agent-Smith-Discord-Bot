@@ -13,6 +13,7 @@ import { platformTransportAllowed } from './platform/transport.js';
 import { executeTicketWrite } from './platform/ticket-write.js';
 import { executeSelfRoleWrite } from './platform/role-write.js';
 import { executePlatformCommandWrite } from './platform/commands.js';
+import { executeAcceptanceResourceWrite } from './platform/acceptance-resources.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -28,6 +29,8 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
     if (selfRoleWrite) return selfRoleWrite;
     const commandWrite = executePlatformCommandWrite(client, request, () => original(request));
     if (commandWrite) return commandWrite;
+    const acceptanceWrite = executeAcceptanceResourceWrite(client, request, () => original(request));
+    if (acceptanceWrite) return acceptanceWrite;
     if (platformTransportAllowed(client, request)) return original(request);
     const context = mutationScope();
     async function lookupWarningOwner(recipientId) {

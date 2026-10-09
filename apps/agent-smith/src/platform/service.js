@@ -11,6 +11,7 @@ import { assertSelfRoleSafe } from './roles.js';
 import { validatePublicFeedSource } from './source-policy.js';
 import { calculateLevel } from './activity.js';
 import { safetyReply } from '../ai-safety.js';
+import { platformAllowlist } from './activation.js';
 
 const record = row => ({
   id: String(row.record_id ?? row.id), title: row.title ?? row.action ?? 'Record',
@@ -50,7 +51,7 @@ export function defaultModule(key, legacy, env) {
   configuration: settings[key] ?? {}, revision: 0 };
 }
 
-export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null, ticketActions, onboardingActions }) {
+export function createPlatformService({ pool, discord, env = process.env, legacyActions = () => null, ticketActions, onboardingActions, runtimeStatus, acceptanceActions }) {
   const configuration = createGuildConfigurationService(pool, { onSave: async (db, change) => {
     if (change.guildId !== TARGET_GUILD_ID) return;
     if (change.key === 'leveling' || change.key === 'economy') {
@@ -71,6 +72,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   const entitlements = createEntitlementService(pool);
   async function adopt(guild) {
     const legacy = guild.id === TARGET_GUILD_ID;
+    // Merely viewing Hallowed Core must not create or alter its platform data.
+    if (legacy || env.NODE_ENV === 'production' && !platformAllowlist(env).has(guild.id)) return guild;
     await pool.query(
       `INSERT INTO platform_guilds(guild_id,policy_key,settings,setup_complete)
        VALUES($1,$2,$3,$4) ON CONFLICT(guild_id) DO UPDATE SET installed=true,updated_at=now()`,
@@ -394,6 +397,10 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   async function overview(authority) {
     const id = authority.guild.id;
+    const status = runtimeStatus ? await runtimeStatus(id) :
+      { botConnected: env.NODE_ENV === 'production' ? discord.client.isReady() : null,
+        platformEnabled: false, guildConfigured: false, runtimeActive: false,
+        lastSeenAt: null, activatedAt: null, moduleStates: {}, statusUnavailable: true };
     const result = (await pool.query(
       `SELECT
         CASE WHEN $1=$2 THEN (SELECT count(*) FROM members WHERE guild_id=$1 AND left_at IS NULL)
@@ -424,7 +431,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     ], recentActions, warnings: ['Activity counts begin when collection is enabled; they are not a backfill of Discord history.',
       id === TARGET_GUILD_ID ? 'Hallowed Core access, Owner protection and native onboarding remain guarded.' :
         'Second-server runtime verification is required before broader installation.'],
-    botOnline: discord.client.isReady(), plan: planRow?.plan ?? 'FREE' };
+    botOnline: status.botConnected === true, runtimeStatus: status, plan: planRow?.plan ?? 'FREE' };
   }
   async function setup(authority, input) {
     if (authority.role !== 'OWNER') throw new PlatformError('owner_required', 403);
@@ -453,6 +460,11 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     finally { db.release(); }
   }
   async function action(authority, input) {
+    if (input.action === 'acceptance-prepare') {
+      if (!input.confirmed || authority.role !== 'OWNER') throw new PlatformError('owner_confirmation_required', 403);
+      if (!acceptanceActions) throw new PlatformError('acceptance_setup_requires_production_gateway', 409);
+      return acceptanceActions(authority);
+    }
     if (input.action === 'onboarding-publish') {
       if (!onboardingActions) throw new PlatformError('onboarding_runtime_not_available_in_readonly_preview', 409);
       return onboardingActions(authority);

@@ -1,5 +1,13 @@
 -- Additive platform foundation. Apply to development explicitly.
 -- Never run this file from bot startup or a production build.
+CREATE TABLE IF NOT EXISTS platform_runtime_state (
+ guild_id text PRIMARY KEY CHECK(guild_id ~ '^[0-9]{17,20}$'),
+ activated_at timestamptz NOT NULL,
+ last_seen_at timestamptz NOT NULL,
+ bot_connected boolean NOT NULL DEFAULT false,
+ runtime_active boolean NOT NULL DEFAULT false,
+ module_states jsonb NOT NULL DEFAULT '{}'
+);
 CREATE TABLE IF NOT EXISTS platform_guilds (
  guild_id text PRIMARY KEY CHECK(guild_id ~ '^[0-9]{17,20}$'),
  installed boolean NOT NULL DEFAULT true,

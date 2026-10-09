@@ -25,6 +25,7 @@ export const GetPlatformSessionResponse = zod.object({
   "oauthCallbackRegistered": zod.boolean().nullish(),
   "runtimeMode": zod.enum(['preview', 'production']).optional(),
   "botOnline": zod.boolean(),
+  "botConnected": zod.boolean().nullish(),
   "csrfToken": zod.string().optional(),
   "user": zod.object({
   "id": zod.string(),
@@ -79,6 +80,16 @@ export const GetPlatformOverviewResponse = zod.object({
 })),
   "warnings": zod.array(zod.string()),
   "botOnline": zod.boolean(),
+  "runtimeStatus": zod.object({
+  "botConnected": zod.boolean().nullable(),
+  "platformEnabled": zod.boolean(),
+  "guildConfigured": zod.boolean(),
+  "runtimeActive": zod.boolean(),
+  "lastSeenAt": zod.string().nullable(),
+  "activatedAt": zod.string().nullable(),
+  "moduleStates": zod.record(zod.string(), zod.boolean()),
+  "statusUnavailable": zod.boolean().optional()
+}).optional(),
   "plan": zod.string()
 })
 
