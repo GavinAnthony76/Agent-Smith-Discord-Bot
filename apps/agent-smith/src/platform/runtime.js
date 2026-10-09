@@ -73,13 +73,9 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
           AND collection='acceptance-publication' AND record_id='ticket-panel'`, [authority.guild.id]);
       }
       const onboardingAuthority = await web.service.authorize(authority.actor.id,authority.guild.id,'onboarding',true);
-      const onboardingConfig = await moduleConfig(authority.guild.id,'onboarding');
-      const entry = (await pool.query(`SELECT data FROM platform_records WHERE guild_id=$1
-        AND collection='onboarding-entry' AND record_id=$2`,
-      [authority.guild.id,`entry:${onboardingConfig.revision}`])).rows[0];
-      if (entry && entry.data.status !== 'confirmed')
-        throw new PlatformError('acceptance_onboarding_entry_uncertain_inspect_before_retry',409);
-      if (!entry) await onboarding.publish(onboardingAuthority);
+      // Publication owns confirmed reuse and proven Owner-only pre-dispatch
+      // recovery; an unclassified/unknown send remains held there.
+      await onboarding.publish(onboardingAuthority,{confirmedOwnerRetry:true});
       const economyAuthority = await web.service.authorize(authority.actor.id,authority.guild.id,'economy',true);
       const shop = (await pool.query(`SELECT 1 FROM platform_records WHERE guild_id=$1
         AND collection='shop' AND title='LMOC TEST disposable acceptance token'`, [authority.guild.id])).rowCount;

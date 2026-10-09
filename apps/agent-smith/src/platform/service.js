@@ -461,7 +461,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   async function action(authority, input) {
     if (input.action === 'acceptance-prepare') {
-      if (!input.confirmed || authority.role !== 'OWNER') throw new PlatformError('owner_confirmation_required', 403);
+      if (input.confirmed !== true || authority.role !== 'OWNER') throw new PlatformError('owner_confirmation_required', 403);
       if (!acceptanceActions) throw new PlatformError('acceptance_setup_requires_production_gateway', 409);
       return acceptanceActions(authority);
     }

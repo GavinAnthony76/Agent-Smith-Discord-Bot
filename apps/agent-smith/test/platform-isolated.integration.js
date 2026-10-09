@@ -15,7 +15,7 @@ import { createTicketService } from '../src/platform/tickets.js';
 import { executeTicketWrite } from '../src/platform/ticket-write.js';
 import { PermissionsBitField, PermissionFlagsBits as P } from 'discord.js';
 import { createWelcomeService } from '../src/platform/welcome.js';
-import { createOnboardingService } from '../src/platform/onboarding.js';
+import { createOnboardingService, claimOnboardingPreDispatchRetry } from '../src/platform/onboarding.js';
 import { executeSelfRoleWrite } from '../src/platform/role-write.js';
 import { communicationGuard } from '../src/platform/transport.js';
 import { createEconomyService } from '../src/platform/economy.js';
@@ -418,6 +418,70 @@ await test('platform HTTP and PostgreSQL isolation', async t => {
       await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
         VALUES($1,$2,'security.intent','settings',$3)`,[LMOC_TEST_ID,userA,{operation:'acceptance.resource.create',resourceKind:'panel'}]);
       assert.equal((await claimPreDispatchRetry(pool,authority,'panel')).rowCount,0);
+    });
+    await t.test('onboarding recovery requires fresh Owner identity and unambiguous pre-dispatch proof', async () => {
+      const scope={guildId:LMOC_TEST_ID,userId:userA,role:'OWNER'};
+      await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by,created_at)
+        VALUES($1,'onboarding-entry','entry:3','Onboarding entry','{"status":"creating"}',$2,now()-interval '1 minute')`,
+      [LMOC_TEST_ID,userA]);
+      assert.equal((await claimOnboardingPreDispatchRetry(pool,scope,'entry:3')).rowCount,0);
+      const denial={status:'denied',operation:'onboarding.publish',source:'platform-onboarding',
+        reason:'onboarding_entry_not_authorized'};
+      await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state,created_at)
+        VALUES($1,$2,'security.denied','onboarding',$3,now()-interval '5 seconds')`,[LMOC_TEST_ID,userA,denial]);
+      assert.equal((await claimOnboardingPreDispatchRetry(pool,{...scope,userId:userB},'entry:3')).rowCount,0);
+      await assert.rejects(claimOnboardingPreDispatchRetry(pool,{...scope,guildId:TARGET_GUILD_ID},'entry:3'),/owner_retry_required/);
+      await assert.rejects(claimOnboardingPreDispatchRetry(pool,{...scope,role:'ADMIN'},'entry:3'),/owner_retry_required/);
+      // Old audits have no entryId. Two possible publications are ambiguous.
+      await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by)
+        VALUES($1,'onboarding-entry','entry:4','Other revision','{"status":"creating"}',$2)`,[LMOC_TEST_ID,userA]);
+      assert.equal((await claimOnboardingPreDispatchRetry(pool,scope,'entry:3')).rowCount,0);
+      await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state,created_at)
+        VALUES($1,$2,'security.denied','onboarding',$3,now()-interval '2 seconds')`,
+      [LMOC_TEST_ID,userA,{...denial,entryId:'entry:99'}]);
+      assert.equal((await claimOnboardingPreDispatchRetry(pool,scope,'entry:3')).rowCount,0);
+      await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state,created_at)
+        VALUES($1,$2,'security.denied','onboarding',$3,now()-interval '1 second')`,
+      [LMOC_TEST_ID,userA,{...denial,entryId:'entry:3'}]);
+      const claims=await Promise.all([claimOnboardingPreDispatchRetry(pool,scope,'entry:3'),
+        claimOnboardingPreDispatchRetry(pool,scope,'entry:3')]);
+      assert.equal(claims.reduce((total,result)=>total+result.rowCount,0),1);
+      assert.equal((await claimOnboardingPreDispatchRetry(pool,scope,'entry:3')).rowCount,0);
+      await pool.query(`UPDATE platform_records SET data='{"status":"creating"}' WHERE guild_id=$1
+        AND collection='onboarding-entry' AND record_id='entry:3'`,[LMOC_TEST_ID]);
+      const cid='81000000000000091',botId='90000000000000099';
+      const readable=new PermissionsBitField([P.ViewChannel,P.ReadMessageHistory]);
+      const writable=new PermissionsBitField([...readable.toArray(),P.SendMessages]);
+      const actor={id:userA,pending:false,user:{bot:false},permissions:writable};
+      const bot={id:botId,permissions:readable};
+      let botCanSend=false,sends=0;
+      const channel={id:cid,type:0,permissionsFor:member=>member.id===botId&&!botCanSend?readable:writable,
+        send:async body=>{
+          assert.equal(communicationGuard({method:'POST',fullRoute:`/channels/${cid}/messages`,
+            body:{content:body.content,allowed_mentions:{parse:[],replied_user:false}}}),true);
+          sends++;return{id:'83000000000000091'};
+        }};
+      const guild={id:LMOC_TEST_ID,ownerId:userA,members:{me:bot,cache:new Map([[userA,actor]]),fetch:async()=>actor},
+        channels:{cache:new Map([[cid,channel]])}};
+      const service=createOnboardingService({client:{},pool,
+        discord:{freshGuild:async()=>guild,memberRolesVerified:()=>true},
+        moduleConfig:async()=>({enabled:true,revision:3,configuration:{entryChannelId:cid,
+          steps:[{type:'BUTTON',title:'Test',content:'Synthetic isolated publication'}]}})});
+      const permit=await authorizeTenant({userId:userA,guildId:LMOC_TEST_ID,capability:'onboarding',write:true,
+        resolve:async()=>({installed:true,member:true,role:'OWNER'})});
+      await assert.rejects(service.publish({permit}),/uncertain_inspect/);
+      await assert.rejects(service.publish({permit},{confirmedOwnerRetry:true}),/not_authorized/);
+      assert.equal(sends,0);
+      botCanSend=true;
+      assert.equal((await service.publish({permit},{confirmedOwnerRetry:true})).ok,true);
+      assert.equal(sends,1);
+      assert.equal((await service.publish({permit},{confirmedOwnerRetry:true})).ok,true);
+      assert.equal(sends,1);
+      await pool.query(`UPDATE platform_records SET data='{"status":"creating"}' WHERE guild_id=$1
+        AND collection='onboarding-entry' AND record_id='entry:3'`,[LMOC_TEST_ID]);
+      await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
+        VALUES($1,$2,'security.intent','onboarding',$3)`,[LMOC_TEST_ID,userA,{operation:'onboarding.publish'}]);
+      assert.equal((await claimOnboardingPreDispatchRetry(pool,scope,'entry:3')).rowCount,0);
     });
     await t.test('OAuth ciphertext and schema remain isolated, logout invalidates the session', async () => {
       const row = (await pool.query('SELECT token_ciphertext FROM platform_sessions')).rows[0];

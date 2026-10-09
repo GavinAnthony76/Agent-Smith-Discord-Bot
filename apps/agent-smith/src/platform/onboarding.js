@@ -7,6 +7,36 @@ import { PlatformError, permitScope } from './catalog.js';
 import { createSelfRoleService } from './roles.js';
 import { withPlatformCommunication } from './transport.js';
 import { withPrivilegedPipeline } from '../privileged-pipeline.js';
+import { LMOC_TEST_ID } from './activation.js';
+
+export async function claimOnboardingPreDispatchRetry(pool, scope, entryId) {
+  if (scope.guildId !== LMOC_TEST_ID || scope.role !== 'OWNER' || !/^entry:\d+$/.test(entryId))
+    throw new PlatformError('onboarding_owner_retry_required',403);
+  return pool.query(`WITH claimed AS (
+    UPDATE platform_records r SET data=jsonb_build_object('status','creating','reservedAt',now()),updated_at=now()
+    WHERE r.guild_id=$1 AND r.collection='onboarding-entry' AND r.record_id=$2
+      AND r.created_by=$3 AND r.data->>'status'='creating'
+      AND EXISTS (SELECT 1 FROM platform_audit a WHERE a.guild_id=r.guild_id
+        AND a.actor_user_id=r.created_by AND a.action='security.denied'
+        AND a.after_state->>'status'='denied'
+        AND a.after_state->>'operation'='onboarding.publish'
+        AND a.after_state->>'source'='platform-onboarding'
+        AND a.after_state->>'reason'='onboarding_entry_not_authorized'
+        AND a.created_at>=COALESCE((r.data->>'reservedAt')::timestamptz,r.created_at)
+        AND (a.after_state->>'entryId'=$2 OR
+          (NOT (a.after_state ? 'entryId') AND
+           (SELECT count(*) FROM platform_records e WHERE e.guild_id=r.guild_id
+            AND e.collection='onboarding-entry')=1)))
+      AND NOT EXISTS (SELECT 1 FROM platform_audit a WHERE a.guild_id=r.guild_id
+        AND a.action IN ('security.intent','security.result')
+        AND a.after_state->>'operation'='onboarding.publish'
+        AND a.created_at>=COALESCE((r.data->>'reservedAt')::timestamptz,r.created_at))
+    RETURNING record_id
+  ) INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
+    SELECT $1,$3,'onboarding_pre_dispatch_retry','onboarding',
+      jsonb_build_object('entryId',$2::text,'reason','verified_authorization_denial_before_dispatch')
+    FROM claimed RETURNING id`,[scope.guildId,entryId,scope.userId]);
+}
 
 function progressId(guildId, memberId) {
   const hex = createHash('sha256').update(`onboarding:${guildId}:${memberId}`).digest('hex');
@@ -15,7 +45,7 @@ function progressId(guildId, memberId) {
 export function createOnboardingService({ client, pool, discord, moduleConfig }) {
   const forms = new Map();
   const roles = createSelfRoleService({ client, pool, discord, moduleConfig });
-  async function publish(authority) {
+  async function publish(authority, { confirmedOwnerRetry = false } = {}) {
     const scope = permitScope(authority.permit, 'onboarding', true);
     if (scope.guildId === TARGET_GUILD_ID) throw new PlatformError('existing_native_onboarding_retained', 409);
     const settings = await moduleConfig(scope.guildId, 'onboarding');
@@ -29,11 +59,13 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
       const old = (await pool.query(`SELECT data FROM platform_records WHERE guild_id=$1
         AND collection='onboarding-entry' AND record_id=$2`, [scope.guildId,entryId])).rows[0];
       if (old?.data.status === 'confirmed') return {ok:true,message:'This onboarding revision already has an entry.'};
-      throw new PlatformError('onboarding_entry_uncertain_inspect_before_retry',409);
+      if (!confirmedOwnerRetry || scope.guildId !== LMOC_TEST_ID || scope.role !== 'OWNER')
+        throw new PlatformError('onboarding_entry_uncertain_inspect_before_retry',409);
     }
     let guild, channel;
     const message = await withPrivilegedPipeline({
-      action: { operation: 'onboarding.publish', source: 'platform-onboarding', guildId: scope.guildId },
+      action: { operation: 'onboarding.publish', source: 'platform-onboarding', guildId: scope.guildId,
+        entryId, channelId: settings.configuration.entryChannelId },
       validate: async () => {
         guild = await discord.freshGuild(scope.guildId);
         const actor = await guild.members.fetch({ user: scope.userId, force: true });
@@ -44,6 +76,11 @@ export function createOnboardingService({ client, pool, discord, moduleConfig })
             !channel || channel.type !== 0 || !hasPermission(actor, P.ViewChannel, channel) ||
             !hasPermission(actor, P.ReadMessageHistory, channel) || !hasPermission(guild.members.me, P.SendMessages, channel))
           throw new PlatformError('onboarding_entry_not_authorized', 403);
+        if (!reserved.rowCount) {
+          if (guild.ownerId !== scope.userId) throw new PlatformError('onboarding_owner_retry_required',403);
+          if (!(await claimOnboardingPreDispatchRetry(pool,scope,entryId)).rowCount)
+            throw new PlatformError('onboarding_entry_uncertain_inspect_before_retry',409);
+        }
       },
       record: (action,data) => pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
         VALUES($1,$2,$3,'onboarding',$4)`,[scope.guildId,scope.userId,action,data]),

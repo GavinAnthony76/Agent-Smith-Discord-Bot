@@ -1,11 +1,11 @@
 # Controlled two-server live acceptance — 2026-10-08
 
-**Latest checkpoint (2026-10-09 02:41 UTC): the timing fix is published and the
-panel retry succeeded. All three disposable resources and the ticket panel are
-confirmed. Onboarding publication is now held because Smith cannot send in the
-configured LMOC #welcome channel. Overall acceptance remains BLOCKED; the
-pre-release full member fingerprint discrepancy remains unresolved. Earlier
-checkpoints below are historical.**
+**Latest checkpoint (2026-10-09 02:56 UTC): the Owner fixed #welcome permissions;
+Smith's effective Send Messages is verified allowed without Administrator.
+All three disposable resources and the ticket panel are confirmed. A checked
+Owner-only recovery fix for the held onboarding entry is prepared, not published.
+Overall acceptance remains BLOCKED; the pre-release full member fingerprint
+discrepancy remains unresolved. Earlier checkpoints below are historical.**
 Earlier sections below are historical observations, not current deployment status.**
 
 ## Verdict: BLOCKED — live acceptance has not passed
@@ -613,3 +613,55 @@ reservation/audit. These are preparation, not genuine member module test results
 No new application code, publishing, production mutation or Hallowed Core change
 was performed by the agent in this screenshot investigation. No second Gateway
 was started. Overall verdict stays **BLOCKED**.
+
+---
+
+## Owner permission update and held-entry recovery — 2026-10-09 02:56 UTC
+
+The Owner confirmed the channel permission update. Read-only Discord GET metadata
+and full effective-permission calculation (guild roles, everyone overwrite,
+combined role overwrites and member overwrite) verified Smith has View Channel,
+Read Message History and Send Messages in LMOC TEST's `#welcome`.
+Administrator remains false. Checking only a direct bot-member overwrite did not
+establish the effective permission; the complete calculation confirms access.
+No channel permission was changed by the agent.
+
+Production still has one held onboarding entry, `entry:3`, with the earlier
+`onboarding_entry_not_authorized` denial and no dispatch intent/result. The
+prepared code fix routes explicit Owner resource preparation through publication's
+safe recovery rather than refusing every held entry beforehand:
+
+- Fresh channel, membership, current revision and send-permission checks must
+  pass before any recovery claim.
+- Recovery requires the same freshly verified Owner in LMOC TEST and the real
+  explicitly confirmed preparation action. Generic onboarding publication does
+  not opt into retry.
+- An atomic claim requires a matching audited pre-dispatch permission denial,
+  the reservation's original Owner and no onboarding dispatch intent/result
+  since its boundary. Concurrent retries have one winner.
+- New audits bind the exact onboarding entry ID and target channel. Old audits
+  lacking an entry ID are usable only when exactly one onboarding entry exists;
+  ambiguous legacy evidence remains held.
+- Claims advance the reservation boundary and write a recovery audit together.
+  Old proofs cannot be reused. Confirmed entries are reused without another send.
+- No reservation deletion, configuration-revision bypass, consent reset, schema
+  change, history fabrication or Hallowed Core mutation is involved.
+
+Checks: **446 regressions passed, 6 skipped; all 12 isolated PostgreSQL checks
+passed**. The recovery check additionally exercised the actual publication
+service with an isolated/mocked Discord transport: unconfirmed retries refused;
+missing bot Send Messages refused with zero sends; corrected permissions and
+valid evidence produced one send; confirmed reuse produced no duplicate.
+Foreign guild/Owner/admin, ambiguous/wrong-entry proofs, stale proof, concurrent
+claims and dispatch-intent holds were checked. These are not live human tests.
+
+Static privileged transport/permission/AI checks and whitespace checks passed.
+The preview API rebuilt/restarted cleanly, and the mobile public status page
+rendered normally with production Gateway connected. Production readiness
+remained connected/ready at `02:56:26Z`; the workspace bot was not started.
+
+No production records or Discord resources were changed by the agent.
+**Next:** publish this actual recovery code fix without schema/data overwrite,
+then the Owner may run preparation once. The live onboarding send, 5-credit
+shop item creation and all genuine supported-module tests remain unverified until
+that real action completes. Overall verdict remains **BLOCKED**, not complete.
