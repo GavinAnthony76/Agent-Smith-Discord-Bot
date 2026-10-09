@@ -1,0 +1,984 @@
+Perform a VISUAL-ONLY redesign of the Hallowed Core / Agent Smith admin and platform UI.
+
+IMPORTANT:
+
+Do NOT change:
+- Discord bot logic
+- onboarding behavior
+- database schema
+- XP logic
+- role logic
+- moderation logic
+- runtime state logic
+- deployment behavior
+- production API contracts
+- acceptance-test logic
+
+This task is strictly a UI/UX modernization pass.
+
+The visual direction must match the existing Agent Smith branding and artwork.
+
+==================================================
+1. CORE VISUAL IDENTITY
+==================================================
+
+The UI should feel like:
+
+AGENT SMITH
++
+CYBERPUNK CONTROL ROOM
++
+APPLE-LIKE POLISH
++
+FROSTED GLASS
++
+PREMIUM SCI-FI SYSTEM CONSOLE
+
+The design should feel like the user is inside the operating system behind Hallowed Core.
+
+It should NOT feel like:
+- a generic SaaS admin panel
+- Bootstrap
+- a spreadsheet dashboard
+- a cheap neon gamer UI
+- a hacker terminal
+- a cartoon interface
+
+It should feel:
+- cinematic
+- premium
+- controlled
+- intelligent
+- futuristic
+- immersive
+- polished
+- slightly ominous
+- high-status
+- clean
+
+==================================================
+2. AGENT SMITH COLOR PALETTE
+==================================================
+
+Use the established Agent Smith palette.
+
+PRIMARY BACKGROUND:
+#07111F
+
+SECONDARY BACKGROUND:
+#0B1020
+
+SURFACE:
+#0E1726
+
+DEEP SURFACE:
+#08111F
+
+GLASS SURFACE:
+rgba(14, 23, 38, 0.72)
+
+PRIMARY CYAN:
+#00DFFF
+
+ELECTRIC CYAN:
+#00E5FF
+
+SECONDARY BLUE:
+#149CFF
+
+ELECTRIC BLUE:
+#00B8FF
+
+VIOLET:
+#7C3AED
+
+PURPLE:
+#8B5CF6
+
+MAGENTA:
+#D946EF
+
+MAGENTA ACCENT:
+#EC4899
+
+TEXT PRIMARY:
+#F4F7FB
+
+TEXT MUTED:
+#94A3B8
+
+STEEL:
+#334155
+
+GUNMETAL:
+#1F2937
+
+GLASS BORDER:
+rgba(255,255,255,0.08)
+
+SUCCESS:
+soft emerald
+
+WARNING:
+soft amber
+
+DANGER:
+muted red
+
+==================================================
+3. LIGHTING LANGUAGE
+==================================================
+
+Use lighting that matches the Agent Smith artwork.
+
+Primary glow:
+cyan / electric blue
+
+Secondary glow:
+violet / purple
+
+Accent glow:
+magenta
+
+Use:
+- cyan edge lighting
+- violet rim lighting
+- soft magenta accent lighting
+- restrained bloom
+- atmospheric gradients
+- subtle illuminated borders
+
+Do NOT make every element glow.
+
+Glows should indicate:
+- active states
+- selected modules
+- live systems
+- important interactions
+
+==================================================
+4. BACKGROUND STYLE
+==================================================
+
+Use a deep navy-black base.
+
+Add subtle layered backgrounds such as:
+
+- radial cyan glow
+- violet radial glow
+- dark linear gradient
+- faint grid / circuit texture
+- subtle abstract digital architecture
+- optional low-opacity cyber-cathedral geometry
+
+Keep all background detail extremely subtle.
+
+The content must remain readable.
+
+Example conceptual background:
+
+background:
+radial-gradient(circle at 20% 20%, rgba(0,223,255,.08), transparent 35%),
+radial-gradient(circle at 80% 30%, rgba(124,58,237,.10), transparent 40%),
+linear-gradient(180deg, #07111F 0%, #0B1020 100%);
+
+==================================================
+5. APP SHELL
+==================================================
+
+The whole application should feel like one integrated system.
+
+Use:
+- dark immersive shell
+- glass sidebar
+- glass top bar
+- rounded floating content regions
+- subtle depth layers
+
+The content area should feel like a control deck floating over the system background.
+
+==================================================
+6. SIDEBAR
+==================================================
+
+Redesign the sidebar as a premium Agent Smith command rail.
+
+Use:
+- frosted translucent panel
+- 22–28px outer radius
+- subtle cyan edge highlight
+- active item shown as rounded luminous pill
+- compact high-quality icons
+- grouped sections
+- soft animated hover state
+
+Active item example:
+
+dark translucent pill
++
+cyan inner glow
++
+thin cyan/blue edge
++
+slightly brighter icon
+
+Do not use loud full-width blue rectangles.
+
+==================================================
+7. TOP BAR
+==================================================
+
+Top bar should feel like a live system header.
+
+Include:
+
+AGENT SMITH identity
+environment
+Discord gateway
+database status
+system health
+current user/admin profile
+
+Use pill indicators such as:
+
+● PRODUCTION
+● DISCORD CONNECTED
+● DATABASE HEALTHY
+
+Healthy:
+subtle cyan/green
+
+Warning:
+amber
+
+Failure:
+muted red
+
+==================================================
+8. AGENT SMITH PRESENCE
+==================================================
+
+Use the Agent Smith visual identity throughout the UI.
+
+Where appropriate include:
+- Agent Smith avatar
+- existing Agent Smith icon artwork
+- existing Agent Smith banner artwork
+- small system-avatar treatment in headers
+- AI control/status cards
+
+Do not overuse the full artwork.
+
+Use the icon as:
+- system identity
+- AI avatar
+- conversation indicator
+- control panel identity
+
+Use the banner primarily on:
+- overview/header
+- system landing page
+- major presentation sections
+
+==================================================
+9. CARD DESIGN
+==================================================
+
+Use large premium cards.
+
+Recommended:
+
+border-radius:
+20–28px
+
+background:
+rgba(14,23,38,.68)
+
+backdrop-filter:
+blur(18px) saturate(140%)
+
+border:
+1px solid rgba(255,255,255,.08)
+
+box-shadow:
+0 16px 50px rgba(0,0,0,.30)
+
+Cards may have a subtle top/side glow:
+
+cyan for active
+violet for AI
+magenta for special systems
+
+Avoid strong borders around everything.
+
+==================================================
+10. MODULE CARDS
+==================================================
+
+Every major module should feel like a subsystem.
+
+Examples:
+
+ONBOARDING
+MODERATION
+XP
+ECONOMY
+AI
+ANALYTICS
+TICKETS
+ROLES
+FEEDS
+
+Each card should show:
+
+icon
+module name
+status
+short description
+last event
+primary action
+
+Example:
+
+AI CORE
+ACTIVE
+
+Conversational service operational
+Last interaction: 2m ago
+
+[OPEN]
+
+Visual state:
+subtle violet/cyan glow
+
+==================================================
+11. MAIN DASHBOARD
+==================================================
+
+The overview should feel like mission control.
+
+Suggested groups:
+
+SYSTEM CORE
+
+Agent Smith
+Discord Gateway
+Database
+Runtime
+Workers
+
+COMMUNITY
+
+Members
+Active Today
+Pending Onboarding
+Reports
+Open Cases
+
+PROGRESSION
+
+XP Events
+Levels
+Achievements
+Rewards
+Economy
+
+MODULES
+
+Onboarding
+Moderation
+AI
+Tickets
+Feeds
+Analytics
+
+Use asymmetric card layouts where appropriate.
+
+Avoid a boring uniform grid everywhere.
+
+==================================================
+12. METRIC CARDS
+==================================================
+
+Use large numbers with restrained visual emphasis.
+
+Example:
+
+22
+ACTIVE MEMBERS
+
++3 this week
+
+Use:
+- clean number
+- small system label
+- subtle trend
+- faint gradient icon
+
+Do not make them look like finance dashboards.
+
+==================================================
+13. MEMBER UI
+==================================================
+
+Redesign members as polished identity rows/cards.
+
+Show:
+
+avatar
+display name
+primary framework
+crossover access
+level
+XP
+achievements
+status
+roles
+
+Use small chips:
+
+GAMING
+LEVEL 12
+VETERAN
+ACTIVE
+
+Actions appear on hover or inside an overflow menu.
+
+==================================================
+14. FRAMEWORK COLORS
+==================================================
+
+Preserve the Agent Smith overall palette but allow subtle framework accents.
+
+FAITH:
+violet / soft gold accent
+
+GAMING:
+electric cyan / blue
+
+TECH:
+violet / magenta / cyan
+
+Do not make the three frameworks feel like completely different apps.
+
+They remain part of one Agent Smith system.
+
+==================================================
+15. XP / LEVELING
+==================================================
+
+Progression UI should feel premium and satisfying.
+
+Use:
+
+rounded progress bars
+level rings
+achievement badges
+milestone cards
+animated XP gain indicators
+
+Example:
+
+LEVEL 18
+72%
+
+4,230 / 5,000 XP
+
+Progress bar:
+cyan → violet gradient
+
+==================================================
+16. ACHIEVEMENTS
+==================================================
+
+Achievement cards should resemble collectible digital badges.
+
+Use:
+- metallic/glass badge surface
+- glowing icon
+- title
+- short description
+- date unlocked
+
+Locked achievements:
+dark/desaturated
+
+Unlocked:
+subtle cyan/violet glow
+
+Rare:
+magenta accent
+
+==================================================
+17. ECONOMY
+==================================================
+
+The virtual economy UI should feel like an in-system inventory.
+
+Use:
+- wallet card
+- inventory tiles
+- rounded shop items
+- credits chip
+- transaction timeline
+
+Do NOT make it look like cryptocurrency or banking.
+
+==================================================
+18. MODERATION
+==================================================
+
+Moderation should feel serious and controlled.
+
+Use:
+- dark glass panels
+- severity/status pills
+- clear hierarchy
+- restrained red
+
+Example:
+
+CASE #0042
+TIMEOUT
+ACTIVE
+
+Target
+Moderator
+Reason
+Duration
+
+[ADD NOTE]
+[RESOLVE]
+
+Danger styling only where necessary.
+
+==================================================
+19. LOGS / SYSTEM CONSOLE
+==================================================
+
+Logs should resemble a modern control console.
+
+Not a green hacker terminal.
+
+Use:
+
+timestamp
+small icon
+event type
+actor
+target
+summary
+
+Example:
+
+21:04:18
+ROLE RESTORED
+Agent Smith restored Gaming access to @User
+
+Use monospace only for:
+- IDs
+- hashes
+- raw system values
+- timestamps where useful
+
+==================================================
+20. AI / AGENT SMITH PANEL
+==================================================
+
+The AI area should feel like the core intelligence layer.
+
+Use:
+- Agent Smith avatar
+- purple/cyan glow
+- conversation activity
+- AI status
+- allowed channels
+- model health
+- latency
+- request volume
+- controls
+
+Optional title:
+
+AGENT SMITH CORE
+
+Avoid exposing technical secrets.
+
+==================================================
+21. ONBOARDING DESIGN
+==================================================
+
+The onboarding editor should look like a visual system flow.
+
+Example:
+
+WELCOME
+  ↓
+RULES
+  ↓
+FRAMEWORK
+  ↓
+INTERESTS
+  ↓
+ACTIVE
+
+Each step:
+rounded glass node
+
+Connections:
+soft illuminated line
+
+Active step:
+cyan glow
+
+Completed:
+cyan/green
+
+Warning:
+amber
+
+==================================================
+22. GLASSMORPHISM RULES
+==================================================
+
+Use glass selectively.
+
+Use glass on:
+
+sidebar
+top bar
+major cards
+modals
+system control panels
+
+Nested panels should usually be flatter.
+
+Avoid blur-on-blur-on-blur.
+
+Readability comes first.
+
+==================================================
+23. IPHONE / IOS MORPHISM
+==================================================
+
+Use Apple-inspired physicality.
+
+Include:
+- smooth rounded surfaces
+- floating panels
+- large touch-friendly buttons
+- subtle inner highlights
+- translucent layers
+- restrained shadows
+- soft spring animations
+- clean spacing
+- minimal visual clutter
+
+Do not clone Apple's UI directly.
+
+Use the principles, not the exact product design.
+
+==================================================
+24. BUTTONS
+==================================================
+
+PRIMARY:
+
+cyan → blue gradient
+rounded 14–18px
+soft glow on hover
+
+SECONDARY:
+
+translucent glass
+thin light border
+
+AI / SPECIAL:
+
+violet → magenta gradient where appropriate
+
+DANGER:
+
+dark muted red
+
+Avoid excessively bright solid colors.
+
+==================================================
+25. INPUTS
+==================================================
+
+Inputs should use:
+
+dark translucent surface
+rounded 14–18px corners
+minimal borders
+cyan focus ring
+clear labels
+large comfortable height
+
+No sharp rectangular form controls.
+
+==================================================
+26. MODALS
+==================================================
+
+Modals should resemble floating system panes.
+
+Use:
+
+24–30px radius
+frosted glass
+background dim/blur
+subtle glow
+strong hierarchy
+
+Destructive actions:
+clear warning panel
+
+==================================================
+27. TABLES
+==================================================
+
+Where tables are necessary:
+
+place them inside rounded containers.
+
+Use:
+- minimal grid lines
+- soft row separation
+- hover highlight
+- sticky headers
+- pill values
+- avatar cells
+
+For mobile:
+convert complex tables into cards.
+
+==================================================
+28. MICRO-INTERACTIONS
+==================================================
+
+Use subtle motion.
+
+Examples:
+
+card hover:
+translateY(-2px)
+
+button press:
+scale(.98)
+
+selected module:
+soft cyan pulse
+
+modal:
+spring/fade
+
+status change:
+small glow transition
+
+Respect prefers-reduced-motion.
+
+==================================================
+29. CYBERPUNK WITHOUT OVERDOING IT
+==================================================
+
+The Agent Smith artwork is cyberpunk.
+
+The application should interpret that as:
+
+premium digital system
+not nightclub neon.
+
+Aim for roughly:
+
+70% premium dark system UI
+20% glass / Apple-like polish
+10% cyberpunk glow
+
+This balance is important.
+
+==================================================
+30. MOBILE / RESPONSIVE
+==================================================
+
+Desktop:
+full control-room feel
+
+Tablet:
+collapsible navigation
+
+Mobile:
+stacked glass cards
+large touch targets
+bottom/slide navigation where appropriate
+
+Preserve immersive design on mobile.
+
+==================================================
+31. DESIGN TOKENS
+==================================================
+
+Centralize all style tokens.
+
+Suggested:
+
+--bg-deep: #07111F;
+--bg-secondary: #0B1020;
+--surface: #0E1726;
+
+--cyan: #00DFFF;
+--cyan-electric: #00E5FF;
+--blue: #149CFF;
+
+--violet: #7C3AED;
+--purple: #8B5CF6;
+--magenta: #D946EF;
+
+--text: #F4F7FB;
+--text-muted: #94A3B8;
+
+--glass-border: rgba(255,255,255,.08);
+
+--radius-card: 24px;
+--radius-button: 16px;
+--radius-pill: 999px;
+
+Centralize:
+
+colors
+radii
+spacing
+shadows
+blur
+transitions
+typography
+
+==================================================
+32. REUSABLE COMPONENTS
+==================================================
+
+Create or refine:
+
+AgentSmithAvatar
+SystemHeader
+GlassCard
+GlowCard
+MetricCard
+ModuleCard
+StatusPill
+FrameworkBadge
+LevelBadge
+AchievementBadge
+MemberRow
+ControlPanel
+TimelineItem
+ConsoleEvent
+SettingsGroup
+ConfirmDialog
+
+Do not duplicate visual implementations.
+
+==================================================
+33. EXISTING AGENT SMITH ASSETS
+==================================================
+
+Use the existing Agent Smith visual assets already created for this project.
+
+There is:
+- an Agent Smith Discord/profile icon
+- a cinematic Agent Smith banner
+
+Integrate those visual references consistently into the redesign.
+
+If those files are not currently present in the Replit project:
+
+create clearly named placeholders and tell me where to upload them.
+
+Suggested paths:
+
+public/branding/agent-smith-avatar.png
+public/branding/agent-smith-banner.png
+
+Do not replace them with generic stock artwork.
+
+==================================================
+34. ACCESSIBILITY
+==================================================
+
+Maintain:
+
+strong contrast
+keyboard navigation
+focus indicators
+semantic controls
+usable touch targets
+reduced motion support
+
+Glow must never be required to understand state.
+
+==================================================
+35. DO NOT TOUCH BACKEND
+==================================================
+
+This is critical.
+
+Do NOT:
+
+- change Discord runtime behavior
+- restart or duplicate Gateway processes unnecessarily
+- change XP calculations
+- change role permissions
+- alter database schema
+- activate new modules
+- change moderation rules
+- change AI authorization
+- modify bot secrets
+- migrate production data
+
+Only change presentation-layer code unless a tiny frontend-support adjustment is absolutely required.
+
+If backend change appears necessary:
+
+STOP and report it rather than making the change.
+
+==================================================
+36. VALIDATION
+==================================================
+
+After redesign run:
+
+type checks
+frontend tests
+production build
+visual smoke tests
+responsive checks
+
+Verify:
+
+no database migration
+no new Discord writes
+no Gateway behavior change
+no command behavior change
+no module activation change
+no permission change
+
+==================================================
+37. FINAL REPORT
+==================================================
+
+Provide:
+
+1. pages redesigned
+2. components redesigned
+3. design tokens added
+4. Agent Smith assets integrated
+5. glass/morphism system
+6. color system
+7. responsive changes
+8. motion added
+9. accessibility work
+10. screenshots/previews
+11. production build result
+12. tests
+13. confirmation that backend/Discord behavior was not modified
