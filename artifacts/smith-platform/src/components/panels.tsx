@@ -26,6 +26,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState, ErrorState, RuntimeBadge } from '@/components/shell';
 import { FieldForm } from '@/components/fields';
+import { AchievementBadge, ConsoleEvent, FrameworkBadge, LevelBadge, MemberRow } from '@/components/smith-ui';
 import { MODULE_LABELS, RECORD_ACTIONS, errMsg, useCsrf } from '@/lib/platform';
 
 function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: PlatformModule; resources?: PlatformResources }) {
@@ -55,8 +56,8 @@ function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: Platfor
   });
   const ro = !mod.editable;
   return (
-    <section className="rounded-xl border bg-card" data-testid={`panel-module-${mod.moduleKey}`}>
-      <div className="flex flex-wrap items-center gap-3 border-b p-4">
+    <section className="panel" data-testid={`panel-module-${mod.moduleKey}`}>
+      <div className="panel-head">
         <div>
           <h2 className="font-display text-xl font-bold">{MODULE_LABELS[mod.moduleKey] ?? mod.moduleKey} configuration</h2>
           <p className="font-mono text-xs text-muted-foreground">revision {mod.revision}</p>
@@ -68,13 +69,13 @@ function ModuleForm({ guildId, mod, resources }: { guildId: string; mod: Platfor
         </label>
       </div>
       <div className="p-4 space-y-4">
-        {ro && <p className="rounded-md bg-muted p-3 text-sm" data-testid="text-read-only">Read only. Your role or this server's policy does not allow editing this module.</p>}
+        {ro && <p className="notice notice-info" data-testid="text-read-only">Read only. Your role or this server's policy does not allow editing this module.</p>}
         {mod.fields.length === 0
           ? <EmptyState title="No configurable fields" body="This module exposes no settings yet. Its status above shows what the runtime currently does." />
           : <FieldForm fields={mod.fields} values={config} onChange={setConfig} resources={resources} disabled={ro} />}
       </div>
       {!ro && (
-        <div className="flex justify-end gap-2 border-t p-4">
+        <div className="flex justify-end gap-2 border-t border-white/10 p-4">
           {mod.moduleKey === 'onboarding' && mod.runtimeStatus === 'Platform runtime' && <Button variant="outline"
             disabled={dirty || !mod.enabled || publish.isPending} data-testid="button-publish-onboarding"
             onClick={() => publish.mutate({ guildId, data: { action: 'onboarding-publish', target: 'onboarding' } })}>
@@ -97,6 +98,82 @@ export function ModulePanel({ guildId, mod, resources }: { guildId: string; mod:
 
 function summarize(data: Record<string, unknown>) {
   return Object.entries(data).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object').slice(0, 5);
+}
+
+
+type RecData = Record<string, unknown>;
+const has = (v: unknown) => v !== undefined && v !== null && v !== '';
+function pick(d: RecData, keys: string[]) { for (const k of keys) if (has(d[k]) && typeof d[k] !== 'object') return [k, d[k]] as const; return undefined; }
+function rest(d: RecData, used: string[]) { return Object.entries(d).filter(([k, v]) => !used.includes(k) && has(v) && typeof v !== 'object').slice(0, 5); }
+function Kv({ items }: { items: [string, unknown][] }) {
+  return <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">{items.map(([k, v]) => <span key={k}><span className="font-mono">{k}</span> {String(v)}</span>)}</p>;
+}
+function Meta({ r }: { r: PlatformRecord }) {
+  return <p className="mt-1 font-mono text-[11px] text-muted-foreground">rev {r.revision}{r.createdAt ? ` · ${new Date(r.createdAt).toLocaleString()}` : ''}</p>;
+}
+function Title({ r }: { r: PlatformRecord }) { return <p className="truncate font-medium" data-testid={`text-title-${r.id}`}>{r.title}</p>; }
+
+function RecordBody({ collection, r }: { collection: string; r: PlatformRecord }) {
+  const d = r.data as RecData;
+  if (collection === 'profiles' || collection === 'leaderboard') {
+    const fw = pick(d, ['framework', 'primaryFramework']); const lv = pick(d, ['level', 'currentLevel']); const xp = pick(d, ['xp', 'totalXp', 'experience']);
+    const st = pick(d, ['status']); const used = ['framework', 'primaryFramework', 'level', 'currentLevel', 'xp', 'totalXp', 'experience', 'status'];
+    return (
+      <MemberRow title={r.title}>
+        <Title r={r} />
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {fw && <FrameworkBadge name={String(fw[1])} />}
+          {(lv || xp) && <LevelBadge level={lv?.[1]} xp={xp?.[1]} />}
+          {st && <span className="chip">{String(st[1])}</span>}
+        </div>
+        <Kv items={rest(d, used)} /><Meta r={r} />
+      </MemberRow>
+    );
+  }
+  if (collection === 'achievements' || collection === 'rewards') {
+    const flag = pick(d, ['unlocked', 'earned', 'enabled', 'active']);
+    const state = flag ? (flag[1] === true || flag[1] === 'true' ? 'on' : 'off') : 'unknown';
+    const when = pick(d, ['unlockedAt', 'earnedAt']);
+    return (
+      <AchievementBadge title={r.title} state={state}>
+        <span className="sr-only" data-testid={`text-title-${r.id}`}>{r.title}</span>
+        {flag && <span className="chip mt-1">{['enabled', 'active'].includes(flag[0]) ? 'Definition' : 'Member award'} · {flag[0]}: {String(flag[1])}</span>}
+        {when && <p className="text-xs text-muted-foreground">Unlocked {String(when[1])}</p>}
+        <Kv items={rest(d, ['unlocked', 'earned', 'enabled', 'active', 'unlockedAt', 'earnedAt'])} /><Meta r={r} />
+      </AchievementBadge>
+    );
+  }
+  if (collection === 'shop' || collection === 'inventory' || collection === 'economy') {
+    const price = pick(d, ['price', 'cost', 'amount', 'balance']); const stock = pick(d, ['stock', 'quantity']);
+    return (
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="min-w-0 flex-1"><Title r={r} /><Kv items={rest(d, ['price', 'cost', 'amount', 'balance', 'stock', 'quantity'])} /><Meta r={r} /></div>
+        <div className="flex flex-col items-end gap-1">
+          {price && <span className="chip chip-info">{String(price[0])} {String(price[1])}</span>}
+          {stock && <span className="chip">{String(stock[0])} {String(stock[1])}</span>}
+        </div>
+      </div>
+    );
+  }
+  if (collection === 'cases' || collection === 'reports') {
+    const st = pick(d, ['status', 'state']); const kind = pick(d, ['type', 'action', 'severity', 'reason']);
+    const closed = st && /closed|resolved|done/i.test(String(st[1]));
+    return (
+      <ConsoleEvent title={r.title} time={r.createdAt ? new Date(r.createdAt).toLocaleString() : null}
+        meta={<>{st && <span className={`chip ${closed ? 'chip-live' : 'chip-warn'}`}>{String(st[1])}</span>}{kind && <span className="chip">{String(kind[0])} {String(kind[1])}</span>}</>}>
+        <span className="sr-only" data-testid={`text-title-${r.id}`}>{r.title}</span>
+        <Kv items={rest(d, ['status', 'state', 'type', 'action', 'severity', 'reason'])} /><p className="font-mono text-[11px] text-muted-foreground">rev {r.revision}</p>
+      </ConsoleEvent>
+    );
+  }
+  if (collection === 'audit') {
+    return (
+      <ConsoleEvent title={r.title} time={r.createdAt ? new Date(r.createdAt).toLocaleString() : null}>
+        <span className="sr-only" data-testid={`text-title-${r.id}`}>{r.title}</span><Kv items={rest(d, [])} />
+      </ConsoleEvent>
+    );
+  }
+  return <><Title r={r} /><Kv items={summarize(d)} /><Meta r={r} /></>;
 }
 
 export function CollectionPanel({ guildId, collection, label, resources }: { guildId: string; collection: string; label: string; resources?: PlatformResources }) {
@@ -135,8 +212,8 @@ export function CollectionPanel({ guildId, collection, label, resources }: { gui
   const actions = RECORD_ACTIONS[collection] ?? [];
 
   return (
-    <section className="rounded-xl border bg-card" data-testid={`panel-collection-${collection}`}>
-      <div className="flex items-center gap-3 border-b p-4">
+    <section className="panel" data-testid={`panel-collection-${collection}`}>
+      <div className="panel-head">
         <div className="min-w-0">
           <h2 className="font-display text-xl font-bold">{label}</h2>
           {c && <p className="text-xs text-muted-foreground">{c.description}</p>}
@@ -149,16 +226,10 @@ export function CollectionPanel({ guildId, collection, label, resources }: { gui
         {q.isError && <ErrorState message={errMsg(q.error)} onRetry={() => q.refetch()} />}
         {c && c.records.length === 0 && <EmptyState title={`No ${label.toLowerCase()} yet`} body={c.editable ? 'Create the first record with the New button.' : 'Nothing has been recorded for this server so far.'} />}
         {c && c.records.length > 0 && (
-          <ul className="divide-y rounded-md border">
+          <ul className="space-y-2">
             {c.records.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-start gap-3 p-3" data-testid={`row-${collection}-${r.id}`}>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate" data-testid={`text-title-${r.id}`}>{r.title}</p>
-                  <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                    {summarize(r.data).map(([k, v]) => <span key={k}><span className="font-mono">{k}</span> {String(v)}</span>)}
-                  </p>
-                  <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">rev {r.revision}{r.createdAt ? ` · ${new Date(r.createdAt).toLocaleString()}` : ''}</p>
-                </div>
+              <li key={r.id} className="tile tile-hover group flex flex-wrap items-start gap-3 p-3.5" data-testid={`row-${collection}-${r.id}`}>
+                <div className="min-w-0 flex-1"><RecordBody collection={collection} r={r} /></div>
                 <div className="flex flex-wrap gap-1">
                   {actions.map((a) => <Button key={a.action} size="sm" variant="outline" onClick={() => setAct({ rec: r, ...a })} data-testid={`button-${a.action}-${r.id}`}>{a.label}</Button>)}
                   {c.editable && <Button size="icon" variant="ghost" onClick={() => openEdit(r)} data-testid={`button-edit-${r.id}`}><Pencil className="h-4 w-4" /></Button>}

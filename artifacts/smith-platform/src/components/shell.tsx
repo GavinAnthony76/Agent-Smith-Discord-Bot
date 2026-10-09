@@ -1,26 +1,28 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { AlertTriangle, Inbox, LogOut, Menu, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { SmithMark } from '@/components/branding';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetPlatformSessionQueryKey, useGetPlatformSession, useListPlatformGuilds, useLogoutPlatform } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MODULE_ICONS } from '@/components/module-icons';
 import { FALLBACK_LOGIN, NAV_GROUPS, PAGES, guildIconUrl, initials, useCsrf, userAvatarUrl } from '@/lib/platform';
 
 export function Logo({ dark }: { dark?: boolean }) {
   return (
-    <span className="flex items-center gap-2">
-      <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground"><ShieldCheck className="h-4 w-4" /></span>
-      <span className={`font-display text-lg font-bold ${dark ? 'text-sidebar-accent-foreground' : ''}`}>Agent Smith</span>
+    <span className="flex items-center gap-2.5">
+      <SmithMark size={30} />
+      <span className={`font-display text-lg font-bold tracking-tight ${dark ? 'text-white' : ''}`}>Agent <span className="grad-text">Smith</span></span>
     </span>
   );
 }
 
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed bg-card/60 p-10 text-center" data-testid="empty-state">
-      <Inbox className="mx-auto h-8 w-8 text-muted-foreground" />
+    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-10 text-center" data-testid="empty-state">
+      <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/5"><Inbox className="h-5 w-5 text-cyan-300/80" /></span>
       <p className="mt-3 font-display text-lg font-bold">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{body}</p>
       {action && <div className="mt-4">{action}</div>}
@@ -30,14 +32,14 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
 
 export function ErrorState({ message, onRetry }: { message?: string; onRetry?: () => void }) {
   return (
-    <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-6" data-testid="error-state" role="alert">
+    <div className="rounded-2xl border border-red-400/30 bg-red-500/[0.07] p-5" data-testid="error-state" role="alert">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+        <AlertTriangle className="mt-0.5 h-5 w-5 text-red-300" />
         <div className="flex-1">
           <p className="font-medium">Could not load this data</p>
           <p className="text-sm text-muted-foreground">{message || 'The platform API did not respond as expected.'}</p>
         </div>
-        {onRetry && <Button size="sm" variant="outline" onClick={onRetry} data-testid="button-retry"><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>}
+        {onRetry && <Button size="sm" variant="outline" onClick={onRetry} data-testid="button-retry"><RefreshCw className="mr-1 h-3.5 w-3.5" />Retry</Button>}
       </div>
     </div>
   );
@@ -46,20 +48,25 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
 export function RuntimeBadge({ status }: { status: string }) {
   const s = status.toLowerCase();
   const tone = /foundation|inactive|unsupported|planned|disabled/.test(s)
-    ? 'bg-amber-100 text-amber-900 border-amber-300'
+    ? 'chip-warn'
     : /live|active|running|ok|protected|existing/.test(s)
-      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-      : 'bg-muted text-muted-foreground';
-  return <span data-testid="badge-runtime" className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[11px] ${tone}`}>{status}</span>;
+      ? 'chip-live'
+      : '';
+  return <span data-testid="badge-runtime" className={`chip ${tone}`}>{status}</span>;
+}
+
+/** Labelled readout used in the sidebar and header; shows only what is reported. */
+export function StatusPill({ label, value, tone = '' }: { label: string; value: string; tone?: string }) {
+  return <span className={`chip ${tone}`}><span className="opacity-60">{label}</span>{value}</span>;
 }
 
 export function LoginCard({ loginUrl, oauthConfigured = true, title = 'Sign in with Discord' }: { loginUrl?: string; oauthConfigured?: boolean; title?: string }) {
   return (
-    <div className="mx-auto max-w-md rounded-xl border bg-card p-8 shadow-sm rise" data-testid="login-card">
+    <div className="glass mx-auto max-w-md p-8 rise" data-testid="login-card">
       <Logo />
       <h1 className="mt-6 font-display text-3xl font-bold">{title}</h1>
       <p className="mt-2 text-sm text-muted-foreground">Smith only shows servers where you hold management permission and the bot is installed. Authentication happens on Discord; Smith never sees your password.</p>
-      {!oauthConfigured && <p className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" data-testid="text-oauth-unconfigured">Discord OAuth is not configured on this deployment yet, so sign-in is unavailable.</p>}
+      {!oauthConfigured && <p className="notice notice-warn mt-4" data-testid="text-oauth-unconfigured">Discord OAuth is not configured on this deployment yet, so sign-in is unavailable.</p>}
       <Button asChild={oauthConfigured} disabled={!oauthConfigured} className="mt-6 w-full" size="lg" data-testid="button-discord-login">
         {oauthConfigured ? <a href={loginUrl || FALLBACK_LOGIN} target={window.self !== window.top ? '_blank' : undefined} rel="noopener noreferrer">Continue with Discord</a> : <span>Continue with Discord</span>}
       </Button>
@@ -72,7 +79,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   const links = [['/premium', 'Plans'], ['/docs', 'Docs'], ['/status', 'Status']];
   return (
     <div className="min-h-[100dvh] flex flex-col">
-      <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07111F]/70 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
           <Link href="/" data-testid="link-home"><Logo /></Link>
           <nav className="hidden sm:flex gap-5 text-sm">
@@ -86,9 +93,9 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t">
+      <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground">
-          <span>Agent Smith</span>
+          <span className="font-display text-foreground">Agent Smith</span>
           <Link href="/privacy" data-testid="link-privacy">Privacy</Link>
           <Link href="/terms" data-testid="link-terms">Terms</Link>
           <Link href="/docs" data-testid="link-docs">Docs</Link>
@@ -130,14 +137,14 @@ export function UserMenu() {
     <div className="flex items-center gap-2">
       <Avatar className="h-7 w-7"><AvatarImage src={userAvatarUrl(u.id, u.avatar) ?? undefined} /><AvatarFallback>{initials(u.username)}</AvatarFallback></Avatar>
       <span className="hidden sm:block text-sm" data-testid="text-username">{u.username}</span>
-      <Button size="sm" variant="ghost" onClick={() => logout.mutate()} disabled={logout.isPending} data-testid="button-logout"><LogOut className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Log out</span></Button>
+      <Button size="sm" variant="ghost" aria-label="Log out" onClick={() => logout.mutate()} disabled={logout.isPending} data-testid="button-logout"><LogOut className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Log out</span></Button>
     </div>
   );
 }
 
 export function DashboardTopbar({ children }: { children?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
+    <header className="topbar sticky top-3 z-20 mx-3 mt-3 flex h-14 items-center gap-3 px-4">
       <Link href="/dashboard" data-testid="link-dashboard-home"><Logo /></Link>
       <div className="ml-auto flex items-center gap-3">{children}<UserMenu /></div>
     </header>
@@ -146,50 +153,89 @@ export function DashboardTopbar({ children }: { children?: ReactNode }) {
 
 export function GuildShell({ guildId, page, children }: { guildId: string; page: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const rail = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const targets = () => Array.from(rail.current?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled)') ?? []);
+    targets().find(el => el.offsetParent !== null)?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); }
+      if (event.key !== 'Tab') return;
+      const visible = targets().filter(el => el.offsetParent !== null);
+      const first = visible[0], last = visible.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', keydown);
+    return () => { document.removeEventListener('keydown', keydown); previous?.focus(); };
+  }, [open]);
   const guilds = useListPlatformGuilds();
   const guild = guilds.data?.find((g) => g.id === guildId);
   const session = useGetPlatformSession().data;
+  const env = session?.runtimeMode ? String(session.runtimeMode) : 'not reported';
+  // Presentation only: a REST-only preview's botOnline=false is not a Gateway verdict.
+  const gateway = session?.botConnected === true ? 'connected' :
+    session?.botConnected === false ? 'disconnected' :
+      session?.runtimeMode === 'production' && session?.botOnline ? 'connected' : 'unverified';
   const nav = (
-    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+    <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Server modules">
       {NAV_GROUPS.map((g) => (
         <div key={g.label}>
-          <p className="px-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-sidebar-foreground/50">{g.label}</p>
-          {g.pages.map((p) => (
-            <Link key={p} href={`/dashboard/${guildId}/${p}`} onClick={() => setOpen(false)} data-testid={`link-nav-${p}`}
-              className={`block rounded-md px-2 py-1.5 text-sm transition-colors ${p === page ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/60'}`}>
-              {PAGES[p].title}
-            </Link>
-          ))}
+          <p className="eyebrow px-3 pb-1.5">{g.label}</p>
+          <div className="space-y-0.5">
+            {g.pages.map((p) => {
+              const Icon = MODULE_ICONS[p] ?? ShieldCheck;
+              return (
+              <Link key={p} href={`/dashboard/${guildId}/${p}`} onClick={() => setOpen(false)} data-testid={`link-nav-${p}`}
+                aria-current={p === page ? 'page' : undefined} className="nav-item">
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {PAGES[p].title}
+              </Link>
+              );
+            })}
+          </div>
         </div>
       ))}
     </nav>
   );
   return (
-    <div className="min-h-[100dvh] md:grid md:grid-cols-[15rem_1fr]">
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform md:static md:w-auto md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-14 items-center justify-between px-4 border-b border-sidebar-border">
+    <div className="shell-bg lg:grid lg:grid-cols-[16rem_1fr] lg:gap-4 lg:p-3">
+      <aside ref={rail} aria-label="Server navigation" className={`rail fixed inset-y-2 left-2 z-40 flex w-64 flex-col transition-transform lg:sticky lg:top-3 lg:inset-auto lg:h-[calc(100dvh-1.5rem)] lg:w-auto lg:translate-x-0 ${open ? 'translate-x-0 visible' : '-translate-x-[110%] invisible lg:visible'}`}>
+        <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
           <Link href="/dashboard" data-testid="link-switch-server"><Logo dark /></Link>
-          <button className="md:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
+          <button className="grid h-10 w-10 place-items-center rounded-full lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
         </div>
-        <Link href="/dashboard" className="mx-3 mt-3 flex items-center gap-2 rounded-md border border-sidebar-border p-2 hover:bg-sidebar-accent/60" data-testid="link-guild-switcher">
-          <Avatar className="h-8 w-8"><AvatarImage src={guild ? guildIconUrl(guild.id, guild.icon) ?? undefined : undefined} /><AvatarFallback className="bg-sidebar-accent text-xs">{initials(guild?.name ?? 'S')}</AvatarFallback></Avatar>
-          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-sidebar-accent-foreground" data-testid="text-guild-name">{guild?.name ?? 'Server'}</span><span className="block text-[11px] text-sidebar-foreground/60">Switch server</span></span>
+        <Link href="/dashboard" className="tile tile-hover mx-3 mt-3 flex items-center gap-2 p-2" data-testid="link-guild-switcher">
+          <Avatar className="h-9 w-9 rounded-xl"><AvatarImage src={guild ? guildIconUrl(guild.id, guild.icon) ?? undefined : undefined} /><AvatarFallback className="rounded-xl bg-white/10 text-xs">{initials(guild?.name ?? 'S')}</AvatarFallback></Avatar>
+          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-white" data-testid="text-guild-name">{guild?.name ?? 'Server'}</span><span className="block text-[11px] text-muted-foreground">Switch server</span></span>
         </Link>
         {nav}
-        <div className="border-t border-sidebar-border p-3 text-xs flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${session?.botOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-          <span data-testid="text-bot-status">{session?.botOnline ? 'Bot online' : 'Bot offline'}</span>
+        <div className="space-y-1.5 border-t border-white/10 p-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${gateway === 'connected' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span data-testid="text-bot-status">Gateway {gateway}</span>
+          </div>
+          <p className="text-muted-foreground">Database: not reported</p>
+          <p className="text-muted-foreground">Environment: {env}</p>
         </div>
       </aside>
-      {open && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setOpen(false)} />}
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
-          <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setOpen(true)} data-testid="button-open-menu"><Menu className="h-5 w-5" /></Button>
-          <p className="font-display text-lg font-bold">{PAGES[page].title}</p>
-          <div className="ml-auto"><UserMenu /></div>
+        <header className="topbar sticky top-3 z-20 m-3 flex h-14 items-center gap-3 px-3 lg:m-0">
+          <Button size="icon" variant="ghost" className="h-11 w-11 lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)} data-testid="button-open-menu"><Menu className="h-5 w-5" /></Button>
+          <div className="min-w-0">
+            <p className="eyebrow">Control room</p>
+            <p className="truncate font-display text-lg font-bold leading-tight">{PAGES[page].title}</p>
+          </div>
+          <div className="ml-auto hidden items-center gap-2 sm:flex">
+            <StatusPill label="Env" value={env} tone="chip-info" />
+            <StatusPill label="Gateway" value={gateway} tone={gateway === 'connected' ? 'chip-live' : 'chip-warn'} />
+          </div>
+          <div className="ml-auto sm:ml-2"><UserMenu /></div>
         </header>
-        <main className="mx-auto max-w-5xl p-4 md:p-8 space-y-6 rise">
-          <p className="text-sm text-muted-foreground -mt-2">{PAGES[page].blurb}</p>
+        <main className="mx-auto max-w-5xl space-y-6 p-3 lg:px-2 lg:py-6 rise">
+          <p className="-mt-2 text-sm text-muted-foreground">{PAGES[page].blurb}</p>
           {children}
         </main>
       </div>

@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap");
 @import 'tailwindcss';
+@import './styles/smith.css';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 
@@ -79,62 +80,62 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 42 30% 96%;
+  --background: 214 66% 8%;
 
-  --foreground: 222 30% 13%;
+  --foreground: 213 38% 97%;
 
-  --border: 38 18% 85%;
+  --border: 215 30% 20%;
 
-  --card: 42 35% 98.5%;
+  --card: 217 46% 11%;
 
-  --card-foreground: 222 30% 13%;
+  --card-foreground: 213 38% 97%;
 
-  --card-border: 38 18% 87%;
+  --card-border: 215 30% 20%;
 
-  --sidebar: 222 30% 11%;
+  --sidebar: 214 60% 9%;
 
-  --sidebar-foreground: 40 20% 82%;
+  --sidebar-foreground: 215 25% 75%;
 
-  --sidebar-border: 222 20% 20%;
+  --sidebar-border: 215 30% 18%;
 
-  --sidebar-primary: 168 55% 52%;
+  --sidebar-primary: 187 100% 50%;
 
   --sidebar-primary-foreground: 222 30% 10%;
 
-  --sidebar-accent: 222 22% 18%;
+  --sidebar-accent: 215 40% 16%;
 
-  --sidebar-accent-foreground: 40 30% 95%;
+  --sidebar-accent-foreground: 213 38% 97%;
 
-  --sidebar-ring: 168 55% 52%;
+  --sidebar-ring: 187 100% 50%;
 
-  --popover: 42 35% 99%;
+  --popover: 217 46% 11%;
 
-  --popover-foreground: 222 30% 13%;
+  --popover-foreground: 213 38% 97%;
 
-  --popover-border: 38 18% 86%;
+  --popover-border: 215 30% 22%;
 
-  --primary: 172 62% 24%;
+  --primary: 187 100% 50%;
 
-  --primary-foreground: 42 40% 97%;
+  --primary-foreground: 214 66% 8%;
 
-  --secondary: 40 22% 90%;
+  --secondary: 215 35% 18%;
 
-  --secondary-foreground: 222 30% 18%;
+  --secondary-foreground: 213 38% 95%;
 
-  --muted: 40 20% 92%;
+  --muted: 215 35% 15%;
 
-  --muted-foreground: 222 10% 38%;
+  --muted-foreground: 215 20% 65%;
 
-  --accent: 38 60% 88%;
+  --accent: 262 60% 22%;
 
-  --accent-foreground: 222 30% 15%;
+  --accent-foreground: 213 38% 97%;
 
   --destructive: 8 70% 45%;
 
   --destructive-foreground: 0 0% 98%;
 
-  --input: 38 15% 74%;
-  --ring: 172 62% 30%;
+  --input: 215 28% 28%;
+  --ring: 187 100% 50%;
   --chart-1: 172 62% 30%;
   --chart-2: 36 85% 50%;
   --chart-3: 8 65% 50%;
@@ -144,7 +145,7 @@
   --app-font-sans: 'DM Sans', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'Spline Sans Mono', monospace;
-  --radius: 0.5rem; /* 8px */
+  --radius: 0.75rem; /* 8px */
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-sm:

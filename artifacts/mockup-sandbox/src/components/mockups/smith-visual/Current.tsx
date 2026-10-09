@@ -1,0 +1,3 @@
+import './_group.css';
+import {GuildShell,EmptyState} from './_current-shell';
+export function Current(){return <div onClick={e=>{if((e.target as HTMLElement).closest('a'))e.preventDefault();}}><GuildShell guildId="visual-demo" page="overview"><p className="text-xs text-muted-foreground">DESIGN PREVIEW · SAMPLE CONTENT · NOT LIVE DATA</p><section className="rounded-xl border bg-card"><h2 className="border-b p-4 font-display text-xl font-bold">Modules</h2><EmptyState title="No live data in this preview" body="This is the extracted application shell. Navigation and account actions are disabled here." /></section></GuildShell></div>;}

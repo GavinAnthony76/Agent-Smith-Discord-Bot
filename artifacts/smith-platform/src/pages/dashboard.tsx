@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { AuthGate, DashboardTopbar, EmptyState, ErrorState, GuildShell, RuntimeBadge } from '@/components/shell';
 import { CollectionPanel, ModulePanel } from '@/components/panels';
 import { FieldInput } from '@/components/fields';
+import { ConsoleEvent, MetricCard, ModuleCard } from '@/components/smith-ui';
+import { SmithMark } from '@/components/branding';
 import { MODULE_LABELS, PAGES, errMsg, guildIconUrl, initials, useCsrf } from '@/lib/platform';
 import NotFound from '@/pages/not-found';
 
@@ -44,7 +46,7 @@ function SelectorBody() {
     <main className="mx-auto max-w-4xl p-4 md:p-10 rise">
       <div className="flex flex-wrap items-end gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold">Your servers</h1>
+          <p className="eyebrow">Server selector</p><h1 className="font-display text-3xl font-bold">Your servers</h1>
           <p className="text-sm text-muted-foreground">Only servers where you can manage Smith and the bot is installed appear here.</p>
         </div>
         {session?.installUrl && <Button asChild variant="outline" className="ml-auto" data-testid="button-install-bot"><a href={session.installUrl} target="_blank" rel="noreferrer"><Plus className="h-4 w-4 mr-1" />Add Smith to a server</a></Button>}
@@ -55,7 +57,7 @@ function SelectorBody() {
         {q.data?.length === 0 && <EmptyState title="No authorized servers with Smith installed" body="Invite Smith to a server you manage, then return here. If Smith is already there, you may lack the Manage Server permission or an assigned dashboard role." action={session?.installUrl ? <Button asChild><a href={session.installUrl} target="_blank" rel="noreferrer">Invite Smith</a></Button> : undefined} />}
         {q.data?.map((g) => (
           <Link key={g.id} href={`/dashboard/${g.id}/${g.setupComplete ? 'overview' : 'setup'}`} data-testid={`card-guild-${g.id}`}
-            className="flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/50">
+            className="flex items-center gap-4 panel tile-hover p-4">
             <Avatar className="h-12 w-12 rounded-lg"><AvatarImage src={guildIconUrl(g.id, g.icon) ?? undefined} /><AvatarFallback className="rounded-lg">{initials(g.name)}</AvatarFallback></Avatar>
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-lg font-bold">{g.name}</p>
@@ -94,15 +96,15 @@ function ModuleAndCollections({ guildId, page }: { guildId: string; page: string
   const mod = def.module ? mods.data?.find((m) => m.moduleKey === def.module) : undefined;
   return (
     <div className="space-y-6">
-      {page === 'onboarding' && <div className="rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-900" data-testid="notice-hallowed-core">The protected Hallowed Core onboarding remains the existing flow. Changes here configure the platform module and do not replace it.</div>}
+      {page === 'onboarding' && <div className="notice notice-info" data-testid="notice-hallowed-core">The protected Hallowed Core onboarding remains the existing flow. Changes here configure the platform module and do not replace it.</div>}
       {page === 'roles' && res.data && (
-        <section className="rounded-xl border bg-card p-4" data-testid="panel-role-flags">
+        <section className="panel p-4" data-testid="panel-role-flags">
           <h2 className="font-display text-xl font-bold">Role flags</h2>
           <p className="text-xs text-muted-foreground mb-3">Protected roles cannot be self-assigned or rewarded. Rewardable roles can be granted by rewards and leveling.</p>
           {res.data.roles.length === 0 ? <p className="text-sm text-muted-foreground">No roles were reported for this server.</p> : (
             <div className="flex flex-wrap gap-1.5">
               {res.data.roles.map((r) => (
-                <span key={r.id} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs" data-testid={`role-flag-${r.id}`}>
+                <span key={r.id} className="chip" data-testid={`role-flag-${r.id}`}>
                   @{r.name}
                   {r.protected && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">protected</Badge>}
                   {r.rewardable && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">rewardable</Badge>}
@@ -142,17 +144,28 @@ function OverviewPage({ guildId }: { guildId: string }) {
   const o = q.data;
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="secondary" data-testid="badge-bot">{o.runtimeStatus?.botConnected === true ? 'Production Gateway online' :
-          o.runtimeStatus?.botConnected === false ? 'Production Gateway disconnected' : 'Production Gateway unverified'}</Badge>
-        <Badge variant="outline">{o.guild.policy === 'hallowed-core' ? 'Legacy/custom runtime' :
-          o.runtimeStatus?.runtimeActive ? 'Guild adapter active' : 'Guild adapter inactive'}</Badge>
-        <Badge variant="outline">{o.runtimeStatus?.platformEnabled ? 'Platform allowlisted' : 'Platform not activated'}</Badge>
-        <Badge variant="outline" data-testid="badge-plan">Plan: {o.plan}</Badge>
-        {!o.guild.setupComplete && <Button asChild size="sm" data-testid="button-run-setup"><Link href={`/dashboard/${guildId}/setup`}>Finish server setup</Link></Button>}
-      </div>
+      <section className="panel overflow-hidden" data-testid="group-system-core">
+        <div className="relative h-24 overflow-hidden"><SmithMark banner className="h-24 opacity-80" /><div className="absolute inset-0 bg-gradient-to-t from-[#0E1726] to-transparent" /></div>
+        <div className="space-y-3 p-4">
+          <p className="eyebrow">System core</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" data-testid="badge-bot">{o.runtimeStatus?.botConnected === true ? 'Production Gateway online' :
+              o.runtimeStatus?.botConnected === false ? 'Production Gateway disconnected' : 'Production Gateway unverified'}</Badge>
+            <Badge variant="outline">{o.guild.policy === 'hallowed-core' ? 'Legacy/custom runtime' :
+              o.runtimeStatus?.runtimeActive ? 'Guild adapter active' : 'Guild adapter inactive'}</Badge>
+            <Badge variant="outline">{o.runtimeStatus?.platformEnabled ? 'Platform allowlisted' : 'Platform not activated'}</Badge>
+            <Badge variant="outline" data-testid="badge-plan">Plan: {o.plan}</Badge>
+            {!o.guild.setupComplete && <Button asChild size="sm" data-testid="button-run-setup"><Link href={`/dashboard/${guildId}/setup`}>Finish server setup</Link></Button>}
+          </div>
+          <dl className="grid gap-2 text-sm sm:grid-cols-4">
+            {[['Environment', mode ?? 'not reported'], ['Database', 'not reported'], ['Workers', 'not reported'], ['Server', o.guild.name ?? guildId]].map(([k, v]) => (
+              <div key={k} className="tile p-3"><dt className="eyebrow">{k}</dt><dd className="mt-1 truncate">{String(v)}</dd></div>
+            ))}
+          </dl>
+        </div>
+      </section>
       {o.guild.policy !== 'hallowed-core' && (
-        <div className="rounded-xl border bg-card p-4 text-sm space-y-2" data-testid="guild-runtime-status">
+        <div className="panel p-4 text-sm space-y-2" data-testid="guild-runtime-status">
           <p>Configuration: {o.runtimeStatus?.guildConfigured ? 'Present in production' : 'Production presence not confirmed'}</p>
           <p>Last heartbeat: {o.runtimeStatus?.lastSeenAt ? new Date(o.runtimeStatus.lastSeenAt).toLocaleString() : 'Not observed'}</p>
           <p>Analytics activation: {o.runtimeStatus?.activatedAt ? new Date(o.runtimeStatus.activatedAt).toLocaleString() : 'Not activated'}</p>
@@ -176,39 +189,35 @@ function OverviewPage({ guildId }: { guildId: string }) {
       )}
       {o.warnings.length > 0 && (
         <div className="space-y-2" data-testid="list-warnings">
-          {o.warnings.map((w, i) => <div key={i} className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />{w}</div>)}
+          {o.warnings.map((w, i) => <div key={i} className="flex gap-2 notice notice-warn"><AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />{w}</div>)}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {o.metrics.map((m) => (
-          <div key={m.key} className="rounded-xl border bg-card p-4" data-testid={`metric-${m.key}`}>
-            <p className="text-xs text-muted-foreground">{m.label}</p>
-            {m.value === null
-              ? <><p className="mt-1 font-display text-xl text-muted-foreground">Unavailable</p><p className="text-xs text-muted-foreground">{m.reason ?? 'No data source reported.'}</p></>
-              : <p className="mt-1 font-display text-3xl font-bold">{m.value.toLocaleString()}</p>}
-          </div>
-        ))}
-        {o.metrics.length === 0 && <div className="sm:col-span-3"><EmptyState title="No metrics reported" body="The platform returned no metrics for this server." /></div>}
-      </div>
-      <section className="rounded-xl border bg-card">
-        <h2 className="border-b p-4 font-display text-xl font-bold">Modules</h2>
-        {mods.isLoading && <Skeleton className="m-4 h-32" />}
-        {mods.isError && <div className="p-4"><ErrorState message={errMsg(mods.error)} onRetry={() => mods.refetch()} /></div>}
-        <ul className="divide-y">
-          {mods.data?.map((m) => (
-            <li key={m.moduleKey} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm" data-testid={`module-row-${m.moduleKey}`}>
-              <Link href={`/dashboard/${guildId}/${m.moduleKey}`} className="font-medium hover:underline">{MODULE_LABELS[m.moduleKey] ?? m.moduleKey}</Link>
-              <Badge variant={m.enabled ? 'secondary' : 'outline'}>{m.enabled ? 'Enabled' : 'Disabled'}</Badge>
-              <span className="ml-auto"><RuntimeBadge status={m.runtimeStatus} /></span>
-            </li>
-          ))}
+      {(() => {
+        const prog = /xp|level|achiev|reward|econom|credit|coin|shop/i;
+        const progression = o.metrics.filter((m) => prog.test(`${m.key} ${m.label}`));
+        const community = o.metrics.filter((m) => !prog.test(`${m.key} ${m.label}`));
+        const grid = (list: typeof o.metrics) => list.map((m) => <MetricCard key={m.key} testId={`metric-${m.key}`} label={m.label} value={m.value} reason={m.reason} />);
+        return (
+          <>
+            {o.metrics.length === 0 && <EmptyState title="No metrics reported" body="The platform returned no metrics for this server." />}
+            {community.length > 0 && <section data-testid="group-community"><p className="eyebrow mb-2">Community</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{grid(community)}</div></section>}
+            {progression.length > 0 && <section data-testid="group-progression"><p className="eyebrow mb-2">Progression</p><div className="grid gap-3 sm:grid-cols-2">{grid(progression)}</div></section>}
+          </>
+        );
+      })()}
+      <section data-testid="group-modules">
+        <p className="eyebrow mb-2">Modules</p>
+        {mods.isLoading && <Skeleton className="h-32" />}
+        {mods.isError && <ErrorState message={errMsg(mods.error)} onRetry={() => mods.refetch()} />}
+        <ul className="grid gap-3 md:grid-cols-2">
+          {mods.data?.map((m) => <ModuleCard key={m.moduleKey} guildId={guildId} moduleKey={m.moduleKey} enabled={m.enabled} runtimeStatus={m.runtimeStatus} />)}
         </ul>
       </section>
-      <section className="rounded-xl border bg-card">
-        <h2 className="border-b p-4 font-display text-xl font-bold">Recent actions</h2>
+      <section className="panel">
+        <h2 className="panel-head font-display text-xl font-bold">Recent actions</h2>
         {o.recentActions.length === 0
           ? <div className="p-4"><EmptyState title="No recent actions" body="Moderation and configuration actions will be listed here." /></div>
-          : <ul className="divide-y">{o.recentActions.map((r) => <li key={r.id} className="flex justify-between gap-3 px-4 py-2.5 text-sm" data-testid={`action-${r.id}`}><span>{r.title}</span><span className="font-mono text-xs text-muted-foreground">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</span></li>)}</ul>}
+          : <ul className="space-y-3 p-4">{o.recentActions.map((r) => <li key={r.id} data-testid={`action-${r.id}`}><ConsoleEvent title={r.title} time={r.createdAt ? new Date(r.createdAt).toLocaleString() : null} /></li>)}</ul>}
       </section>
     </div>
   );
@@ -261,7 +270,7 @@ function SetupWizard({ guildId }: { guildId: string }) {
   const field = (type: 'channel') => ({ key: 'c', label: '', type });
 
   if (done) return (
-    <div className="rounded-xl border bg-card p-8 text-center" data-testid="setup-done">
+    <div className="panel p-8 text-center" data-testid="setup-done">
       <Check className="mx-auto h-8 w-8 text-primary" />
       <h2 className="mt-3 font-display text-2xl font-bold">Setup saved</h2>
       <Button asChild className="mt-4"><Link href={`/dashboard/${guildId}/overview`}>Go to overview</Link></Button>
@@ -269,8 +278,8 @@ function SetupWizard({ guildId }: { guildId: string }) {
   );
 
   return (
-    <div className="rounded-xl border bg-card" data-testid="setup-wizard">
-      <div className="flex gap-1 p-4 border-b">{STEPS.map((_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-primary' : 'bg-muted'}`} />)}</div>
+    <div className="panel" data-testid="setup-wizard">
+      <div className="flex gap-1 p-4 border-b border-white/10">{STEPS.map((_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-gradient-to-r from-cyan-300 to-violet-500' : 'bg-white/10'}`} />)}</div>
       <div className="p-5 space-y-4 min-h-64">
         <p className="font-mono text-xs text-muted-foreground" data-testid="text-step-count">Step {step + 1} of {STEPS.length}</p>
         <h2 className="font-display text-2xl font-bold">{s.title}</h2>
@@ -287,7 +296,7 @@ function SetupWizard({ guildId }: { guildId: string }) {
             {s.modules.map((k) => {
               const m = mods.data?.find((x) => x.moduleKey === k);
               return (
-                <li key={k} className="flex items-start gap-3 rounded-md border p-3">
+                <li key={k} className="tile flex items-start gap-3 p-3">
                   <Checkbox checked={selected.includes(k)} onCheckedChange={() => toggle(k)} disabled={!m} id={`mod-${k}`} data-testid={`checkbox-module-${k}`} />
                   <label htmlFor={`mod-${k}`} className="flex-1 text-sm"><span className="font-medium">{MODULE_LABELS[k]}</span>{!m && <span className="ml-2 text-xs text-muted-foreground">not reported</span>}</label>
                   {m && <RuntimeBadge status={m.runtimeStatus} />}
@@ -306,7 +315,7 @@ function SetupWizard({ guildId }: { guildId: string }) {
           </dl>
         )}
       </div>
-      <div className="flex justify-between border-t p-4">
+      <div className="flex justify-between border-t border-white/10 p-4">
         <Button variant="ghost" disabled={step === 0} onClick={() => setStep(step - 1)} data-testid="button-setup-back"><ChevronLeft className="h-4 w-4" />Back</Button>
         {step < STEPS.length - 1
           ? <Button onClick={() => setStep(step + 1)} data-testid="button-setup-next">Next<ChevronRight className="h-4 w-4" /></Button>

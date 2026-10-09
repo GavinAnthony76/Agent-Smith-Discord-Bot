@@ -4,6 +4,7 @@ import { useHealthCheck, useGetPlatformSession } from '@workspace/api-client-rea
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoginCard, PublicLayout, RuntimeBadge } from '@/components/shell';
+import { SmithMark } from '@/components/branding';
 import { MODULE_LABELS } from '@/lib/platform';
 
 function Prose({ title, children }: { title: string; children: ReactNode }) {
@@ -24,23 +25,23 @@ export function Landing() {
       <section className="mx-auto max-w-6xl px-4 py-16 md:py-28 grid gap-10 md:grid-cols-[1.3fr_1fr] items-center">
         <div className="rise">
           <p className="font-mono text-xs uppercase tracking-widest text-primary">Discord operations platform · private testing preview</p>
-          <h1 className="mt-3 font-display text-5xl md:text-7xl font-bold leading-[0.95]">One careful bot. Every server you run.</h1>
+          <h1 className="mt-3 font-display text-5xl md:text-7xl font-bold leading-[0.95]">One careful bot. <span className="grad-text">Every server you run.</span></h1>
           <p className="mt-5 max-w-xl text-muted-foreground">Agent Smith is being upgraded from a guarded community bot to a server-scoped operations dashboard. Authentication, configuration and audit foundations are built; several module adapters remain in development. Multi-server operation is not yet verified. Install only into an approved test server.</p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Button asChild size="lg" data-testid="button-hero-dashboard"><Link href="/dashboard">Open dashboard</Link></Button>
             {s?.installUrl && <Button asChild size="lg" variant="outline" data-testid="button-hero-invite"><a href={s.installUrl} target="_blank" rel="noreferrer">Add to Discord</a></Button>}
           </div>
         </div>
-        <div className="rounded-xl border bg-sidebar p-5 font-mono text-xs text-sidebar-foreground shadow-lg" aria-hidden>
-          <p className="text-sidebar-primary">smith@platform</p>
-          {['Sign in with Discord OAuth', 'Servers filtered by your permissions', 'CSRF-protected writes', 'Revision-checked saves', 'Audit entry on every change'].map((l, i) => <p key={l} className="mt-2">{String(i + 1).padStart(2, '0')}  {l}</p>)}
-        </div>
+        <div className="glass overflow-hidden text-sm text-slate-300"><SmithMark banner className="h-28" /><div className="p-5">
+          <p className="eyebrow">Guarded by design</p>
+          {['Sign in with Discord OAuth', 'Servers filtered by your permissions', 'CSRF-protected writes', 'Revision-checked saves', 'Audit entry on every change'].map((l) => <p key={l} className="mt-3 flex items-center gap-3"><span className="h-1 w-1 shrink-0 rounded-full bg-cyan-300" aria-hidden="true" />{l}</p>)}
+        </div></div>
       </section>
-      <section className="border-t bg-card/50">
+      <section className="border-y border-white/10 bg-white/[0.02]">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <h2 className="font-display text-3xl font-bold">Modules</h2>
           <p className="mt-1 text-sm text-muted-foreground">Each module reports its real runtime status in the dashboard. Features still being built are labeled foundation or inactive.</p>
-          <div className="mt-6 flex flex-wrap gap-2">{Object.values(MODULE_LABELS).map((l) => <span key={l} className="rounded-full border bg-background px-3 py-1 text-sm">{l}</span>)}</div>
+          <div className="mt-6 flex flex-wrap gap-2">{Object.values(MODULE_LABELS).map((l) => <span key={l} className="chip text-sm">{l}</span>)}</div>
         </div>
       </section>
       <section className="mx-auto max-w-6xl px-4 py-14 grid gap-8 md:grid-cols-2">
@@ -75,10 +76,10 @@ export function Premium() {
     <PublicLayout>
       <div className="mx-auto max-w-5xl px-4 py-14 rise">
         <h1 className="font-display text-4xl font-bold">Plans</h1>
-        <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" data-testid="text-billing-notice">Billing is not enabled. There is no checkout, and no final prices have been set. The tiers below are proposed and their contents may change.</p>
+        <p className="mt-3 notice notice-warn" data-testid="text-billing-notice">Billing is not enabled. There is no checkout, and no final prices have been set. The tiers below are proposed and their contents may change.</p>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {PLANS.map((p, i) => (
-            <div key={p.name} className={`rounded-xl border bg-card p-5 ${i === 1 ? 'md:-translate-y-2 border-primary' : ''}`} data-testid={`plan-${p.name.toLowerCase()}`}>
+            <div key={p.name} className={`panel p-5 ${i === 1 ? 'md:-translate-y-2 border-cyan-300/40' : ''}`} data-testid={`plan-${p.name.toLowerCase()}`}>
               <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Proposed</p>
               <h2 className="font-display text-2xl font-bold">{p.name}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{p.body}</p>
@@ -105,7 +106,7 @@ export function Docs() {
           <li>Fine-tune each module from the sidebar.</li>
         </ol>
         <h2 className="mt-8 font-display text-2xl font-bold">Modules</h2>
-        <ul className="mt-3 divide-y rounded-md border text-sm">
+        <ul className="mt-3 divide-y divide-white/10 rounded-2xl border text-sm">
           {Object.entries(MODULE_LABELS).map(([k, l]) => <li key={k} className="flex justify-between p-3"><span>{l}</span><span className="font-mono text-xs text-muted-foreground">{k}</span></li>)}
         </ul>
         <h2 className="mt-8 font-display text-2xl font-bold">Runtime status</h2>
@@ -131,7 +132,7 @@ export function Status() {
       <div className="mx-auto max-w-xl px-4 py-12 rise">
         <h1 className="font-display text-4xl font-bold">Status</h1>
         <p className="mt-2 text-sm text-muted-foreground">Live readings from this deployment, taken when the page loaded.</p>
-        <ul className="mt-6 divide-y rounded-xl border bg-card">
+        <ul className="mt-6 divide-y divide-white/10 panel">
           {row('API', h.isLoading ? 'load' : h.isError ? 'bad' : 'ok', h.isError ? 'unreachable' : 'active')}
           {row('Discord bot', s.isLoading ? 'load' : 'ok', s.data?.botConnected === true ? 'Production Gateway connected' :
             s.data?.botConnected === false ? 'Production Gateway disconnected' : 'Production Gateway unverified; preview is REST-only')}

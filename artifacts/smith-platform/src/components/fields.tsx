@@ -37,12 +37,12 @@ function MultiChoice({ choices, value, onChange, disabled, prefix, id }: { choic
   }
   const toggle = (cid: string) => onChange(value.includes(cid) ? value.filter((v) => v !== cid) : [...value, cid]);
   return (
-    <div className="max-h-44 overflow-y-auto rounded-md border bg-background p-2 flex flex-wrap gap-1.5" data-testid={`multi-${id}`}>
+    <div className="max-h-44 overflow-y-auto rounded-xl border bg-black/20 p-2 flex flex-wrap gap-1.5" data-testid={`multi-${id}`}>
       {choices.map((c) => {
         const on = value.includes(c.id);
         return (
           <button key={c.id} type="button" disabled={disabled} onClick={() => toggle(c.id)} data-testid={`chip-${id}-${c.id}`}
-            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${on ? 'bg-primary text-primary-foreground border-primary' : 'bg-card hover:bg-muted'} disabled:opacity-50`}>
+            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${on ? 'border-cyan-300/60 bg-cyan-300/15 text-cyan-100' : 'bg-white/5 hover:bg-white/10'} disabled:opacity-50`}>
             {prefix === 'Channel' ? '#' : '@'}{c.name}
             {c.protected ? ' · protected' : ''}{c.rewardable ? ' · rewardable' : ''}
           </button>
@@ -63,12 +63,12 @@ export function StepsEditor({ value, onChange, disabled }: { value: Step[]; onCh
     onChange(n);
   };
   return (
-    <div className="space-y-2" data-testid="steps-editor">
-      {value.length === 0 && <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No steps yet. Add the first step below.</p>}
+    <div className="space-y-3" data-testid="steps-editor">
+      {value.length === 0 && <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No steps yet. Add the first step below.</p>}
       {value.map((s, i) => (
-        <div key={i} className="rounded-md border bg-background p-3 space-y-2" data-testid={`step-${i}`}>
+        <div key={i} className="step-node tile ml-0 space-y-2 p-3" data-testid={`step-${i}`}>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-muted-foreground w-5">{i + 1}</span>
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-cyan-300/40 bg-cyan-300/10 font-mono text-xs text-cyan-200">{i + 1}</span>
             <Select value={s.type} onValueChange={(v) => upd(i, { type: v })} disabled={disabled}>
               <SelectTrigger className="h-8 w-48 font-mono text-xs" data-testid={`select-step-type-${i}`}><SelectValue /></SelectTrigger>
               <SelectContent>{STEP_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>

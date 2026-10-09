@@ -21,3 +21,4 @@
 - [Standard onboarding](standard-onboarding-boundaries.md) — cosmetic self-assignment only; questions are transient, private access and human-reviewed extras need separate policy.
 - [Acceptance fingerprint evidence](acceptance-fingerprint-evidence.md) — keep failed full hashes visible; later normalization cannot replace a missing historical semantic baseline.
 - [Permission validation timing](permission-validation-timing.md) — separate slow fresh-authority reads from the short authorized-write window; never relax safeguards to fix timing.
+- [Agent Smith visual intent](agent-smith-visual-intent.md) — premium control room, selective glass and restrained lighting; preserve supplied branding and verify portable asset paths.
