@@ -1,12 +1,34 @@
 # Controlled two-server live acceptance — 2026-10-08
 
-**Latest checkpoint (2026-10-09 02:56 UTC): the Owner fixed #welcome permissions;
-Smith's effective Send Messages is verified allowed without Administrator.
-All three disposable resources and the ticket panel are confirmed. A checked
-Owner-only recovery fix for the held onboarding entry is prepared, not published.
-Overall acceptance remains BLOCKED; the pre-release full member fingerprint
-discrepancy remains unresolved. Earlier checkpoints below are historical.**
-Earlier sections below are historical observations, not current deployment status.**
+**Latest checkpoint (2026-10-09 03:03 UTC): Owner preparation succeeded.
+Production confirms the guarded onboarding recovery and completed publication,
+plus the enabled 5-credit shop item. All disposable preparation records are
+confirmed. Production Gateway and all eight supported adapters remain active.
+Genuine member module tests have no recorded evidence yet, and the pre-release
+full member fingerprint discrepancy remains unresolved. Overall acceptance
+remains BLOCKED. Earlier sections below are historical observations.**
+
+## Owner preparation success — 2026-10-09 03:03 UTC
+
+The Owner reported running the test successfully. Read-only production inspection
+confirms preparation completed, rather than relying solely on the UI result:
+
+- One guarded `onboarding_pre_dispatch_retry` audit at `03:02:31.130Z`.
+- Matching onboarding dispatch intent and completed result, followed by confirmed
+  `entry:3` at `03:02:33.714Z`, with a saved message ID in LMOC `#welcome`.
+- One enabled disposable shop token priced at 5 credits, created at `03:02:34.319Z`.
+- The original role, category, panel channel and published ticket panel remain
+  confirmed; the preparation query found no duplicate resources or shop item.
+- Production readiness is connected/ready. The runtime reports all eight supported
+  adapters active with heartbeat `03:03:14.141Z`.
+
+No onboarding-progress or other member-result collection was returned. Activity,
+XP-event and ticket counts are each zero. These observations establish successful
+preparation, not completion of the eight genuine-human module tests. Live Discord
+message visibility and channel ACLs were not independently reread in this checkpoint.
+Hallowed Core was not mutated or rechecked; its outstanding comparison remains
+unresolved. No publishing, workflow restart, Gateway login or production write
+was performed by the agent. Only this acceptance document was updated.
 
 ## Verdict: BLOCKED — live acceptance has not passed
 
