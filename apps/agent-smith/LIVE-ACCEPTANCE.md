@@ -1,10 +1,11 @@
 # Controlled two-server live acceptance — 2026-10-08
 
-**Latest checkpoint (2026-10-09 02:25 UTC): Owner preparation partially succeeded,
-then panel creation was denied before dispatch due to an expired validation
-scope. A checked code fix is prepared, not published; the panel stays held.
-Overall acceptance remains BLOCKED. The pre-release full member fingerprint
-does not match. See the post-release checkpoint and 403 investigation at the end.
+**Latest checkpoint (2026-10-09 02:41 UTC): the timing fix is published and the
+panel retry succeeded. All three disposable resources and the ticket panel are
+confirmed. Onboarding publication is now held because Smith cannot send in the
+configured LMOC #welcome channel. Overall acceptance remains BLOCKED; the
+pre-release full member fingerprint discrepancy remains unresolved. Earlier
+checkpoints below are historical.**
 Earlier sections below are historical observations, not current deployment status.**
 
 ## Verdict: BLOCKED — live acceptance has not passed
@@ -560,3 +561,55 @@ may click preparation once; the held panel is retryable only if its pre-dispatch
 denial proof remains valid and fresh checks pass. Leave the confirmed role/category
 unchanged. Overall acceptance stays **BLOCKED** until preparation and genuine
 member tests have succeeded.
+
+---
+
+## Screenshot follow-up: panel recovered, onboarding permission denial
+
+Production logs show the next release starting at `2026-10-09T02:36:20Z`, with
+the single configured artifact worker ready at `02:37:06.312Z`.
+
+The real Owner preparation performed a proven pre-dispatch retry at
+`02:40:12.017Z`. Panel dispatch intent at `02:40:12.615Z` was followed by a
+completed result at `02:40:12.845Z` and a confirmed resource record at
+`02:40:12.873Z`. The role/category were reused. The cosmetic-role configuration
+is now revision 2 with one allowlisted role. Ticket-panel configuration and
+publication are confirmed, including a real published panel message.
+
+The uploaded screenshot shows the **previous** scope-expiry error. The latest
+denial is instead `onboarding_entry_not_authorized` at `02:41:08.877Z`.
+`onboarding-entry/entry:3` is held at `creating`; no onboarding dispatch
+intent/result is recorded. Shop preparation has not been reached.
+
+Read-only Discord metadata requests (GET only, no Client construction, login,
+Gateway or mutation) verified the configured entry channel:
+
+- Guild: LMOC TEST only, `1555330318569971743`.
+- Channel `1555336735301308506`, name `welcome`, type 0 (text).
+- Owner screening `pending=false`; Owner and bot role IDs match the fresh role list.
+- Owner effective permissions: View Channel, Read Message History and Send
+  Messages all allowed.
+- Smith effective permissions: View Channel and Read Message History allowed;
+  **Send Messages denied**.
+
+The entry-publication guard is therefore correctly refusing the send. This is
+not another proven scope-timing failure and its authorization check must not be
+weakened. Welcome delivery in this same channel also needs Send Messages.
+
+The narrow required permission change is an explicit **Smith bot member**
+overwrite allowing Send Messages in LMOC TEST's #welcome, while retaining
+everyone/member read-only restrictions and without granting Administrator.
+No permission was changed by the agent. Owner action/choice is needed before
+continuing. The held onboarding reservation still requires safe, audited
+pre-dispatch recovery; fixing permissions alone does not justify blind retries,
+deleting the reservation or incrementing configuration merely to bypass it.
+
+Observed Owner-flow Discord writes since the earlier failure: panel-channel
+creation and ticket-panel publication. Observed production writes include its
+recovery/dispatch audits, confirmed resource/publication records, ticket-panel
+configuration, cosmetic role allowlist update and the denied onboarding
+reservation/audit. These are preparation, not genuine member module test results.
+
+No new application code, publishing, production mutation or Hallowed Core change
+was performed by the agent in this screenshot investigation. No second Gateway
+was started. Overall verdict stays **BLOCKED**.
