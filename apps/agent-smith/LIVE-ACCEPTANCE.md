@@ -1,12 +1,38 @@
 # Controlled two-server live acceptance — 2026-10-08
 
-**Latest checkpoint (2026-10-09 03:03 UTC): Owner preparation succeeded.
-Production confirms the guarded onboarding recovery and completed publication,
-plus the enabled 5-credit shop item. All disposable preparation records are
-confirmed. Production Gateway and all eight supported adapters remain active.
-Genuine member module tests have no recorded evidence yet, and the pre-release
-full member fingerprint discrepancy remains unresolved. Overall acceptance
+**Latest member evidence (2026-10-09 21:50 UTC): the reported non-owner
+onboarding completion is verified in production. All six configured steps,
+rules consent and a successful cosmetic-role selection are recorded. This
+passes the normal completion path, not the entire two-server acceptance suite.
+Resume/replay testing, other module journeys and the pre-release full member
+fingerprint discrepancy remain unverified or unresolved. Overall acceptance
 remains BLOCKED. Earlier sections below are historical observations.**
+
+## Non-owner onboarding completion verified — 2026-10-09 21:50 UTC
+
+Read-only production database inspection confirms the reported LMOC TEST run:
+
+- One completed member progress record has `step=6`, progress revision 7 and
+  `completedAt=2026-10-09T21:50:55.027Z`.
+- Progress configuration revision 3 matches the current onboarding module
+  revision 3, which has exactly six configured steps.
+- Six ordered `onboarding.step` audits record MESSAGE, RULES_ACCEPTANCE,
+  ROLE_SELECT, ROLE_SELECT, BUTTON and FINALIZATION. The final audit explicitly
+  records `completed=true`.
+- The saved rules consent belongs to configuration revision 3 and was accepted
+  at `2026-10-09T21:50:42.417Z`.
+- The completing actor matches the progress record creator and differs from
+  the Owner actor in the guarded preparation recovery.
+- Matching role-selection dispatch intent/result audits record a completed
+  `role.self-select` operation; the progress record saves the selected
+  disposable cosmetic role. This is delivery/audit evidence, not a fresh
+  inspection of the member's current Discord roles.
+
+**Result: PASS for the genuine member's six-step normal completion path.**
+Persisted state is confirmed; interrupted-session resume, replay refusal,
+role removal and the remaining module journeys were not exercised by this
+read-only verification. No synthetic interaction, Discord write, database
+mutation, deployment or Gateway restart was performed.
 
 ## Owner preparation success — 2026-10-09 03:03 UTC
 
