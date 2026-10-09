@@ -1,8 +1,10 @@
 # Controlled two-server live acceptance — 2026-10-08
 
-**Latest checkpoint (2026-10-09 02:12–02:15 UTC): published prerequisites PASS;
-overall acceptance BLOCKED on real Owner/member actions. The pre-release full
-member fingerprint does not match. See the post-release checkpoint at the end.
+**Latest checkpoint (2026-10-09 02:25 UTC): Owner preparation partially succeeded,
+then panel creation was denied before dispatch due to an expired validation
+scope. A checked code fix is prepared, not published; the panel stays held.
+Overall acceptance remains BLOCKED. The pre-release full member fingerprint
+does not match. See the post-release checkpoint and 403 investigation at the end.
 Earlier sections below are historical observations, not current deployment status.**
 
 ## Verdict: BLOCKED — live acceptance has not passed
@@ -496,3 +498,65 @@ Published prerequisites **PASS**. Overall live two-server acceptance remains
 Hallowed Core equivalence evidence. It is **not PASSED** and is not marked complete.
 No code fix or repeat publishing is currently justified by the measured
 prerequisite results.
+
+---
+
+## Owner preparation 403 investigation — 2026-10-09 02:19–02:25 UTC
+
+The Owner reported a 403 after clicking the production preparation action.
+Read-only production inspection establishes **partial success**, not an empty
+or fully prepared setup:
+
+| Resource | Observed state | Timestamp UTC |
+|---|---|---|
+| Disposable cosmetic role | Confirmed creation | `02:19:11.246` |
+| Private disposable category | Confirmed creation | `02:19:12.740` |
+| Public panel channel | Reservation held at `creating`; no dispatch intent/result | Reserved `02:19:13.297` |
+| Panel denied operation | `security.denied`, `acceptance_resource_scope_expired` | `02:19:53.835` |
+
+The denial audit identifies `operation=acceptance.resource.create`,
+`resourceKind=panel`, `source=owner-confirmed-lmoc-test`. Existing privileged
+pipeline ordering records this denial before the dispatch intent and before
+calling Discord. Slow fresh permission/Owner verification exhausted the original
+30-second scope; it was not a demonstrated Owner/permission failure.
+
+The newly prepared fix:
+
+- Separates the bounded authority-validation budget from the 30-second dispatch
+  window, which now begins only after successful fresh authorization.
+- Rechecks expiry before invoking the Discord transport after intent storage.
+- Keeps exact route/body/client, one-use, Owner, hierarchy, no-Administrator and
+  LMOC-only checks intact.
+- On a **new explicit Owner-confirmed preparation only**, permits one atomic
+  recovery of a same-Owner reservation with an audited scope-expiry denial and
+  **no** dispatch intent/result since that reservation. It records the recovery
+  and advances the reservation boundary so concurrent/old proofs cannot reclaim it.
+- Holds all unknown outcomes, recorded intents/results, ownership mismatches and
+  untracked matching live resources. It never deletes or blindly replays them.
+- Reuses and freshly verifies the already-confirmed role/category rather than
+  creating duplicates.
+
+No production row was manually reset or changed by the agent. The Owner's action
+made the two resource writes and corresponding audit/reservation writes in LMOC
+only. Ticket-panel/onboarding/shop preparation was not reached. No live supported
+module test has passed from these preparation writes.
+
+Verification: **446 regression tests passed, 6 skipped; all 11 isolated PostgreSQL
+checks passed.** New checks cover slow-but-bounded authorization, validation-budget
+expiry with zero Discord writes, unknown-outcome holds, and real PostgreSQL
+concurrent recovery with exactly one winner, foreign/changed-Owner refusal and
+dispatch-intent refusal. Static transport/permission/AI checks and whitespace
+validation passed. The preview API rebuilt/restarted cleanly; the public status
+page rendered without browser errors. No real Owner browser test was fabricated.
+
+Production `/api/readyz` remained connected/ready at `02:25:33Z`. The workspace
+bot workflow remains not started; the existing production Gateway was not restarted.
+Hallowed Core was not mutated by the agent; its earlier full-fingerprint
+discrepancy remains unresolved.
+
+**Next action:** this actual code fix requires a user-controlled publish. No schema
+changes or data overwrite are part of it. After the fix is published, the Owner
+may click preparation once; the held panel is retryable only if its pre-dispatch
+denial proof remains valid and fresh checks pass. Leave the confirmed role/category
+unchanged. Overall acceptance stays **BLOCKED** until preparation and genuine
+member tests have succeeded.

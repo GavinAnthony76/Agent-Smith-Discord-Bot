@@ -20,3 +20,4 @@
 - [Ticket rollout safety](ticket-rollout-safety.md) — preserve opening-time access and private evidence; uncertain writes require review, never automatic retries or cleanup.
 - [Standard onboarding](standard-onboarding-boundaries.md) — cosmetic self-assignment only; questions are transient, private access and human-reviewed extras need separate policy.
 - [Acceptance fingerprint evidence](acceptance-fingerprint-evidence.md) — keep failed full hashes visible; later normalization cannot replace a missing historical semantic baseline.
+- [Permission validation timing](permission-validation-timing.md) — separate slow fresh-authority reads from the short authorized-write window; never relax safeguards to fix timing.

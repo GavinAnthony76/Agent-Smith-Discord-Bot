@@ -5,7 +5,7 @@ import { createAcceptanceResources, executeAcceptanceResourceWrite } from '../sr
 import { LMOC_TEST_ID } from '../src/platform/activation.js';
 import { TARGET_GUILD_ID } from '../src/config.js';
 
-function fixture(unknown = false) {
+function fixture(unknown = false, onAuthority = () => {}) {
   const rows=new Map(),writes=[];
   const bot={id:'90000000000000001',permissions:new PermissionsBitField(P.ManageRoles|P.ManageChannels),
     roles:{highest:{position:10}}};
@@ -13,6 +13,7 @@ function fixture(unknown = false) {
     roles:{cache:new Map()},channels:{cache:new Map()}};
   const authority={guild,role:'OWNER',actor:{id:guild.ownerId}};
   const pool={query:async(sql,params)=>{
+    if(sql.startsWith('WITH claimed AS'))return{rows:[],rowCount:0};
     if(sql.startsWith('SELECT data')) return{rows:rows.has(params[1])?[{data:rows.get(params[1])}]:[],rowCount:0};
     if(sql.startsWith('INSERT INTO platform_records')){
       if(rows.has(params[1]))return{rows:[],rowCount:0};
@@ -35,7 +36,7 @@ function fixture(unknown = false) {
       return value;
     });
   const service=createAcceptanceResources({client,pool,
-    discord:{authority:async()=>authority,memberRolesVerified:()=>true},
+    discord:{authority:async()=>{onAuthority();return authority;},memberRolesVerified:()=>true},
     env:{PLATFORM_ENABLED_GUILD_IDS:LMOC_TEST_ID},requireActive:async()=>{}});
   return{service,authority,writes,rows,guild};
 }
@@ -62,6 +63,23 @@ test('uncertain resource creation remains held, never auto-replayed or deleted',
   assert.equal(f.rows.get('resource-role').status,'creating');
   await assert.rejects(f.service.prepare(f.authority),/uncertain_inspect_before_retry/);
   assert.equal(f.writes.length,1);
+});
+
+test('slow fresh-authority reads do not expire the later bounded dispatch window', async t=>{
+  let now=Date.now();
+  t.mock.method(Date,'now',()=>now);
+  const f=fixture(false,()=>{now+=40000;});
+  await f.service.prepare(f.authority);
+  assert.equal(f.writes.length,3);
+});
+
+test('reads exceeding the validation budget deny before any Discord write', async t=>{
+  let now=Date.now(),calls=0;
+  t.mock.method(Date,'now',()=>now);
+  const f=fixture(false,()=>{if(++calls===2)now+=121000;});
+  await assert.rejects(f.service.prepare(f.authority),/scope_expired/);
+  assert.equal(f.writes.length,0);
+  assert.equal(f.rows.get('resource-role').status,'creating');
 });
 
 test('Hallowed Core and non-Owner resource requests are refused before writes', async()=>{

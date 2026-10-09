@@ -22,6 +22,7 @@ import { createEconomyService } from '../src/platform/economy.js';
 import { LMOC_TEST_ID, createActivation, STANDARD_MODULES } from '../src/platform/activation.js';
 import { loadReviewedConfiguration, configurationDigest, seedReviewedConfiguration } from '../src/platform/release-config.js';
 import { TARGET_GUILD_ID } from '../src/config.js';
+import { claimPreDispatchRetry } from '../src/platform/acceptance-resources.js';
 
 if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1' || !process.env.DATABASE_URL) {
   throw new Error('Development database required; production/default fallback is prohibited.');
@@ -396,6 +397,27 @@ await test('platform HTTP and PostgreSQL isolation', async t => {
       await activation.stop();
       assert.equal(await activation.active(LMOC_TEST_ID),false);
       assert.equal(JSON.stringify((await pool.query('SELECT * FROM platform_guilds WHERE guild_id=$1',[TARGET_GUILD_ID])).rows),coreBefore);
+    });
+    await t.test('explicit Owner recovery claims only a proven pre-dispatch denial and only once', async () => {
+      const authority={guild:{id:LMOC_TEST_ID},role:'OWNER',actor:{id:userA}};
+      await pool.query(`INSERT INTO platform_records(guild_id,collection,record_id,title,data,created_by,created_at)
+        VALUES($1,'acceptance-resource','resource-panel','Disposable panel','{"status":"creating"}',$2,now()-interval '1 minute')`,
+      [LMOC_TEST_ID,userA]);
+      assert.equal((await claimPreDispatchRetry(pool,authority,'panel')).rowCount,0);
+      const denial={status:'denied',operation:'acceptance.resource.create',source:'owner-confirmed-lmoc-test',
+        resourceKind:'panel',reason:'acceptance_resource_scope_expired'};
+      await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state,created_at)
+        VALUES($1,$2,'security.denied','settings',$3,now()-interval '5 seconds')`,[LMOC_TEST_ID,userA,denial]);
+      assert.equal((await claimPreDispatchRetry(pool,{...authority,actor:{id:userB}},'panel')).rowCount,0);
+      await assert.rejects(claimPreDispatchRetry(pool,{...authority,guild:{id:TARGET_GUILD_ID}},'panel'),/lmoc_owner_only/);
+      const claims=await Promise.all([claimPreDispatchRetry(pool,authority,'panel'),claimPreDispatchRetry(pool,authority,'panel')]);
+      assert.equal(claims.reduce((total,result)=>total+result.rowCount,0),1);
+      assert.equal((await claimPreDispatchRetry(pool,authority,'panel')).rowCount,0);
+      await pool.query(`UPDATE platform_records SET data='{"status":"creating"}' WHERE guild_id=$1
+        AND collection='acceptance-resource' AND record_id='resource-panel'`,[LMOC_TEST_ID]);
+      await pool.query(`INSERT INTO platform_audit(guild_id,actor_user_id,action,module,after_state)
+        VALUES($1,$2,'security.intent','settings',$3)`,[LMOC_TEST_ID,userA,{operation:'acceptance.resource.create',resourceKind:'panel'}]);
+      assert.equal((await claimPreDispatchRetry(pool,authority,'panel')).rowCount,0);
     });
     await t.test('OAuth ciphertext and schema remain isolated, logout invalidates the session', async () => {
       const row = (await pool.query('SELECT token_ciphertext FROM platform_sessions')).rows[0];
