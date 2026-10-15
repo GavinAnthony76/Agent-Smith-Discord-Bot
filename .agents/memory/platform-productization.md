@@ -20,7 +20,10 @@ have both been verified. Web configuration must never bypass existing guarded
 Discord mutation services.
 
 The former controlled LMOC acceptance authorization was revoked on 2026-10-15.
-Hallowed Core is now Smith's sole active production guild. LMOC configuration
+Hallowed Core is now Smith's sole currently authorized production guild, not a
+permanent single-server restriction. Preserve the generic multi-server
+architecture so future guilds can be explicitly added, configured and activated.
+LMOC configuration
 is historical/reference-only; preserve the six-step handoff and all historical
 records, without heartbeats, activation, command registration, analytics
 collection or Discord writes. Any later test guild requires explicit Owner

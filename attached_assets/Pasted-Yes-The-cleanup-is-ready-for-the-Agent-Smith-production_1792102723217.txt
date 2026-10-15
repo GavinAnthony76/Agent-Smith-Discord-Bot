@@ -1,0 +1,44 @@
+Yes. The cleanup is ready for the **Agent Smith production republish**.
+
+One nuance matters: “Hallowed Core as the sole authorized production guild” should mean **the only currently authorized production guild**, not that Agent Smith has lost his multi-server capability. Future servers should still be able to be explicitly added, configured, and activated later.
+
+Give the Agent Smith agent this:
+
+> **Owner approval granted to republish the existing Agent Smith production VM with the verified LMOC-runtime-removal changes.**
+>
+> Preserve Agent Smith’s generic multi-server architecture for future explicitly authorized guilds.
+>
+> Hallowed Core is the **sole currently authorized production guild**, not a permanent single-server restriction.
+>
+> Publish the already verified candidate only. Do not merge unrelated feature work before deployment.
+>
+> After republishing, perform a read-only production verification:
+>
+> 1. Confirm the existing production Gateway reconnects normally.
+> 2. Confirm Hallowed Core remains active and healthy.
+> 3. Confirm LMOC is no longer in the active production guild allowlist.
+> 4. Confirm LMOC receives no:
+>    - runtime activation
+>    - heartbeat updates
+>    - analytics collection
+>    - command registration
+>    - Discord writes
+>    - configuration imports
+> 5. Confirm the historical LMOC six-step onboarding evidence, release bundle, audits, and archived runtime records remain preserved.
+> 6. Confirm the runtime archival audit entry records the prior LMOC state without deleting history.
+> 7. Confirm Hallowed Core member/access/progression data remains unchanged.
+> 8. Confirm no second Gateway was started.
+>
+> Then report:
+>
+> - active production guilds
+> - Hallowed Core health
+> - LMOC archived/inactive status
+> - LMOC heartbeat stopped
+> - historical evidence preserved
+> - multi-server capability still available for future explicitly authorized guilds
+> - production verification results
+>
+> Do not automatically authorize any new guild.
+
+That closes the temporary Smith→LMOC test relationship cleanly while keeping Smith capable of joining other servers later.
