@@ -232,3 +232,17 @@ mtime_ms = 1791487997361
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/c3747efd-4b90-4d4e-b53c-31541dec31ac/c2a1696e-3ea3-4ddf-aa6d-91cc947ea712"
 storage_version_token = "1791488561486743"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "t-tWPvNwvtm2hfkeSNsCw"
+uri = "file://docs/lmoc-six-step-onboarding-handoff.md"
+type = "text"
+title = "LMOC Six-Step Onboarding — Forensic Handoff"
+description = "Read-only source and configuration provenance, six-step reconstruction, schema and audit evidence, historical source references, and MannaBot port-review boundaries."
+logical_id = "edb51753-e05b-47ef-b830-0f9d4150c744"
+content_hash = "sha256:091727e2c693f130d6d858132c3d03f063d8cd2b943e9b36604c1c53f0c14a74"
+size = 34666
+mtime_ms = 1792101608907
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/edb51753-e05b-47ef-b830-0f9d4150c744/d6613c63-d707-4831-bda4-5b6d5938c0a9"
+storage_version_token = "1792101650510844"
+content_type = "text/markdown"

@@ -1,0 +1,183 @@
+READ-ONLY FORENSIC HANDOFF TASK.
+
+We need to identify the exact source/configuration that produced the successful
+six-step LMOC TEST onboarding flow recorded on October 9.
+
+DO NOT MODIFY Hallowed Core.
+DO NOT MODIFY LMOC TEST.
+DO NOT START ANOTHER GATEWAY.
+DO NOT MIGRATE OR PUBLISH ANYTHING.
+
+This is source/provenance analysis only.
+
+Known acceptance evidence:
+
+- LMOC TEST onboarding configuration revision 3
+- progress revision 7
+- six ordered onboarding.step records
+- step types included:
+  MESSAGE
+  RULES_ACCEPTANCE
+  ROLE_SELECT
+  ROLE_SELECT
+  BUTTON
+  FINALIZATION
+- final record completed=true
+- successful non-owner completion occurred October 9
+- platform implementation included platform_runtime_state
+- this implementation appears different from the current standalone MannaBot
+  onboarding state machine
+
+Identify exactly what produced this flow.
+
+==================================================
+1. LOCATE SOURCE
+==================================================
+
+Search the Agent Smith/platform source for:
+
+onboarding.step
+platform_runtime_state
+progress revision
+configuration revision
+MESSAGE
+RULES_ACCEPTANCE
+ROLE_SELECT
+FINALIZATION
+completed=true
+
+Identify:
+
+- source files
+- services
+- handlers
+- schema/migrations
+- configuration records
+- platform adapters
+- runtime dispatchers
+
+==================================================
+2. IDENTIFY IMPLEMENTATION OWNERSHIP
+==================================================
+
+Determine whether the six-step flow belongs to:
+
+A. Agent Smith core
+B. multi-server platform layer
+C. LMOC TEST adapter
+D. website-side configuration
+E. another component
+
+Do not speculate.
+
+Provide evidence.
+
+==================================================
+3. RECONSTRUCT THE SIX STEPS
+==================================================
+
+Document each actual user-facing step:
+
+Step 1
+Step 2
+Step 3
+Step 4
+Step 5
+Step 6
+
+For each provide:
+
+- configured type
+- displayed purpose
+- handler/source file
+- persisted state
+- audit event
+- Discord component type
+- completion condition
+
+Do not include secrets or unnecessary member data.
+
+==================================================
+4. DATABASE MODEL
+==================================================
+
+Document the exact tables/columns involved in:
+
+- onboarding configuration
+- configuration revisions
+- member progress
+- progress revisions
+- rules consent
+- role selections
+- completion
+- audit history
+- platform runtime state
+
+Provide schema names and relationships.
+
+Do NOT export production credentials.
+
+==================================================
+5. CONFIGURATION
+==================================================
+
+Recover the redacted LMOC TEST onboarding configuration revision 3 if still
+available.
+
+Return a safe configuration representation containing:
+
+- step order
+- step type
+- labels/purpose
+- role references by logical name where possible
+- required/optional state
+- transition behavior
+
+Do not include secrets.
+
+==================================================
+6. SOURCE VERSION
+==================================================
+
+Identify:
+
+- commit/checkpoint if available
+- deployment/build version if available
+- date
+- whether source still exists in current repository
+- whether later work replaced or removed it
+
+==================================================
+7. HANDOFF PACKAGE
+==================================================
+
+Create:
+
+docs/lmoc-six-step-onboarding-handoff.md
+
+It must contain:
+
+1. implementation owner
+2. six-step flow
+3. source files
+4. database/schema dependencies
+5. configuration model
+6. audit model
+7. runtime dependencies
+8. safe migration/port considerations
+9. what is LMOC-specific
+10. what must NOT be copied into standalone MannaBot
+
+==================================================
+8. VERDICT
+==================================================
+
+Return one:
+
+SOURCE IDENTIFIED — SAFE FOR MANNABOT REVIEW
+
+or
+
+SOURCE NOT FULLY IDENTIFIED
+
+Do not change any runtime.
