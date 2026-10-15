@@ -25,6 +25,9 @@ export function validateReleaseConfiguration(bundle) {
 
 /** Explicit, digest-approved configuration seed; no DDL, history, identities or legacy data. */
 export async function seedReviewedConfiguration({ pool, client, env = process.env, bundle }) {
+  // Preserved for provenance, not as an executable startup promotion path.
+  if (!platformAllowlist(env).has(LMOC_TEST_ID))
+    return { skipped: true, reason: 'historical_reference_only' };
   if (!env.PLATFORM_LMOC_CONFIG_SHA256) return { skipped: true };
   bundle = validateReleaseConfiguration(bundle);
   const digest = configurationDigest(bundle);

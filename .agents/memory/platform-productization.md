@@ -19,18 +19,21 @@ support cannot be declared complete until Hallowed Core and a separate test guil
 have both been verified. Web configuration must never bypass existing guarded
 Discord mutation services.
 
-During controlled two-server acceptance, runtime changes are authorized only in
-LMOC TEST. Do not modify Hallowed Core or activate modules labeled “runtime
-activation pending.”
+The former controlled LMOC acceptance authorization was revoked on 2026-10-15.
+Hallowed Core is now Smith's sole active production guild. LMOC configuration
+is historical/reference-only; preserve the six-step handoff and all historical
+records, without heartbeats, activation, command registration, analytics
+collection or Discord writes. Any later test guild requires explicit Owner
+authorization.
 
-**Why:** The Owner explicitly limited the live acceptance rollout to the eight
-already-supported modules and required Hallowed Core to remain unchanged.
+**Why:** The Owner explicitly retired LMOC and required safe archival without
+deleting evidence or LMOC TEST records.
 
-**How to apply:** Verify the production process can load the test guild's saved
-configuration before creating live test events. Enforce the test-guild activation
-boundary, including startup adoption and analytics, rather than assuming a shared
-runtime's defaults are harmless. Keep one Gateway; never use the read-only
-preview client as a second mutation authority.
+**How to apply:** Do not use prior installation, reviewed release bundles,
+environment allowlists or historical acceptance instructions as new activation
+approval. Preserve Hallowed Core's native runtime and the single-Gateway rule.
+Distinguish prepared source/settings from the still-running published version;
+publishing remains Owner-controlled.
 
 Configuration promotion must be limited to LMOC TEST's reviewed configuration,
 never a copy/reset of the development database or member/consent/activity history.
@@ -69,15 +72,15 @@ Production web actions reuse the already-connected, guarded bot and its actual
 guild services; do not make the read-only preview client privileged just to enable
 an unsupported dashboard control.
 
-The Owner authorized the private **LMOC TEST** guild, `1555330318569971743`, for
-separate-guild verification. The existing Hallowed Core must not be used as its
-own second-guild proof.
+The Owner formerly authorized LMOC TEST for separate-guild verification; that
+authorization is revoked. Hallowed Core must not be used as its own second-guild
+proof.
 
-**Why:** The Owner supplied the separate server ID and installed the existing
-Smith application there after the production server was initially supplied.
+**Why:** The Owner explicitly changed the production scope to Hallowed Core only.
 
-**How to apply:** Recheck the actual server identity and permissions before
-controlled tests. Installation alone does not prove unpublished adapters work.
+**How to apply:** Seek explicit authorization for a future test guild before
+controlled multi-server verification. Historical LMOC evidence is for review,
+not permission to resume tests.
 
 Preserve all current production access while implementing the entitlement
 architecture. Do not infer or enforce final FREE/PRO/ULTIMATE restrictions from

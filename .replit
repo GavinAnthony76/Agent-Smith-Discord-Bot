@@ -90,8 +90,7 @@ SMITH_ENABLE_MESSAGE_CONTENT = "true"
 
 [userenv.production]
 PLATFORM_PUBLIC_URL = "https://agent-smith-discord-bot.replit.app"
-PLATFORM_ENABLED_GUILD_IDS = "1555330318569971743"
-PLATFORM_LMOC_CONFIG_SHA256 = "7142c8ad7810cbf5a58c69d7c52a4ba15227871bf4d4bec2f6255a1291e71ce4"
+PLATFORM_ENABLED_GUILD_IDS = ""
 
 [userenv.development]
 PLATFORM_RUNTIME_STATUS_URL = "https://agent-smith-discord-bot.replit.app/api/platform/runtime-status"

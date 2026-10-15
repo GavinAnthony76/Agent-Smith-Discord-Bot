@@ -1,17 +1,18 @@
 import { TARGET_GUILD_ID } from '../config.js';
 import { PlatformError } from './catalog.js';
+import { standardGuildAuthorized, historicalGuild } from './guild-lifecycle.js';
+export { LMOC_TEST_ID } from './guild-lifecycle.js';
 
 export const STANDARD_MODULES = Object.freeze([
   'welcome', 'onboarding', 'roles', 'leveling', 'economy', 'tickets', 'ai', 'analytics',
 ]);
-export const LMOC_TEST_ID = '1555330318569971743';
 
 export function platformAllowlist(env = process.env) {
   const ids = (env.PLATFORM_ENABLED_GUILD_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean);
   if (ids.some(id => !/^\d{17,20}$/.test(id) || id === TARGET_GUILD_ID)) {
     throw new PlatformError('invalid_standard_platform_allowlist', 503);
   }
-  const allowed = new Set(ids);
+  const allowed = new Set(ids.filter(standardGuildAuthorized));
   return Object.freeze({ has: id => id !== TARGET_GUILD_ID && allowed.has(id), ids: Object.freeze([...allowed]) });
 }
 
@@ -50,6 +51,8 @@ export function createActivation({ pool, client, env = process.env }) {
     const platformEnabled = allowed.has(guildId);
     const base = { botConnected: client.isReady(), platformEnabled,
       guildConfigured: false, runtimeActive: false, lastSeenAt: null, activatedAt: null, moduleStates: {} };
+    if (historicalGuild(guildId)) return { ...base, botConnected: false,
+      lifecycle: 'historical-reference-only' };
     if (!platformEnabled) return base;
     try {
       const row = (await pool.query(`SELECT g.setup_complete,s.* FROM platform_guilds g
@@ -79,6 +82,9 @@ export function previewRuntimeStatus(env = process.env) {
     const unknown = { botConnected: null, platformEnabled: false, guildConfigured: false,
       runtimeActive: false, lastSeenAt: null, activatedAt: null, moduleStates: {}, statusUnavailable: true };
     if (!/^\d{17,20}$/.test(guildId)) return unknown;
+    // Do not relay an older deployment's active status for an archived guild.
+    if (historicalGuild(guildId)) return { ...unknown, botConnected: false,
+      statusUnavailable: false, lifecycle: 'historical-reference-only' };
     if (!env.PLATFORM_RUNTIME_STATUS_URL) return unknown;
     try {
       const url = new URL(env.PLATFORM_RUNTIME_STATUS_URL);

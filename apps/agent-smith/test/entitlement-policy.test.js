@@ -102,7 +102,8 @@ test('basic XP does not require paid milestones; enabled saves validate projecte
 test('application admin, guild permission and local test scope are all required for assignment', () => {
   const authority={guild:{id:guildId},actor:{id:userId},role:'OWNER'};
   const env={NODE_ENV:'development',OWNER_IDS:userId,PLATFORM_ENABLED_GUILD_IDS:guildId};
-  assert.equal(canAssignPlan(authority,env),true);
+  // No standard guild is currently authorized, even for local plan assignment.
+  assert.equal(canAssignPlan(authority,env),false);
   assert.equal(canAssignPlan(authority,{...env,OWNER_IDS:''}),false);
   assert.equal(canAssignPlan(authority,{...env,NODE_ENV:'production'}),false);
   assert.equal(canAssignPlan({...authority,role:'VIEW_ONLY'},env),false);

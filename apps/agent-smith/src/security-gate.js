@@ -14,6 +14,7 @@ import { executeTicketWrite } from './platform/ticket-write.js';
 import { executeSelfRoleWrite } from './platform/role-write.js';
 import { executePlatformCommandWrite } from './platform/commands.js';
 import { executeAcceptanceResourceWrite } from './platform/acceptance-resources.js';
+import { assertProductionGuildWritable } from './platform/guild-lifecycle.js';
 
 // Every SDK REST write passes this gate, including workers, recovery and CLIs.
 // Unknown management writes fail closed; no destructive admin APIs are exposed.
@@ -23,6 +24,15 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
   client.rest.request = async request => {
     const method = request.method.toUpperCase(), route = request.fullRoute, body = request.body ?? {};
     if (['GET', 'HEAD'].includes(method)) return original(request);
+    // Apply production guild policy before any standard-module write adapter.
+    const routeGuildId = /^\/guilds\/(\d+)(?:\/|$)/.exec(route)?.[1];
+    const routeChannelId = /^\/channels\/(\d+)(?:\/|$)/.exec(route)?.[1];
+    const routeChannel = routeChannelId && (client.channels?.cache?.get(routeChannelId) ??
+      [...(client.guilds?.cache?.values() ?? [])]
+        .map(g => g.channels?.cache?.get(routeChannelId)).find(Boolean));
+    const channelGuildId = routeChannel?.guildId ?? routeChannel?.guild?.id;
+    if (routeGuildId || channelGuildId)
+      assertProductionGuildWritable(routeGuildId ?? channelGuildId);
     const ticketWrite = executeTicketWrite(client, request, () => original(request));
     if (ticketWrite) return ticketWrite;
     const selfRoleWrite = executeSelfRoleWrite(client, request, () => original(request));

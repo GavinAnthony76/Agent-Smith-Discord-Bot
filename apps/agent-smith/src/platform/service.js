@@ -14,6 +14,7 @@ import { validatePublicFeedSource } from './source-policy.js';
 import { calculateLevel } from './activity.js';
 import { safetyReply } from '../ai-safety.js';
 import { platformAllowlist } from './activation.js';
+import { assertProductionGuildWritable, historicalGuild } from './guild-lifecycle.js';
 
 const record = row => ({
   id: String(row.record_id ?? row.id), title: row.title ?? row.action ?? 'Record',
@@ -91,7 +92,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   async function adopt(guild) {
     const legacy = guild.id === TARGET_GUILD_ID;
     // Merely viewing Hallowed Core must not create or alter its platform data.
-    if (legacy || env.NODE_ENV === 'production' && !platformAllowlist(env).has(guild.id)) return guild;
+    if (legacy || !platformAllowlist(env).has(guild.id)) return guild;
     await pool.query(
       `INSERT INTO platform_guilds(guild_id,policy_key,settings,setup_complete)
        VALUES($1,$2,$3,$4) ON CONFLICT(guild_id) DO UPDATE SET installed=true,updated_at=now()`,
@@ -103,6 +104,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     return guild;
   }
   async function authorize(userId, guildId, capability, write = false) {
+    if (write) assertProductionGuildWritable(guildId);
     let authority;
     const permit = await authorizeTenant({ userId, guildId, capability, write,
       resolve: async () => {
@@ -115,6 +117,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   function guildDTO(authority, row) {
     return { id: authority.guild.id, name: authority.guild.name,
+      lifecycle: historicalGuild(authority.guild.id) ? 'historical-reference-only' :
+        authority.guild.id === TARGET_GUILD_ID ? 'active' : 'inactive-not-authorized',
       icon: authority.guild.icon ?? null, role: authority.role,
       setupComplete: row?.setup_complete ?? authority.guild.id === TARGET_GUILD_ID,
       policy: row?.policy_key ?? (authority.guild.id === TARGET_GUILD_ID ? 'hallowed-core' : 'standard') };
@@ -146,7 +150,9 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
   }
   function presentModule(row, authority) {
     const base = defaultModule(row.module_key, authority.guild.id === TARGET_GUILD_ID, env);
-    const runtimeStatus = row.module_key === 'roles' && authority.guild.id !== TARGET_GUILD_ID ?
+    const referenceOnly = historicalGuild(authority.guild.id);
+    const runtimeStatus = referenceOnly ? 'Historical/reference-only; runtime deactivated. Saved configuration is evidence, not activation.' :
+      row.module_key === 'roles' && authority.guild.id !== TARGET_GUILD_ID ?
       'Cosmetic self-assignment runtime; private access and human-reviewed extras are not automated' :
       ['ai', 'analytics'].includes(row.module_key) ||
       ['leveling', 'tickets', 'welcome', 'onboarding', 'economy'].includes(row.module_key) && authority.guild.id !== TARGET_GUILD_ID ?
@@ -156,7 +162,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
         'Configuration foundation; runtime activation pending' : 'Configuration foundation; runtime activation pending';
     return { moduleKey: row.module_key, enabled: row.enabled,
       configuration: { ...base.configuration, ...row.configuration_json },
-      revision: row.revision, editable: dashboardCan(authority.role, row.module_key, true),
+      revision: row.revision, editable: !referenceOnly && dashboardCan(authority.role, row.module_key, true),
       fields: MODULE_FIELDS[row.module_key], runtimeStatus };
   }
   async function modules(authority) {

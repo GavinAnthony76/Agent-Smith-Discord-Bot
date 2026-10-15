@@ -16,7 +16,7 @@
 - [Video soundtrack timing](video-audio-duration.md) — measure generated duration and actual media-clock alignment; requested length and play events are not guarantees.
 - [PostgreSQL test isolation](postgres-test-isolation.md) — public search-path fallback can hide missing test schema and send test writes into live tables.
 - [Conversation boundaries](conversation-upgrade-boundaries.md) — preserve the existing bot/runtime; conversational AI is advisory, permission-scoped and short-lived.
-- [Platform productization](platform-productization.md) — preserve current production access; marketing tiers are not approved policy; no billing or completion claim before two-guild verification.
+- [Platform productization](platform-productization.md) — Hallowed Core only; LMOC is historical/reference-only with records preserved. New test guilds need Owner approval; marketing tiers remain unapproved.
 - [Ticket rollout safety](ticket-rollout-safety.md) — preserve opening-time access and private evidence; uncertain writes require review, never automatic retries or cleanup.
 - [Standard onboarding](standard-onboarding-boundaries.md) — cosmetic self-assignment only; questions are transient, private access and human-reviewed extras need separate policy.
 - [Acceptance fingerprint evidence](acceptance-fingerprint-evidence.md) — keep failed full hashes visible; later normalization cannot replace a missing historical semantic baseline.

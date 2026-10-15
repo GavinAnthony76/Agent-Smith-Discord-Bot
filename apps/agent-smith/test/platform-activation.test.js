@@ -8,10 +8,12 @@ import { validateReleaseConfiguration, configurationDigest, loadReviewedConfigur
 import { conversationIdentity, HALLOWED_IDENTITY } from '../src/conversation-identity.js';
 import { withSelfRoleWrite, executeSelfRoleWrite } from '../src/platform/role-write.js';
 
-test('standard activation is opt-in and Hallowed Core cannot be allowlisted', () => {
+test('stale LMOC and arbitrary environment IDs cannot authorize another production guild', () => {
   assert.equal(platformAllowlist({}).has(LMOC_TEST_ID),false);
   const allowed=platformAllowlist({PLATFORM_ENABLED_GUILD_IDS:LMOC_TEST_ID});
-  assert.equal(allowed.has(LMOC_TEST_ID),true);
+  assert.equal(allowed.has(LMOC_TEST_ID),false);
+  assert.deepEqual(allowed.ids,[]);
+  assert.deepEqual(platformAllowlist({PLATFORM_ENABLED_GUILD_IDS:'80000000000000001'}).ids,[]);
   assert.equal(allowed.has(TARGET_GUILD_ID),false);
   assert.throws(()=>platformAllowlist({PLATFORM_ENABLED_GUILD_IDS:`${LMOC_TEST_ID},${TARGET_GUILD_ID}`}));
   assert.throws(()=>platformAllowlist({PLATFORM_ENABLED_GUILD_IDS:'invalid'}));
@@ -38,7 +40,9 @@ test('Hallowed Core bypasses every standard event, interaction, AI and startup p
   assert.equal(await runtime.handleMessage({guildId:TARGET_GUILD_ID}),false);
   assert.equal(await runtime.handleInteraction({guildId:TARGET_GUILD_ID}),false);
   await new Promise(resolve=>setImmediate(resolve));
-  assert.deepEqual(queries,[]);
+  assert.equal(queries.length,1);
+  assert.match(queries[0].sql,/guild_archived_reference_only/);
+  assert.equal(queries[0].params[0],LMOC_TEST_ID);
   runtime.stop();
 });
 

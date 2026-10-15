@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { PermissionFlagsBits as P } from 'discord.js';
 import { hasPermission } from '../permissions.js';
+import { assertProductionGuildWritable } from './guild-lifecycle.js';
 
 const communication = new AsyncLocalStorage();
 const guards = new WeakMap();
@@ -23,6 +24,7 @@ export function platformTransportAllowed(client, request) {
 export function communicationGuard(request) {
   const scope = communication.getStore();
   if (!scope) return false;
+  assertProductionGuildWritable(scope.guild.id);
   // No guild/role/channel-management endpoints; ordinary bounded communication only.
   if (request.method !== 'POST' || request.fullRoute !== `/channels/${scope.channelId}/messages`) return false;
   const channel = scope.guild.channels.cache.get(scope.channelId);

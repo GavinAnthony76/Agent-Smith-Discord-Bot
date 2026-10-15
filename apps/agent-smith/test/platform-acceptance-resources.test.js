@@ -41,7 +41,11 @@ function fixture(unknown = false, onAuthority = () => {}) {
   return{service,authority,writes,rows,guild};
 }
 
-test('Owner-confirmed readiness makes three bounded LMOC resources; repeat reuses verified resources', async()=>{
+// Historical acceptance cases remain as reference, not current activation policy.
+const historicalTest = (name, fn) => test(name,
+  { skip: 'LMOC retired; historical positive-activation fixture' }, fn);
+
+historicalTest('Owner-confirmed readiness makes three bounded LMOC resources; repeat reuses verified resources', async()=>{
   const f=fixture();
   const ids=await f.service.prepare(f.authority);
   assert.equal(f.writes.length,3);
@@ -57,7 +61,7 @@ test('Owner-confirmed readiness makes three bounded LMOC resources; repeat reuse
   assert.equal(f.writes.length,3);
 });
 
-test('uncertain resource creation remains held, never auto-replayed or deleted', async()=>{
+historicalTest('uncertain resource creation remains held, never auto-replayed or deleted', async()=>{
   const f=fixture(true);
   await assert.rejects(f.service.prepare(f.authority),/lost acknowledgement/);
   assert.equal(f.rows.get('resource-role').status,'creating');
@@ -65,7 +69,7 @@ test('uncertain resource creation remains held, never auto-replayed or deleted',
   assert.equal(f.writes.length,1);
 });
 
-test('slow fresh-authority reads do not expire the later bounded dispatch window', async t=>{
+historicalTest('slow fresh-authority reads do not expire the later bounded dispatch window', async t=>{
   let now=Date.now();
   t.mock.method(Date,'now',()=>now);
   const f=fixture(false,()=>{now+=40000;});
@@ -73,7 +77,7 @@ test('slow fresh-authority reads do not expire the later bounded dispatch window
   assert.equal(f.writes.length,3);
 });
 
-test('reads exceeding the validation budget deny before any Discord write', async t=>{
+historicalTest('reads exceeding the validation budget deny before any Discord write', async t=>{
   let now=Date.now(),calls=0;
   t.mock.method(Date,'now',()=>now);
   const f=fixture(false,()=>{if(++calls===2)now+=121000;});
@@ -87,4 +91,11 @@ test('Hallowed Core and non-Owner resource requests are refused before writes', 
   await assert.rejects(f.service.prepare({...f.authority,guild:{id:TARGET_GUILD_ID}}),/lmoc_owner_only/);
   await assert.rejects(f.service.prepare({...f.authority,role:'ADMIN'}),/lmoc_owner_only/);
   assert.equal(f.writes.length,0);
+});
+
+test('even the Owner cannot prepare historical LMOC resources with the old allowlist', async()=>{
+  const f=fixture();
+  await assert.rejects(f.service.prepare(f.authority),/lmoc_owner_only/);
+  assert.equal(f.writes.length,0);
+  assert.equal(f.rows.size,0);
 });

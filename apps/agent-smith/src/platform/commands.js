@@ -4,6 +4,7 @@ import { TARGET_GUILD_ID } from '../config.js';
 import { PlatformError } from './catalog.js';
 import { withPrivilegedPipeline } from '../privileged-pipeline.js';
 import { smithCommand } from '../conversation-commands.js';
+import { standardGuildAuthorized } from './guild-lifecycle.js';
 
 export const communityCommand=new SlashCommandBuilder().setName('smith-community')
   .setDescription('This server’s configured community features; cosmetic credits have no real-money value.')
@@ -36,7 +37,7 @@ export function executePlatformCommandWrite(client, request, execute){
     },record:scope.record},execute);
 }
 export async function registerPlatformCommands({ client,pool,discord,guildId,applicationId }){
-  if(guildId===TARGET_GUILD_ID)return;
+  if(guildId===TARGET_GUILD_ID || !standardGuildAuthorized(guildId))return;
   const route=Routes.applicationGuildCommands(applicationId,guildId);
   const existing=await client.rest.get(route);
   // Add missing static names only. Never replace an existing command tree,

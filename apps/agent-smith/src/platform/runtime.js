@@ -20,7 +20,7 @@ import { registerPlatformCommands } from './commands.js';
 import { PlatformError } from './catalog.js';
 import { createActivation, STANDARD_MODULES } from './activation.js';
 import { createSelfRoleService } from './roles.js';
-import { loadReviewedConfiguration, seedReviewedConfiguration } from './release-config.js';
+import { archiveHistoricalRuntime } from './guild-lifecycle.js';
 import { createAcceptanceResources } from './acceptance-resources.js';
 import { createEntitlementService } from './entitlements.js';
 import { entitlementMemberMessage } from './entitlement-policy.js';
@@ -171,8 +171,8 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
     return handlers;
   }
   async function recordActivity(kind, guildId, eventKey, userId, channelId, occurredAt = Date.now()) {
-    if (!await entitlements.hasFeature(guildId, 'analytics')) return;
     if (!await activation.acceptsEvent(guildId,occurredAt)) return;
+    if (!await entitlements.hasFeature(guildId, 'analytics')) return;
     const row = (await pool.query('SELECT installed FROM platform_guilds WHERE guild_id=$1', [guildId])).rows[0];
     if (!row?.installed) return;
     const settings = await moduleConfig(guildId, 'analytics');
@@ -280,18 +280,18 @@ export function createPlatformRuntime({ client, pool, cfg, legacyActions, env = 
       return true;
     },
     async initialize() {
-      if (env.PLATFORM_LMOC_CONFIG_SHA256) await seedReviewedConfiguration({
-        pool,client,env,bundle:await loadReviewedConfiguration(),
-      });
+      await archiveHistoricalRuntime(pool, client.user.id);
       for (const guild of client.guilds.cache.values()) {
         if (!activation.allowed.has(guild.id) || !await activation.refresh(guild.id)) continue;
         await registerPlatformCommands({client,pool,discord,guildId:guild.id,applicationId:cfg.clientId});
       }
-      heartbeat = setInterval(() => {
-        for (const guildId of activation.allowed.ids)
-          void activation.refresh(guildId).catch(() => console.error('Platform heartbeat unavailable.'));
-      }, 20000);
-      heartbeat.unref();
+      if (activation.allowed.ids.length) {
+        heartbeat = setInterval(() => {
+          for (const guildId of activation.allowed.ids)
+            void activation.refresh(guildId).catch(() => console.error('Platform heartbeat unavailable.'));
+        }, 20000);
+        heartbeat.unref();
+      }
     },
     stop() {
       clearInterval(heartbeat);

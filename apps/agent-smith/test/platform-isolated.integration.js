@@ -1,4 +1,8 @@
 /**
+ * Historical multi-guild acceptance runner, retained as reference only.
+ * Retired with LMOC: these positive activation/write fixtures do not grant
+ * current guild authorization. Use guild-archive.integration.js for retirement
+ * verification; a future acceptance runner needs explicit Owner-approved scope.
  * Explicit development-only integration runner, not part of the offline suite.
  * Creates and drops only a unique isolated schema. No Gateway or real OAuth call.
  */
@@ -49,7 +53,8 @@ const configuration = {
   cooldownSeconds: 5, model: 'gpt-5.4-mini', personalityAdditions: '',
 };
 
-await test('platform HTTP and PostgreSQL isolation', async t => {
+await test('historical platform HTTP and PostgreSQL acceptance',
+  { skip: 'Historical multi-guild acceptance; no currently authorized test guild' }, async t => {
   await admin.query(`CREATE SCHEMA "${schema}"`);
   try {
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL,
