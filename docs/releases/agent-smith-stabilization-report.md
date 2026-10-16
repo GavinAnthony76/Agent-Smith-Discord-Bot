@@ -10,13 +10,16 @@ Gateway was started. The development Bot workflow remains stopped.
 
 ## Verdict
 
-**NOT READY — OWNER DECISION REQUIRED**
+**READY FOR AGENT SMITH STABILIZATION RELEASE REVIEW**
 
-The implementation and isolated tests are complete. A live Hallowed Core policy
-drift remains deliberately blocked: the tracked `mmo-adventures` Gaming forum is
-now called `mmo-thread`. Its tracked ID, Gaming parent and forum type still match,
-but the reviewed name-based access guard rejects it. This sprint did not rename
-the forum, approve an alias, weaken that guard or publish.
+The Owner approved retaining `mmo-thread` and binding validation to its reviewed
+Discord identity rather than its display name. That bounded policy fix is now
+included in this single unpublished candidate. All four live native role-grant
+audits pass using the candidate guard. No Discord resource was renamed, no
+permission was changed, and nothing was published.
+
+This verdict means ready for **Owner release review**, not already published,
+fully production-accepted or approved to publish automatically.
 
 The historical setup incident cannot be conclusively attributed to an actor or
 request without its original trace. A concrete missing-parent-row failure was
@@ -225,16 +228,41 @@ regressions explicitly include cached threads and missing/unsafe parents.
 Existing worker jobs will still reconcile only through their unchanged protected
 reward-role workflow. No fabricated XP, levels, achievements or history were added.
 
-## 10. Hallowed Core regression and remaining policy drift
+## 10. Hallowed Core regression and approved identity policy
 
 Published readiness reported connected. The native runtime is now identified
 truthfully in status responses rather than conflated with standard activation.
 The session status lookup no longer points at retired LMOC.
 
-Read-only live role-grant checks passed for Member, Faith and Tech. Gaming failed
-on the renamed tracked forum described in the verdict. The exact tracked forum
-still has the expected Gaming parent and forum type. **That is evidence of identity,
-not permission to approve its changed policy automatically.**
+The initial read-only Gaming audit failed on the renamed forum. The Owner then
+explicitly approved retaining `mmo-thread`, treating names as display metadata,
+and requiring the reviewed identity and all structural/security bounds.
+
+The candidate pins this reviewed resource to:
+
+- Guild: `1556423230590423042`.
+- Forum: `1556432973728063558`.
+- Parent/category: `1556432970326343821`.
+- Gaming role: `1556432551088889878`.
+- Type: Discord GuildForum, with a GuildCategory parent.
+
+Neither the current nor historical name can authorize a replacement resource.
+Setup preflight, the actual native role-write gate and the security audit all
+use the same identity-bound guard. Missing identity, guild/parent/type drift,
+untracked configuration, protected-resource collisions, inaccessible channels,
+unsafe role permissions or hierarchy fail closed for Owner review.
+
+Current forum and category overwrites are bounded to the reviewed @everyone
+privacy denial, Gaming communication rights and Smith communication/channel/thread
+rights. Added principals, management/unknown permission bits beyond those bounds,
+@everyone exposure and unexpected privilege expansion are rejected. Owner/Smith
+protected identities and designated senior-role checks remain enforced. No
+permission overwrite or role assignment is performed by this validation.
+
+A fresh read-only Discord audit using the candidate returned **PASS for Member,
+Faith, Gaming and Tech** while the live name remained `mmo-thread`. It fetched
+current guild/member/channel authority through REST only, with no Gateway session
+or Discord write. This is read-only policy evidence, not a live member-flow test.
 
 The original thread-parent hotfix semantics remain: threads inherit their verified
 parent's overwrites; missing or unverifiable parents fail closed. Offline rules
@@ -262,7 +290,8 @@ event during the observation window.
 ## 12. Files changed
 
 Runtime: bot.js; permissions.js; native-reconcile.js; progression-worker.js;
-new operational-health.js. Platform: activation.js; catalog.js; discord-access.js;
+security-gate.js; security-audit.js; new operational-health.js and
+reviewed-forum-policy.js. Platform: activation.js; catalog.js; discord-access.js;
 http.js; service.js; new setup.js, diagnostics.js and system-status.js.
 
 Frontend: App.tsx; pages/dashboard.tsx; lib/platform.ts; components/plans.tsx;
@@ -272,7 +301,8 @@ Contracts: lib/api-spec/openapi.yaml; generated React API/hooks/schemas;
 generated Zod API and setup/status types.
 
 Tests: access-failures.test.js; helpers/bot-fixture.js; new stabilization.test.js
-and stabilization.integration.js. Existing assertions that required raw internal
+and stabilization.integration.js; security.test.js; new reviewed-forum.test.js and
+helpers/reviewed-forum-fixture.js. Existing assertions that required raw internal
 error text were replaced with safe-message/reference and diagnostic assertions.
 
 Ancillary: a short channel-policy decision memory; this report; its standalone
@@ -290,20 +320,35 @@ to publish this candidate.
 
 ## 14. Verification
 
-- Offline suite: **475 passed, 12 skipped, zero failed** (487 tests).
-- Explicit disposable-schema PostgreSQL/HTTP suite: **18 passed, zero failed**.
-- Combined: **493 passing checks; 12 existing opt-in checks skipped**.
+- Rerun offline suite: **485 passed, 12 skipped, zero failed** (497 tests).
+- Explicit disposable-schema PostgreSQL/HTTP suite: **20 passed, zero failed**.
+- Combined: **505 passing checks; 12 existing opt-in checks skipped**.
+- New regression coverage proves approved-ID `mmo-thread` succeeds; display-only
+  renames preserve setup; same names on different IDs fail; wrong guild, parent
+  and type fail; unsafe allow/deny bits and protected-resource violations fail.
+  It also covers extra same-name copies, parent permission changes, Smith access,
+  management powers, hierarchy, missing security context and inherited threads.
+- Real PostgreSQL checks additionally prove rename-only setup remains idempotent
+  and parent drift blocks preflight without changing the saved revision. Existing
+  transaction, overlap, resume and lost-commit recovery tests remain passing.
 - Static privileged-transport, permission-resolver and AI-boundary checks passed.
 - Offline permission/47-command preflight passed.
 - Frontend typecheck and production build passed. Vite emitted non-blocking
   pre-existing component sourcemap warnings.
-- Live read-only role inventory and candidate progression audit passed as above;
-  the Gaming native policy check remains blocked, not suppressed.
-- One browser pass verified the candidate's redirect, confirmation, preview
+- The new live read-only role-grant audit passes for all four native access roles,
+  including Gaming with the retained forum name. The earlier rank inventory and
+  candidate progression audit are documented above; their implementation was not
+  changed by the identity-policy fix.
+- The earlier browser pass verified the candidate's redirect, confirmation, preview
   invalidation, 503/reference display, fresh-preview resume, successful completion,
   all eleven supplied health statuses and 390×844 setup layout using
   **synthetic browser-intercepted fixtures**. Real transaction behavior was tested
   separately in PostgreSQL, not inferred from those fixtures.
+- After the policy fix the API was rebuilt/restarted successfully, its proxied
+  session endpoint returned HTTP 200, and a fresh setup-route screenshot showed
+  the expected signed-out login without browser errors. The development bot
+  remained stopped. The unchanged interactive UI was not rerun in a second
+  synthetic browser pass.
 - A simulated hidden visibility state produced zero extra health polls over
   31.5 seconds. Native background-tab visibility could not be established in that
   browser environment.
@@ -326,12 +371,11 @@ published deployment contains this code.
 
 ## 16. Consolidated required Owner actions
 
-1. **Resolve the Gaming forum policy choice.** Recommended: retain `mmo-thread`
-   and explicitly approve a narrowly ID-bound alias validation change, retaining
-   guild, parent, forum type, permission bounds and protected-resource checks.
-   Alternative: restore the canonical `mmo-adventures` name after Owner review.
-   Neither action has been performed. Holding the release is also valid.
-2. Review this candidate and its fingerprint after the policy issue is resolved.
+1. **Gaming policy decision completed.** The Owner approved retaining `mmo-thread`
+   and reviewed-ID validation with all structural, permission, hierarchy and
+   protected-resource checks. The candidate implements it; no rename is needed.
+   Any future identity, parent, type or security drift still requires review.
+2. Review this consolidated candidate and its updated fingerprint.
    Publishing remains a separate Owner-controlled action; nothing was published.
 3. After authorized publication, use the real Owner Discord session to verify the
    selector, bare guild redirect, onboarding, setup preview, one confirmed setup
@@ -348,4 +392,4 @@ published deployment contains this code.
 No new secrets, production migration, new guild activation, material permission
 change or destructive operation is requested by the current implementation.
 
-**Final verdict: NOT READY — OWNER DECISION REQUIRED.**
+**Final verdict: READY FOR AGENT SMITH STABILIZATION RELEASE REVIEW.**

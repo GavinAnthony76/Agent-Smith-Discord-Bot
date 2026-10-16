@@ -64,7 +64,8 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
       await guild.roles.fetch();
       const bot = await guild.members.fetchMe({ force: true });
       assertSafeBot(bot);
-      assertSafeHierarchy(bot, await guild.members.fetch({ user: guild.ownerId, force: true }));
+       const owner=await guild.members.fetch({ user: guild.ownerId, force: true });
+       assertSafeHierarchy(bot,owner);
       const memberRole = /^\/guilds\/\d+\/members\/(\d+)\/roles\/(\d+)$/.exec(route);
       if (memberRole && ['PUT', 'DELETE'].includes(method)) {
         const [, uid, rid] = memberRole;
@@ -75,7 +76,8 @@ export function installSecurityGate({ client, guild, cfg, readResources, writeAu
         const trackedNames = new Map(rows.filter(r => r.kind === 'role').map(r => [r.discord_id, r.name]));
         assertSafeRole({ role: guild.roles.cache.get(rid), bot, trackedNames,
           botRoleIds: [...bot.roles.cache.keys()] });
-        assertRoleChannelGrants(guild.roles.cache.get(rid),guild);
+         assertRoleChannelGrants(guild.roles.cache.get(rid),guild,{bot,owner,rows,
+           registry:protectedResources({guild,bot,owner,rows})});
         return privileged(async () => {
           assertPermission(bot,P.ManageRoles);
           const target=await guild.members.fetch({user:uid,force:true});

@@ -1,9 +1,10 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Agent Smith — Stabilization Release Report</title><style>body{margin:0;background:#f5f7fb;color:#162138;font:16px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:40px auto;padding:40px;background:white;border:1px solid #dce2ec;border-radius:14px}h1{font-size:32px;line-height:1.2}h2{margin-top:40px;font-size:23px;border-top:1px solid #e0e5ef;padding-top:24px}h3{font-size:19px}p{margin:12px 0}code,pre{font-family:ui-monospace,monospace;font-size:13px}code{background:#eef2f7;padding:2px 4px;border-radius:4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f3f8;padding:18px}.gate{padding:18px;border-left:5px solid #b72c36;background:#fff2f3}.fingerprint{overflow-wrap:anywhere;padding:18px;background:#eaf4f7;border-left:5px solid #087c98}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;border:1px solid #dce2ec;padding:10px}th{background:#eff3f8}.bullet{padding-left:14px}details{margin-top:32px}summary{cursor:pointer;font-weight:600}@media(max-width:650px){main{margin:0;padding:22px;border:0;border-radius:0}h1{font-size:27px}}@media print{body,main{background:white;margin:0;border:0;padding:0}details{display:none}}</style><main><div class="gate"><strong>NOT READY — OWNER DECISION REQUIRED</strong><br>Unpublished candidate. No production permission or data changes were made.</div><div class="fingerprint"><strong>Candidate SHA-256</strong><br><code>61c33a01cdb89bfe4ddd8acec6c8bc7d08626c8617e8e0fd7d5f9806b845ff2c</code><br>352 source/configuration/assets/test files covered.</div><h1>Agent Smith — Production Stabilization Candidate</h1>
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Agent Smith — Stabilization Release Report</title><style>body{margin:0;background:#f5f7fb;color:#162138;font:16px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:40px auto;padding:40px;background:white;border:1px solid #dce2ec;border-radius:14px}h1{font-size:32px;line-height:1.2}h2{margin-top:40px;font-size:23px;border-top:1px solid #e0e5ef;padding-top:24px}h3{font-size:19px}p{margin:12px 0}code,pre{font-family:ui-monospace,monospace;font-size:13px}code{background:#eef2f7;padding:2px 4px;border-radius:4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f3f8;padding:18px}.gate{padding:18px;border-left:5px solid #b72c36;background:#fff2f3}.fingerprint{overflow-wrap:anywhere;padding:18px;background:#eaf4f7;border-left:5px solid #087c98}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;border:1px solid #dce2ec;padding:10px}th{background:#eff3f8}.bullet{padding-left:14px}details{margin-top:32px}summary{cursor:pointer;font-weight:600}@media(max-width:650px){main{margin:0;padding:22px;border:0;border-radius:0}h1{font-size:27px}}@media print{body,main{background:white;margin:0;border:0;padding:0}details{display:none}}</style><main><div class="gate"><strong>NOT READY — OWNER DECISION REQUIRED</strong><br>Unpublished candidate. No production permission or data changes were made.</div><div class="fingerprint">Source candidate fingerprint (not a publication):<br><code>69828f1067c315190e3944947c93b8b4d2bc639a0f3e26bd69e9a4014d597225</code><br>355 source/configuration/assets/test files covered.</div><h1>Agent Smith — Production Stabilization Candidate</h1>
 <p>Production inspected: https://agent-smith-discord-bot.replit.app</p>
 <p>Evidence collected October 15, 2026, America/Chicago (October 16 UTC). This is one consolidated, <strong>unpublished</strong> candidate for the existing management site, API and bot. No production database records, Discord resources, permissions, XP, levels, achievements or consent were changed by this sprint. No second Gateway was started. The development Bot workflow remains stopped.</p>
 <h2>Verdict</h2>
-<p><strong>NOT READY — OWNER DECISION REQUIRED</strong></p>
-<p>The implementation and isolated tests are complete. A live Hallowed Core policy drift remains deliberately blocked: the tracked <code>mmo-adventures</code> Gaming forum is now called <code>mmo-thread</code>. Its tracked ID, Gaming parent and forum type still match, but the reviewed name-based access guard rejects it. This sprint did not rename the forum, approve an alias, weaken that guard or publish.</p>
+<p><strong>READY FOR AGENT SMITH STABILIZATION RELEASE REVIEW</strong></p>
+<p>The Owner approved retaining <code>mmo-thread</code> and binding validation to its reviewed Discord identity rather than its display name. That bounded policy fix is now included in this single unpublished candidate. All four live native role-grant audits pass using the candidate guard. No Discord resource was renamed, no permission was changed, and nothing was published.</p>
+<p>This verdict means ready for <strong>Owner release review</strong>, not already published, fully production-accepted or approved to publish automatically.</p>
 <p>The historical setup incident cannot be conclusively attributed to an actor or request without its original trace. A concrete missing-parent-row failure was reproduced and fixed; that is not represented as proof of the historical incident. Authenticated production readiness and the 2.5-second dashboard target remain unverified until an Owner-controlled production check.</p>
 <h2>1. Setup 500 root cause and request trace</h2>
 <p>The old wizard sent <code>PUT /api/platform/guilds/{guildId}/setup</code>, with modules and log/welcome channel selections. The server resolves the OAuth session, checks CSRF and guild authority, validates input, then calls the setup service.</p>
@@ -28,7 +29,7 @@
 <p>Structured request logs contain correlation ID, guild, operation, stage, response status, elapsed duration, dependency durations and call counts. Failure logs add a safe failure class and recognized dependency code, without bodies, tokens or SQL. Responses include X-Request-ID and Server-Timing. Recent diagnostic references are bounded and guild-scoped; they reset with the process, not a durable log archive.</p>
 <h2>6. Actual production performance baseline</h2>
 <p>Three read-only HTTP samples per route, milliseconds, measured from this workspace. These are HTML-shell/network measurements, <strong>not authenticated dashboard readiness or a controlled load test</strong>.</p>
-<div class="table-wrap"><table><tr><th>Production path</th><th>Samples, ms</th></tr><tr><td>/dashboard</td><td>295 / 147 / 47</td></tr><tr><td>/dashboard/1556423230590423042</td><td>146 / 165 / 45</td></tr><tr><td>.../onboarding</td><td>142 / 44 / 45</td></tr><tr><td>.../setup</td><td>45 / 46 / 48</td></tr><tr><td>.../members</td><td>47 / 47 / 43</td></tr><tr><td>.../moderation</td><td>43 / 44 / 44</td></tr><tr><td>.../leveling</td><td>43 / 46 / 47</td></tr><tr><td>.../settings</td><td>44 / 44 / 43</td></tr><tr><td>.../audit</td><td>42 / 42 / 51</td></tr><tr><td>/api/platform/session, signed out</td><td>374 / 48 / 46</td></tr><tr><td>/api/readyz</td><td>45 / 46 / 45</td></tr></table></div>
+<table><thead><tr><th>Production path</th><th>Samples, ms</th></tr></thead><tbody><tr><td>/dashboard</td><td>295 / 147 / 47</td></tr><tr><td>/dashboard/1556423230590423042</td><td>146 / 165 / 45</td></tr><tr><td>.../onboarding</td><td>142 / 44 / 45</td></tr><tr><td>.../setup</td><td>45 / 46 / 48</td></tr><tr><td>.../members</td><td>47 / 47 / 43</td></tr><tr><td>.../moderation</td><td>43 / 44 / 44</td></tr><tr><td>.../leveling</td><td>43 / 46 / 47</td></tr><tr><td>.../settings</td><td>44 / 44 / 43</td></tr><tr><td>.../audit</td><td>42 / 42 / 51</td></tr><tr><td>/api/platform/session, signed out</td><td>374 / 48 / 46</td></tr><tr><td>/api/readyz</td><td>45 / 46 / 45</td></tr></tbody></table>
 <p>All HTML shells returned HTTP 200. A browser showed that the bare guild path nevertheless renders a <strong>client-side 404</strong> in the published build. The candidate redirects it to overview; that redirect passed the local browser check.</p>
 <p>The published signed-out login card was visible at the first browser observation, approximately 500 ms after navigation. This is not a separately instrumented paint-to-ready metric. Browser-observed session resource duration was 538 ms. Authenticated selector, overview, onboarding, setup, members, moderation, progression, settings and audit render/API timings could not be measured without the Owner's Discord session. Hydration was not separately measured.</p>
 <p>Published JS: 490,684 raw bytes; locally gzip-estimated 152,062 bytes. The browser observed 490,984 transfer bytes. Published CSS body: 118,032 bytes.</p>
@@ -42,58 +43,47 @@
 <p>Concurrent read-authority requests for the same guild/member are coalesced only while in flight, not retained as a time-based authorization cache. Later reads and all mutations obtain fresh authority. GET-guild role definitions are reused as a fresh identity snapshot instead of redundantly fetching the entire role list; removed cached ghost roles still cannot authorize access.</p>
 <p>Read-only editor resource lists can use the connected production Gateway's channel-event projection. The REST-only preview fetches its own channels. Actual mutation authorization still refreshes channel state and protected permissions. Operational health reads bounded local/SQL observations, not a full Discord scan.</p>
 <p>Production read-only EXPLAIN ANALYZE samples:</p>
-<div class="table-wrap"><table><tr><th>Query</th><th>Planning ms</th><th>Execution ms</th></tr><tr><td>Guild configuration</td><td>16.613</td><td>0.962</td></tr><tr><td>Members page, limit 50</td><td>7.537</td><td>1.381</td></tr><tr><td>Progression aggregate</td><td>42.694</td><td>14.087</td></tr><tr><td>Audit page, limit 50</td><td>6.532</td><td>1.265</td></tr><tr><td>Setup journal lookup</td><td>3.135</td><td>0.049</td></tr></table></div>
+<table><thead><tr><th>Query</th><th>Planning ms</th><th>Execution ms</th></tr></thead><tbody><tr><td>Guild configuration</td><td>16.613</td><td>0.962</td></tr><tr><td>Members page, limit 50</td><td>7.537</td><td>1.381</td></tr><tr><td>Progression aggregate</td><td>42.694</td><td>14.087</td></tr><tr><td>Audit page, limit 50</td><td>6.532</td><td>1.265</td></tr><tr><td>Setup journal lookup</td><td>3.135</td><td>0.049</td></tr></tbody></table>
 <p>These include cold planning/storage effects and the read-only database path; they are not the application's pool/network latency. Instrumentation now measures the latter per request. Samples do not justify a speculative production index. Existing bounded collection/history limits remain; no claim is made that every admin history gained a new cursor-pagination UI. Existing pending-request paging and its regression coverage are preserved.</p>
 <h2>9. Progression diagnosis and repair</h2>
 <p>All <strong>21 tracked rank roles exist</strong>, match their configured names, are unmanaged and permission-free. No rank configuration, role creation or historical repair was needed.</p>
 <p>The progression audit dereferenced permissionOverwrites on cached threads and caught the resulting exception as “Missing tracked rank.” A separate native selection safety scan had the same thread assumption. Both now use the same fail-closed parent-channel resolver as the published onboarding hotfix.</p>
 <p>A read-only live progression audit using the candidate returned <strong>zero errors</strong> in approximately 604 ms. The live REST channel list contained no threads; synthetic regressions explicitly include cached threads and missing/unsafe parents. Existing worker jobs will still reconcile only through their unchanged protected reward-role workflow. No fabricated XP, levels, achievements or history were added.</p>
-<h2>10. Hallowed Core regression and remaining policy drift</h2>
+<h2>10. Hallowed Core regression and approved identity policy</h2>
 <p>Published readiness reported connected. The native runtime is now identified truthfully in status responses rather than conflated with standard activation. The session status lookup no longer points at retired LMOC.</p>
-<p>Read-only live role-grant checks passed for Member, Faith and Tech. Gaming failed on the renamed tracked forum described in the verdict. The exact tracked forum still has the expected Gaming parent and forum type. <strong>That is evidence of identity, not permission to approve its changed policy automatically.</strong></p>
+<p>The initial read-only Gaming audit failed on the renamed forum. The Owner then explicitly approved retaining <code>mmo-thread</code>, treating names as display metadata, and requiring the reviewed identity and all structural/security bounds.</p>
+<p>The candidate pins this reviewed resource to:</p>
+<ul><li>Guild: <code>1556423230590423042</code>.</li><li>Forum: <code>1556432973728063558</code>.</li><li>Parent/category: <code>1556432970326343821</code>.</li><li>Gaming role: <code>1556432551088889878</code>.</li><li>Type: Discord GuildForum, with a GuildCategory parent.</li></ul>
+<p>Neither the current nor historical name can authorize a replacement resource. Setup preflight, the actual native role-write gate and the security audit all use the same identity-bound guard. Missing identity, guild/parent/type drift, untracked configuration, protected-resource collisions, inaccessible channels, unsafe role permissions or hierarchy fail closed for Owner review.</p>
+<p>Current forum and category overwrites are bounded to the reviewed @everyone privacy denial, Gaming communication rights and Smith communication/channel/thread rights. Added principals, management/unknown permission bits beyond those bounds, @everyone exposure and unexpected privilege expansion are rejected. Owner/Smith protected identities and designated senior-role checks remain enforced. No permission overwrite or role assignment is performed by this validation.</p>
+<p>A fresh read-only Discord audit using the candidate returned <strong>PASS for Member, Faith, Gaming and Tech</strong> while the live name remained <code>mmo-thread</code>. It fetched current guild/member/channel authority through REST only, with no Gateway session or Discord write. This is read-only policy evidence, not a live member-flow test.</p>
 <p>The original thread-parent hotfix semantics remain: threads inherit their verified parent's overwrites; missing or unverifiable parents fail closed. Offline rules acceptance, access recovery, Owner immunity, thread-parent and rank tests pass. No human production accept/join action was impersonated.</p>
 <p>Health shows Worker, Gateway, Database, Selected Guild, Setup, Moderation, Onboarding, Progression, Feeds, AI, Background Workers, Last Heartbeat and recent errors. Unexercised moderation, AI and feed operations remain UNKNOWN rather than healthy from flags. Worker/onboarding observations expire when stale.</p>
 <h2>11. LMOC exclusion</h2>
 <p>No allowlist or activation approval was added. Setup and other production writes remain refused for LMOC and unapproved guilds. Historical handoff/release records were preserved; the LMOC preparation button was removed from the overview.</p>
 <p>Repeated production SELECTs show LMOC bot_connected=false, runtime_active=false, and last_seen_at unchanged at 2026-10-15T22:08:34.650Z. Its two historical activity rows remain, with <strong>zero activity rows since archival</strong>. It has zero new setup lifecycle records. Existing archive/activation/transport tests remain passing. This was read-only evidence, not an exhaustive audit of every external Discord event during the observation window.</p>
 <h2>12. Files changed</h2>
-<p>Runtime: bot.js; permissions.js; native-reconcile.js; progression-worker.js; new operational-health.js. Platform: activation.js; catalog.js; discord-access.js; http.js; service.js; new setup.js, diagnostics.js and system-status.js.</p>
+<p>Runtime: bot.js; permissions.js; native-reconcile.js; progression-worker.js; security-gate.js; security-audit.js; new operational-health.js and reviewed-forum-policy.js. Platform: activation.js; catalog.js; discord-access.js; http.js; service.js; new setup.js, diagnostics.js and system-status.js.</p>
 <p>Frontend: App.tsx; pages/dashboard.tsx; lib/platform.ts; components/plans.tsx; new components/setup-flow.tsx and components/system-status.tsx.</p>
 <p>Contracts: lib/api-spec/openapi.yaml; generated React API/hooks/schemas; generated Zod API and setup/status types.</p>
-<p>Tests: access-failures.test.js; helpers/bot-fixture.js; new stabilization.test.js and stabilization.integration.js. Existing assertions that required raw internal error text were replaced with safe-message/reference and diagnostic assertions.</p>
+<p>Tests: access-failures.test.js; helpers/bot-fixture.js; new stabilization.test.js and stabilization.integration.js; security.test.js; new reviewed-forum.test.js and helpers/reviewed-forum-fixture.js. Existing assertions that required raw internal error text were replaced with safe-message/reference and diagnostic assertions.</p>
 <p>Ancillary: a short channel-policy decision memory; this report; its standalone HTML copy; the candidate manifest. The manifest lists exact source paths and hashes. No film, public branding assets, authorization allowlist or production schema was changed.</p>
 <h2>13. Schema and index changes</h2>
 <p><strong>None. No production migration is required by this candidate.</strong> The lifecycle journal uses an existing table. Disposable integration schemas were created and dropped only in development, without public search-path fallback. Do not copy the development database into production or run historical migrations to publish this candidate.</p>
 <h2>14. Verification</h2>
-<p class="bullet">• Offline suite: <strong>475 passed, 12 skipped, zero failed</strong> (487 tests).</p>
-<p class="bullet">• Explicit disposable-schema PostgreSQL/HTTP suite: <strong>18 passed, zero failed</strong>.</p>
-<p class="bullet">• Combined: <strong>493 passing checks; 12 existing opt-in checks skipped</strong>.</p>
-<p class="bullet">• Static privileged-transport, permission-resolver and AI-boundary checks passed.</p>
-<p class="bullet">• Offline permission/47-command preflight passed.</p>
-<p class="bullet">• Frontend typecheck and production build passed. Vite emitted non-blocking</p>
-<p>  pre-existing component sourcemap warnings.</p>
-<p class="bullet">• Live read-only role inventory and candidate progression audit passed as above;</p>
-<p>  the Gaming native policy check remains blocked, not suppressed.</p>
-<p class="bullet">• One browser pass verified the candidate's redirect, confirmation, preview</p>
-<p>  invalidation, 503/reference display, fresh-preview resume, successful completion,   all eleven supplied health statuses and 390×844 setup layout using   <strong>synthetic browser-intercepted fixtures</strong>. Real transaction behavior was tested   separately in PostgreSQL, not inferred from those fixtures.</p>
-<p class="bullet">• A simulated hidden visibility state produced zero extra health polls over</p>
-<p>  31.5 seconds. Native background-tab visibility could not be established in that   browser environment.</p>
-<p class="bullet">• Real published signed-out pages were inspected. The old bare guild route's</p>
-<p>  client-side 404 was confirmed; the fixed local route renders the login card.</p>
-<p class="bullet">• Production signed-in setup, admin timings and member actions are unverified.</p>
-<p>  No production credentials, bypass session or second Gateway was used.</p>
+<ul><li>Rerun offline suite: <strong>485 passed, 12 skipped, zero failed</strong> (497 tests).</li><li>Explicit disposable-schema PostgreSQL/HTTP suite: <strong>20 passed, zero failed</strong>.</li><li>Combined: <strong>505 passing checks; 12 existing opt-in checks skipped</strong>.</li><li>New regression coverage proves approved-ID <code>mmo-thread</code> succeeds; display-only renames preserve setup; same names on different IDs fail; wrong guild, parent and type fail; unsafe allow/deny bits and protected-resource violations fail. It also covers extra same-name copies, parent permission changes, Smith access, management powers, hierarchy, missing security context and inherited threads.</li><li>Real PostgreSQL checks additionally prove rename-only setup remains idempotent and parent drift blocks preflight without changing the saved revision. Existing transaction, overlap, resume and lost-commit recovery tests remain passing.</li><li>Static privileged-transport, permission-resolver and AI-boundary checks passed.</li><li>Offline permission/47-command preflight passed.</li><li>Frontend typecheck and production build passed. Vite emitted non-blocking pre-existing component sourcemap warnings.</li><li>The new live read-only role-grant audit passes for all four native access roles, including Gaming with the retained forum name. The earlier rank inventory and candidate progression audit are documented above; their implementation was not changed by the identity-policy fix.</li><li>The earlier browser pass verified the candidate's redirect, confirmation, preview invalidation, 503/reference display, fresh-preview resume, successful completion, all eleven supplied health statuses and 390×844 setup layout using <strong>synthetic browser-intercepted fixtures</strong>. Real transaction behavior was tested separately in PostgreSQL, not inferred from those fixtures.</li><li>After the policy fix the API was rebuilt/restarted successfully, its proxied session endpoint returned HTTP 200, and a fresh setup-route screenshot showed the expected signed-out login without browser errors. The development bot remained stopped. The unchanged interactive UI was not rerun in a second synthetic browser pass.</li><li>A simulated hidden visibility state produced zero extra health polls over 31.5 seconds. Native background-tab visibility could not be established in that browser environment.</li><li>Real published signed-out pages were inspected. The old bare guild route's client-side 404 was confirmed; the fixed local route renders the login card.</li><li>Production signed-in setup, admin timings and member actions are unverified. No production credentials, bypass session or second Gateway was used.</li></ul>
 <h2>15. Candidate fingerprint</h2>
 <p>The companion <code>stabilization-candidate-manifest.json</code> records SHA-256 file hashes and one canonical candidate SHA-256. It covers runtime source, tests, reviewed configuration, frontend source/assets/build configuration, generated contracts, package/lock configuration and routing manifests. It excludes node_modules, build output, secrets, reports and memory so this report does not hash itself.</p>
 <p>See the manifest and the standalone report's fingerprint panel for the exact digest. This is a source candidate fingerprint, not a claim that the currently published deployment contains this code.</p>
 <h2>16. Consolidated required Owner actions</h2>
-<p>1. <strong>Resolve the Gaming forum policy choice.</strong> Recommended: retain <code>mmo-thread</code>    and explicitly approve a narrowly ID-bound alias validation change, retaining    guild, parent, forum type, permission bounds and protected-resource checks.    Alternative: restore the canonical <code>mmo-adventures</code> name after Owner review.    Neither action has been performed. Holding the release is also valid. 2. Review this candidate and its fingerprint after the policy issue is resolved.    Publishing remains a separate Owner-controlled action; nothing was published. 3. After authorized publication, use the real Owner Discord session to verify the    selector, bare guild redirect, onboarding, setup preview, one confirmed setup    and a repeat. Capture the request IDs and Server-Timing. Do not share passwords,    tokens or session cookies with the agent. 4. Confirm native accept/selection behavior, normal deferred-job recovery and safe    cosmetic progression reconciliation; do not manually reset XP or grants.    Check LMOC remains inactive and its historical records unchanged. 5. Measure signed-in initial usability and subsequent navigation in the real    production browser before claiming the 2.5-second performance target.    If exact attribution of the original 500 is required, provide its time, guild    and any existing reference/screenshot—not credentials.</p>
+<ol><li><strong>Gaming policy decision completed.</strong> The Owner approved retaining <code>mmo-thread</code> and reviewed-ID validation with all structural, permission, hierarchy and protected-resource checks. The candidate implements it; no rename is needed. Any future identity, parent, type or security drift still requires review.</li><li>Review this consolidated candidate and its updated fingerprint. Publishing remains a separate Owner-controlled action; nothing was published.</li><li>After authorized publication, use the real Owner Discord session to verify the selector, bare guild redirect, onboarding, setup preview, one confirmed setup and a repeat. Capture the request IDs and Server-Timing. Do not share passwords, tokens or session cookies with the agent.</li><li>Confirm native accept/selection behavior, normal deferred-job recovery and safe cosmetic progression reconciliation; do not manually reset XP or grants. Check LMOC remains inactive and its historical records unchanged.</li><li>Measure signed-in initial usability and subsequent navigation in the real production browser before claiming the 2.5-second performance target. If exact attribution of the original 500 is required, provide its time, guild and any existing reference/screenshot—not credentials.</li></ol>
 <p>No new secrets, production migration, new guild activation, material permission change or destructive operation is requested by the current implementation.</p>
-<p><strong>Final verdict: NOT READY — OWNER DECISION REQUIRED.</strong></p><details><summary>Complete source fingerprint manifest</summary><pre>{
+<p><strong>Final verdict: READY FOR AGENT SMITH STABILIZATION RELEASE REVIEW.</strong></p><details><summary>Complete candidate source manifest</summary><pre>{
   &quot;algorithm&quot;: &quot;SHA-256&quot;,
-  &quot;candidateSha256&quot;: &quot;61c33a01cdb89bfe4ddd8acec6c8bc7d08626c8617e8e0fd7d5f9806b845ff2c&quot;,
+  &quot;candidateSha256&quot;: &quot;69828f1067c315190e3944947c93b8b4d2bc639a0f3e26bd69e9a4014d597225&quot;,
   &quot;fingerprintInput&quot;: &quot;UTF-8 JSON.stringify(files), sorted by path; files contain path,bytes,sha256 in that key order&quot;,
   &quot;scope&quot;: &quot;Complete selected runtime, tests, release configuration, frontend source/assets, API routing, generated contracts and package configuration; excludes secrets, dependencies, build outputs, reports and memory&quot;,
-  &quot;fileCount&quot;: 352,
+  &quot;fileCount&quot;: 355,
   &quot;files&quot;: [
     {
       &quot;path&quot;: &quot;apps/agent-smith/package.json&quot;,
@@ -432,8 +422,8 @@
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/src/permissions.js&quot;,
-      &quot;bytes&quot;: 6229,
-      &quot;sha256&quot;: &quot;c2df1539ed6f2331565dac6de0567b626739156d1d9e31c6c5ee4008177392bc&quot;
+      &quot;bytes&quot;: 7089,
+      &quot;sha256&quot;: &quot;9ce635ab79ed3243c5d4604b99564148534771a68fa32c97fcaa3534cabcce4a&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/src/platform/acceptance-resources.js&quot;,
@@ -577,8 +567,8 @@
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/src/platform/setup.js&quot;,
-      &quot;bytes&quot;: 14181,
-      &quot;sha256&quot;: &quot;19b5cecc60260315545cc7c62fdb09027a036249e862d83c9b884708b8a057f5&quot;
+      &quot;bytes&quot;: 14217,
+      &quot;sha256&quot;: &quot;a8aca15ed8eef514cfc6c76b0148bafd15b393d64912a87ea56b5476c2f923ab&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/src/platform/source-policy.js&quot;,
@@ -716,14 +706,19 @@
       &quot;sha256&quot;: &quot;42a018270f1cac24cbe692ac64126cf6e7978815b2c12985ed5189686b1eff02&quot;
     },
     {
+      &quot;path&quot;: &quot;apps/agent-smith/src/reviewed-forum-policy.js&quot;,
+      &quot;bytes&quot;: 4344,
+      &quot;sha256&quot;: &quot;aa87499a2d230f8e5ee93e013308a60ea6ea598bcd8e11df91c7c8398490f06b&quot;
+    },
+    {
       &quot;path&quot;: &quot;apps/agent-smith/src/security-audit.js&quot;,
-      &quot;bytes&quot;: 8644,
-      &quot;sha256&quot;: &quot;8c616cdb03c91d9dd4e4cc7b5d18cb11ae8db815eb180c32209faaea3e59f866&quot;
+      &quot;bytes&quot;: 8670,
+      &quot;sha256&quot;: &quot;aebe3c19f5996498808031fc762db25640b74b9430e030596abdf4bcdc997b23&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/src/security-gate.js&quot;,
-      &quot;bytes&quot;: 15977,
-      &quot;sha256&quot;: &quot;970450857e439b748a3422d1ef4208e6c9eb0db2884ad4ee4c9747a6937a4018&quot;
+      &quot;bytes&quot;: 16085,
+      &quot;sha256&quot;: &quot;fc91b4586426e2a33718412c1bceb4a5f0908e2fbf5e0d8395c4db93f3908d91&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/src/security-lock-audit.js&quot;,
@@ -891,6 +886,11 @@
       &quot;sha256&quot;: &quot;1016a594461ee4b40babe3005768e578eb65b5277fe55d208f74e5b2e52d5fdd&quot;
     },
     {
+      &quot;path&quot;: &quot;apps/agent-smith/test/helpers/reviewed-forum-fixture.js&quot;,
+      &quot;bytes&quot;: 2132,
+      &quot;sha256&quot;: &quot;b376903100328c677ea7f700cffcfc71ea614a0e2b8d571d1b6892ebacc4bcdf&quot;
+    },
+    {
       &quot;path&quot;: &quot;apps/agent-smith/test/helpers/transaction-store.js&quot;,
       &quot;bytes&quot;: 10447,
       &quot;sha256&quot;: &quot;a03a89ff1a5c9c5a090a55df6e3cd105d0341b731144bf7f220e743c162b31aa&quot;
@@ -1041,19 +1041,24 @@
       &quot;sha256&quot;: &quot;d386121699efa513b0191ea2e9a031cbd50ba41d0ea64210bc529b75b1ee2da2&quot;
     },
     {
+      &quot;path&quot;: &quot;apps/agent-smith/test/reviewed-forum.test.js&quot;,
+      &quot;bytes&quot;: 6026,
+      &quot;sha256&quot;: &quot;5c50d4541130d6c8b8afbf88b9f20564cfd18603a9a4b185e07e01e5a1ff00eb&quot;
+    },
+    {
       &quot;path&quot;: &quot;apps/agent-smith/test/security-source.test.js&quot;,
       &quot;bytes&quot;: 10868,
       &quot;sha256&quot;: &quot;046cf1bcff294b0256705d054347c49828c5d012be5fdcd86799f8334eb4b7d3&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/test/security.test.js&quot;,
-      &quot;bytes&quot;: 15258,
-      &quot;sha256&quot;: &quot;e516cdcc38ad12c66e9f1db69565e298ebf222f5cb2a8b1e9711a465d8e9c488&quot;
+      &quot;bytes&quot;: 15480,
+      &quot;sha256&quot;: &quot;a953fbc654ea63b8c18ced1697e351eb21390e978d105235b8495c94a5185798&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/test/stabilization.integration.js&quot;,
-      &quot;bytes&quot;: 13944,
-      &quot;sha256&quot;: &quot;88652fbd357d3b9f7a7872aebbc40f49cd4ca6b7b2381d08cb14a853422ef791&quot;
+      &quot;bytes&quot;: 15405,
+      &quot;sha256&quot;: &quot;3a48190c03e8e0a60bd2c2af187ba1da5a6a9301d7bbeab25f07684180e071ec&quot;
     },
     {
       &quot;path&quot;: &quot;apps/agent-smith/test/stabilization.test.js&quot;,
@@ -1856,4 +1861,5 @@
       &quot;sha256&quot;: &quot;8883c5dbf9e073ef0c7e91769b3e4abccca022df69b62fa7518d73e1512b37ef&quot;
     }
   ]
-}</pre></details></main></html>
+}
+</pre></details></main></html>

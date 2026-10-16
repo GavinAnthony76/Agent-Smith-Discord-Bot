@@ -57,7 +57,7 @@ export async function auditSecurity({ guild, client, cfg, rows, pool }) {
     manual.failures.length === 0, [...manual.reviewed, ...manual.failures]);
   const grantFailures=[];
   for(const row of rows.filter(row=>row.kind==='role')) {
-    try {assertRoleChannelGrants(guild.roles.cache.get(row.discord_id),guild);}
+    try {assertRoleChannelGrants(guild.roles.cache.get(row.discord_id),guild,{bot,owner,rows,registry});}
     catch(error){grantFailures.push(`${row.name}: ${error.message}`);}
   }
   check('Role grants cannot confer unexpected channel permissions',grantFailures.length===0,grantFailures);

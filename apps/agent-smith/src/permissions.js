@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { ChannelType, PermissionFlagsBits as P, PermissionsBitField } from 'discord.js';
 import { categories } from './blueprint.js';
 import { manualChannelPolicy, permitsManualRoleOverwrite } from './manual-channels.js';
+import { reviewedGamingForum, assertReviewedGamingForum } from './reviewed-forum-policy.js';
 
 const data=JSON.parse(readFileSync(new URL('./permission-capabilities.json', import.meta.url), 'utf8'));
 for(const value of Object.values(data))if(Array.isArray(value))Object.freeze(value);
@@ -77,9 +78,22 @@ export function permissionChannelFor(cachedChannel,guild) {
     throw new Error('Channel permissions could not be verified; access change refused.');
   return channel;
 }
-export function assertRoleChannelGrants(role, guild) {
+export function assertRoleChannelGrants(role, guild, security={}) {
   const category=categories.find(c=>c.gate===role.name);
   const permitted=new Set(category?[category.name,...category.channels.map(([name])=>name)]:[]);
+  // This reviewed forum is no longer authorized by either its old or new name.
+  permitted.delete(reviewedGamingForum.canonicalDisplayName);
+  const reviewedRole=role.id===reviewedGamingForum.roleId ||
+    guild.id===reviewedGamingForum.guildId && role.name==='Gaming';
+  if(reviewedRole) {
+    assertReviewedGamingForum({...security,guild,role});
+    assertBotCapabilities(security.bot);
+    for(const id of capabilities.seniorRoleIds) {
+      const senior=guild.roles.cache.get(id);
+      if(!senior || senior.position<=security.bot.roles.highest.position)
+        throw new Error('Designated senior role hierarchy could not be verified; Owner review required.');
+    }
+  }
   const allow=new PermissionsBitField([P.ViewChannel,P.ReadMessageHistory,P.UseApplicationCommands,
     P.SendMessages,P.SendMessagesInThreads,P.CreatePublicThreads,P.AddReactions,P.Connect,P.Speak]).bitfield;
   const deny=new PermissionsBitField([P.ViewChannel,P.SendMessages,P.SendMessagesInThreads,
@@ -88,6 +102,7 @@ export function assertRoleChannelGrants(role, guild) {
     // Threads have no permissionOverwrites manager: they inherit their parent's
     // overwrites. Audit that parent, never silently skip an unverifiable channel.
     const channel=permissionChannelFor(cachedChannel,guild);
+    if(reviewedRole && channel.id===reviewedGamingForum.channelId) continue;
     const overwrite=channel.permissionOverwrites.cache.get(role.id);
     if(!overwrite || (overwrite.allow.bitfield===0n && overwrite.deny.bitfield===0n))continue;
     const manual = manualChannelPolicy(guild, channel);

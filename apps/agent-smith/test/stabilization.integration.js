@@ -15,6 +15,8 @@ import { createPlatformHttp } from '../src/platform/http.js';
 import { authorizeTenant, MODULE_KEYS } from '../src/platform/catalog.js';
 import { capabilities } from '../src/permissions.js';
 import { TARGET_GUILD_ID } from '../src/config.js';
+import { reviewedGamingForum } from '../src/reviewed-forum-policy.js';
+import { seedReviewedForum } from './helpers/reviewed-forum-fixture.js';
 
 if(process.env.NODE_ENV==='production' || process.env.REPLIT_DEPLOYMENT==='1' || !process.env.DATABASE_URL)
   throw new Error('Explicit development database required. Production is prohibited.');
@@ -27,8 +29,10 @@ const role=(id,name,position)=>({id,name,position,managed:false,editable:true,
 const everyone=role(TARGET_GUILD_ID,'@everyone',0);
 const ownerRole=role('90000000000000003','Owner',100),botRole=role('90000000000000004','Agent Smith',50);
 const roles=new Collection([everyone,ownerRole,botRole].map(value=>[value.id,value]));
-for(const [index,name] of ['Member','Faith','Gaming','Tech'].entries())
-  roles.set(`9000000000000001${index}`,role(`9000000000000001${index}`,name,10));
+for(const [index,name] of ['Member','Faith','Gaming','Tech'].entries()) {
+  const id=name==='Gaming'?reviewedGamingForum.roleId:`9000000000000001${index}`;
+  roles.set(id,role(id,name,10));
+}
 const owner={id:ownerId,permissions:new PermissionsBitField(P.Administrator),
   roles:{highest:ownerRole,cache:new Collection([[ownerRole.id,ownerRole]])}};
 const bot={id:botId,permissions:new PermissionsBitField(capabilities.allowed.map(key=>P[key])),
@@ -36,6 +40,8 @@ const bot={id:botId,permissions:new PermissionsBitField(capabilities.allowed.map
 const guild={id:TARGET_GUILD_ID,name:'Isolated Hallowed fixture',ownerId,
   roles:{everyone,cache:roles},channels:{cache:new Collection()},members:{me:bot,fetch:async()=>owner}};
 bot.guild=guild;
+const forumRows=[];
+const reviewedForum=seedReviewedForum({guild,role:roles.get(reviewedGamingForum.roleId),bot,rows:forumRows});
 let connected=true,commandsAvailable=true,authorityRole='OWNER',sessionPresent=true,fault;
 const discord={
   client:{isReady:()=>connected,user:{id:botId},rest:{get:async()=>{
@@ -90,6 +96,8 @@ test('stabilization real PostgreSQL and HTTP, strictly isolated',async t=>{
     await pool.query('CREATE TABLE resources(guild_id text,kind text,name text,discord_id text,PRIMARY KEY(guild_id,kind,name))');
     for(const value of roles.values()) if(['Member','Faith','Gaming','Tech'].includes(value.name))
       await pool.query('INSERT INTO resources VALUES($1,$2,$3,$4)',[guild.id,'role',value.name,value.id]);
+    for(const row of forumRows)
+      await pool.query('INSERT INTO resources VALUES($1,$2,$3,$4)',[guild.id,row.kind,row.name,row.discord_id]);
     const setup=createSetupService(options());
     const confirmed=async a=>{
       const preview=await setup.preflight(a,input);
@@ -106,6 +114,23 @@ test('stabilization real PostgreSQL and HTTP, strictly isolated',async t=>{
       assert.equal(state.state,'READY');assert.equal(state.steps.length,8);
       assert.ok(state.steps.every(step=>step.status==='COMPLETE'));
       assert.equal((await pool.query('SELECT count(*) FROM platform_modules')).rows[0].count,String(MODULE_KEYS.length));
+    });
+    await t.test('a display-only forum rename preserves setup, idempotency and recovery',async()=>{
+      const a=await authority();reviewedForum.forum.name='World of Warcraft';
+      try {
+        await setup.run(a,await confirmed(a));
+        assert.equal((await setup.state(a)).state,'READY');
+        assert.equal((await pool.query('SELECT count(*) FROM platform_audit')).rows[0].count,'1');
+      } finally {reviewedForum.forum.name='mmo-thread';}
+    });
+    await t.test('identity or parent drift blocks preflight without modifying configured state',async()=>{
+      const a=await authority(),before=(await setup.state(a)).revision;
+      reviewedForum.forum.parentId='different-parent';
+      try {
+        const checked=await setup.preflight(a,input);
+        assert.equal(checked.classification,'BLOCKED');assert.equal(checked.failureStatus,422);
+        assert.equal((await setup.state(a)).revision,before);
+      } finally {reviewedForum.forum.parentId=reviewedGamingForum.parentId;}
     });
     await t.test('repeat is idempotent and does not rewrite defaults or add an audit',async()=>{
       const a=await authority();

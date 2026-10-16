@@ -1,9 +1,9 @@
 {
   "algorithm": "SHA-256",
-  "candidateSha256": "61c33a01cdb89bfe4ddd8acec6c8bc7d08626c8617e8e0fd7d5f9806b845ff2c",
+  "candidateSha256": "69828f1067c315190e3944947c93b8b4d2bc639a0f3e26bd69e9a4014d597225",
   "fingerprintInput": "UTF-8 JSON.stringify(files), sorted by path; files contain path,bytes,sha256 in that key order",
   "scope": "Complete selected runtime, tests, release configuration, frontend source/assets, API routing, generated contracts and package configuration; excludes secrets, dependencies, build outputs, reports and memory",
-  "fileCount": 352,
+  "fileCount": 355,
   "files": [
     {
       "path": "apps/agent-smith/package.json",
@@ -342,8 +342,8 @@
     },
     {
       "path": "apps/agent-smith/src/permissions.js",
-      "bytes": 6229,
-      "sha256": "c2df1539ed6f2331565dac6de0567b626739156d1d9e31c6c5ee4008177392bc"
+      "bytes": 7089,
+      "sha256": "9ce635ab79ed3243c5d4604b99564148534771a68fa32c97fcaa3534cabcce4a"
     },
     {
       "path": "apps/agent-smith/src/platform/acceptance-resources.js",
@@ -487,8 +487,8 @@
     },
     {
       "path": "apps/agent-smith/src/platform/setup.js",
-      "bytes": 14181,
-      "sha256": "19b5cecc60260315545cc7c62fdb09027a036249e862d83c9b884708b8a057f5"
+      "bytes": 14217,
+      "sha256": "a8aca15ed8eef514cfc6c76b0148bafd15b393d64912a87ea56b5476c2f923ab"
     },
     {
       "path": "apps/agent-smith/src/platform/source-policy.js",
@@ -626,14 +626,19 @@
       "sha256": "42a018270f1cac24cbe692ac64126cf6e7978815b2c12985ed5189686b1eff02"
     },
     {
+      "path": "apps/agent-smith/src/reviewed-forum-policy.js",
+      "bytes": 4344,
+      "sha256": "aa87499a2d230f8e5ee93e013308a60ea6ea598bcd8e11df91c7c8398490f06b"
+    },
+    {
       "path": "apps/agent-smith/src/security-audit.js",
-      "bytes": 8644,
-      "sha256": "8c616cdb03c91d9dd4e4cc7b5d18cb11ae8db815eb180c32209faaea3e59f866"
+      "bytes": 8670,
+      "sha256": "aebe3c19f5996498808031fc762db25640b74b9430e030596abdf4bcdc997b23"
     },
     {
       "path": "apps/agent-smith/src/security-gate.js",
-      "bytes": 15977,
-      "sha256": "970450857e439b748a3422d1ef4208e6c9eb0db2884ad4ee4c9747a6937a4018"
+      "bytes": 16085,
+      "sha256": "fc91b4586426e2a33718412c1bceb4a5f0908e2fbf5e0d8395c4db93f3908d91"
     },
     {
       "path": "apps/agent-smith/src/security-lock-audit.js",
@@ -801,6 +806,11 @@
       "sha256": "1016a594461ee4b40babe3005768e578eb65b5277fe55d208f74e5b2e52d5fdd"
     },
     {
+      "path": "apps/agent-smith/test/helpers/reviewed-forum-fixture.js",
+      "bytes": 2132,
+      "sha256": "b376903100328c677ea7f700cffcfc71ea614a0e2b8d571d1b6892ebacc4bcdf"
+    },
+    {
       "path": "apps/agent-smith/test/helpers/transaction-store.js",
       "bytes": 10447,
       "sha256": "a03a89ff1a5c9c5a090a55df6e3cd105d0341b731144bf7f220e743c162b31aa"
@@ -951,19 +961,24 @@
       "sha256": "d386121699efa513b0191ea2e9a031cbd50ba41d0ea64210bc529b75b1ee2da2"
     },
     {
+      "path": "apps/agent-smith/test/reviewed-forum.test.js",
+      "bytes": 6026,
+      "sha256": "5c50d4541130d6c8b8afbf88b9f20564cfd18603a9a4b185e07e01e5a1ff00eb"
+    },
+    {
       "path": "apps/agent-smith/test/security-source.test.js",
       "bytes": 10868,
       "sha256": "046cf1bcff294b0256705d054347c49828c5d012be5fdcd86799f8334eb4b7d3"
     },
     {
       "path": "apps/agent-smith/test/security.test.js",
-      "bytes": 15258,
-      "sha256": "e516cdcc38ad12c66e9f1db69565e298ebf222f5cb2a8b1e9711a465d8e9c488"
+      "bytes": 15480,
+      "sha256": "a953fbc654ea63b8c18ced1697e351eb21390e978d105235b8495c94a5185798"
     },
     {
       "path": "apps/agent-smith/test/stabilization.integration.js",
-      "bytes": 13944,
-      "sha256": "88652fbd357d3b9f7a7872aebbc40f49cd4ca6b7b2381d08cb14a853422ef791"
+      "bytes": 15405,
+      "sha256": "3a48190c03e8e0a60bd2c2af187ba1da5a6a9301d7bbeab25f07684180e071ec"
     },
     {
       "path": "apps/agent-smith/test/stabilization.test.js",

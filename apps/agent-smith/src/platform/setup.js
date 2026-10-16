@@ -96,7 +96,7 @@ export function createSetupService({pool,discord,env,entitlements,defaultModule,
         const role=guild.roles.cache.get(item.discord_id);
         if(!role || role.managed || role.position>=bot.roles.highest.position)
           throw new PlatformError('native_access_role_not_verified',422);
-        try {assertRoleChannelGrants(role,guild);}
+        try {assertRoleChannelGrants(role,guild,{bot,owner,rows:resources,registry});}
         catch {throw new PlatformError('native_access_policy_requires_owner_review',422);}
       }
       mark(result,stage,'HEALTHY','Protected resources recognized; selected channels verified.');

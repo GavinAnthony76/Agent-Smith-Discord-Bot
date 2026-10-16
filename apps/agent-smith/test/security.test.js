@@ -10,9 +10,11 @@ import { purgeCandidates } from '../src/moderation-policy.js';
 import { createProgressionWorker } from '../src/progression-worker.js';
 import { progressionConfig } from '../src/progression-config.js';
 import { approvedManualChannels } from '../src/manual-channels.js';
+import { reviewedGamingForum } from '../src/reviewed-forum-policy.js';
+import { seedReviewedForum } from './helpers/reviewed-forum-fixture.js';
 
 const gid = '1556423230590423042', owner = '100000000000000001', botId = '100000000000000002';
-const member = '100000000000000003', other = '100000000000000004', rid = '200000000000000001';
+const member = '100000000000000003', other = '100000000000000004', rid = reviewedGamingForum.roleId;
 function fixture(roleId = rid, roleName = 'Gaming') {
   const sent = [];
   const role = { id: roleId, name: roleName, position: 1, managed: false, editable: true, permissions: new PermissionsBitField() };
@@ -26,6 +28,7 @@ function fixture(roleId = rid, roleName = 'Gaming') {
       fetch: async ({user}) => ({ id:user, user:{bot:false}, permissions: new PermissionsBitField(user===owner?[P.Administrator]:[]),
         roles:{highest:highest(user===owner?20:1,user)} }) } };
   const client = { rest: { request: async request => { sent.push(request); return {}; } } };
+  if(roleName==='Gaming') seedReviewedForum({guild,role,bot,rows});
   registerSecurityConfiguration(guild, cfg);
   installSecurityGate({ client, guild, cfg, readResources: async () => rows, writeAudit: async () => {} });
   const request = (method, path, body) => client.rest.request({ method, fullRoute: path, body });
@@ -95,7 +98,7 @@ for (const [name, mutate] of [
   ['managed role', f => { f.role.managed = true; }],
   ['untracked role', f => { f.rows.length = 0; }],
   ['renamed security role', f => { f.role.name = 'Server Owner'; }],
-  ['bot role', f => { f.bot.roles.cache.set(rid, {}); }]
+  ['bot role', f => { f.bot.roles.cache.set(rid, f.role); }]
 ]) test(`assignment and removal refuse ${name}`, async () => {
   const f = fixture(); mutate(f);
   for (const method of ['PUT','DELETE']) await assert.rejects(withRoleWorkflow('native-reconciliation', member,
