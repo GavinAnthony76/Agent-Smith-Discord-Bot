@@ -50,6 +50,23 @@ test('native onboarding Member assignment crosses the gate with approved manual 
   await assert.rejects(withRoleWorkflow('native-reconciliation',member,f.changeRole),/unexpected channel/);
   assert.equal(f.sent.length,1);
 });
+test('new-member rules acceptance can grant Member with cached threads, without bypassing parent safety',async()=>{
+  const policy=approvedManualChannels[0];
+  const f=fixture(policy.roleId,policy.roleName);
+  const overwrite={type:0,allow:new PermissionsBitField(policy.allow),deny:new PermissionsBitField()};
+  const parent={id:policy.channelId,name:policy.label,type:policy.type,
+    permissionOverwrites:{cache:new Map([[policy.roleId,overwrite]])}};
+  const thread={id:'cached-thread',type:11,parentId:parent.id,isThread:()=>true};
+  f.guild.channels={cache:new Map([[parent.id,parent],[thread.id,thread]]),fetch:async()=>{}};
+  await withRoleWorkflow('member-command',member,f.changeRole);
+  assert.equal(f.sent.length,1);
+  overwrite.allow.add(P.ManageChannels);
+  await assert.rejects(withRoleWorkflow('member-command',member,f.changeRole),/unexpected channel/);
+  assert.equal(f.sent.length,1);
+  f.guild.channels.cache.delete(parent.id);
+  await assert.rejects(withRoleWorkflow('member-command',member,f.changeRole),/Thread parent permissions could not be verified/);
+  assert.equal(f.sent.length,1);
+});
 test('owner identity is required and must match the actual guild owner', async () => {
   const f = fixture();
   assert.throws(() => assertOwnerConfiguration({ owners: [owner] }, owner), /OWNER_DISCORD_ID/);

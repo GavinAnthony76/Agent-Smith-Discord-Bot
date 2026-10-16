@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inspectSecuritySource, auditSecuritySource } from '../src/security-source-audit.js';
 import { assertRoleChannelGrants } from '../src/permissions.js';
-import { PermissionFlagsBits as P, PermissionsBitField } from 'discord.js';
+import { ChannelType, PermissionFlagsBits as P, PermissionsBitField } from 'discord.js';
 import { protectedResources } from '../src/protected-resources.js';
 import { nativePrimaryIsSafe } from '../src/security-lock-audit.js';
 import { approvedManualChannels, auditManualChannels, manualChannelPolicy } from '../src/manual-channels.js';
@@ -48,6 +48,37 @@ function manualFixture() {
     channels: { cache: new Map([[channel.id, channel]]) } };
   return { policy, role, overwrite, channel, guild };
 }
+for(const type of [ChannelType.AnnouncementThread,ChannelType.PublicThread,ChannelType.PrivateThread]) {
+  test(`role audit checks inherited parent permissions for cached thread type ${type}`,()=>{
+    const f=manualFixture();
+    f.guild.channels.cache.set('thread',{id:'thread',type,parentId:f.channel.id,isThread:()=>true});
+    assert.doesNotThrow(()=>assertRoleChannelGrants(f.role,f.guild));
+    f.overwrite.allow.add(P.ManageChannels);
+    assert.throws(()=>assertRoleChannelGrants(f.role,f.guild),/unexpected channel/);
+  });
+}
+test('thread names cannot hide unsafe parents or grant the parent a manual-policy exception',()=>{
+  const f=manualFixture();
+  const parent={id:'unapproved-parent',name:'smith-controls',type:ChannelType.GuildText,
+    permissionOverwrites:{cache:new Map([[f.role.id,f.overwrite]])}};
+  f.guild.channels.cache.set(parent.id,parent);
+  f.guild.channels.cache.set('thread',{id:'thread',name:f.channel.name,
+    type:ChannelType.PrivateThread,parentId:parent.id,isThread:()=>true});
+  assert.throws(()=>assertRoleChannelGrants(f.role,f.guild),/unexpected channel/);
+});
+test('a missing thread parent or missing ordinary overwrite manager fails closed with a clear error',()=>{
+  const f=manualFixture();
+  const thread={id:'thread',type:ChannelType.PublicThread,parentId:'missing',isThread:()=>true};
+  f.guild.channels.cache.set(thread.id,thread);
+  assert.throws(()=>assertRoleChannelGrants(f.role,f.guild),/Thread parent permissions could not be verified/);
+  thread.parentId=thread.id;
+  assert.throws(()=>assertRoleChannelGrants(f.role,f.guild),/Thread parent permissions could not be verified/);
+  thread.parentId=f.channel.id;
+  delete f.channel.permissionOverwrites;
+  assert.throws(()=>assertRoleChannelGrants(f.role,f.guild),/Channel permissions could not be verified/);
+  f.guild.channels.cache.delete(thread.id);
+  assert.throws(()=>assertRoleChannelGrants(f.role,f.guild),/Channel permissions could not be verified/);
+});
 test('approved manual Member communication and stricter denies pass without matching a fixed blueprint',()=>{
   const f = manualFixture();
   assert.doesNotThrow(()=>assertRoleChannelGrants(f.role,f.guild));
