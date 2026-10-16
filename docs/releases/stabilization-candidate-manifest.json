@@ -1,0 +1,1769 @@
+{
+  "algorithm": "SHA-256",
+  "candidateSha256": "61c33a01cdb89bfe4ddd8acec6c8bc7d08626c8617e8e0fd7d5f9806b845ff2c",
+  "fingerprintInput": "UTF-8 JSON.stringify(files), sorted by path; files contain path,bytes,sha256 in that key order",
+  "scope": "Complete selected runtime, tests, release configuration, frontend source/assets, API routing, generated contracts and package configuration; excludes secrets, dependencies, build outputs, reports and memory",
+  "fileCount": 352,
+  "files": [
+    {
+      "path": "apps/agent-smith/package.json",
+      "bytes": 1734,
+      "sha256": "6ea7757f4c6327e4ba478a81ba75eda35c5d673dcb934ddfcee88b97705a3dac"
+    },
+    {
+      "path": "apps/agent-smith/release/lmoc-config.json",
+      "bytes": 3066,
+      "sha256": "30710802cf31703f1e8ac825ad295bcffc4026e147a6309c1ca66b74257d9b7b"
+    },
+    {
+      "path": "apps/agent-smith/src/access-recovery.js",
+      "bytes": 2659,
+      "sha256": "426decf8a7ef6611ffa785fa2b007fc45987150892fab56908168c902ec14907"
+    },
+    {
+      "path": "apps/agent-smith/src/access-request.js",
+      "bytes": 1958,
+      "sha256": "44cf3f6c88cdd154a2e95103ad6b1c8f413d3186a6e08e9ea1a23e00eea9fb66"
+    },
+    {
+      "path": "apps/agent-smith/src/ai-conversation.js",
+      "bytes": 11019,
+      "sha256": "45e3627290b4b82a1d75752534c85b297fa97845e96b9c2a1cd6405f28d8366e"
+    },
+    {
+      "path": "apps/agent-smith/src/ai-personality.js",
+      "bytes": 1837,
+      "sha256": "56ae6c2153244c97566e5b7f83abcaabf91dcd536d44c9614ad218123f272d2c"
+    },
+    {
+      "path": "apps/agent-smith/src/ai-provider.js",
+      "bytes": 1626,
+      "sha256": "3ea64c270193fb7c8ec006bdb22c622284e4bc4e45bf92a0d8ee55e2ffafa88a"
+    },
+    {
+      "path": "apps/agent-smith/src/ai-safety.js",
+      "bytes": 2496,
+      "sha256": "0d80b73fbef0796fd75a1375f21107cfc6088f01d4d17d782ed26705282386a9"
+    },
+    {
+      "path": "apps/agent-smith/src/antispam.js",
+      "bytes": 4707,
+      "sha256": "5b9b8d299530f1ce1baf644b60a1adf1892c191d2d466d3733c99f70fffff332"
+    },
+    {
+      "path": "apps/agent-smith/src/authorization.js",
+      "bytes": 1751,
+      "sha256": "16eca7c04c4089256278f023404767e3bbc2e76454fb5ea185b4c94c7cc185bc"
+    },
+    {
+      "path": "apps/agent-smith/src/blueprint-permission-audit.js",
+      "bytes": 2619,
+      "sha256": "b96decc7d9f5b8cc8798948ccd4e5fa3cc830f5a838a8e461c580938aa005cee"
+    },
+    {
+      "path": "apps/agent-smith/src/blueprint.js",
+      "bytes": 2472,
+      "sha256": "9284fe13651fd46c77e8b0dfd623c2e207df10007957804b0b90ab4ae85cbd47"
+    },
+    {
+      "path": "apps/agent-smith/src/bot.js",
+      "bytes": 24635,
+      "sha256": "96876a7e902b91b115640fb73f640b808d77ba2a3f45ab2e13862de0e1086380"
+    },
+    {
+      "path": "apps/agent-smith/src/commands.js",
+      "bytes": 3277,
+      "sha256": "18f868f4b5d4946a39762ce6071afe2d3ef04e9e02228a92973826b25f770a6b"
+    },
+    {
+      "path": "apps/agent-smith/src/community-economy.js",
+      "bytes": 3808,
+      "sha256": "b693075359c992d95021d641f512e58fedac0def31e5bc603da0acc796f39043"
+    },
+    {
+      "path": "apps/agent-smith/src/community.js",
+      "bytes": 2231,
+      "sha256": "a54d82e5b32537c5d5a5639a87984918b2f4a0e4ff3d23c7d4d4b3e5bf801789"
+    },
+    {
+      "path": "apps/agent-smith/src/config.js",
+      "bytes": 1622,
+      "sha256": "5c8a44bca626a0e383341ee0a0a6f14a79a2c76fb198dce3c8ebc0fd8ec81d8c"
+    },
+    {
+      "path": "apps/agent-smith/src/content-automod.js",
+      "bytes": 4861,
+      "sha256": "2dd0e4a66ececbc46b328c6a26064f0c8a7e29c7fc9039005c853b828d4df419"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-budget-migrate.js",
+      "bytes": 589,
+      "sha256": "ac8140b9f58bbc4bb27350bf52d1a765f36d686fd06d4c8102f45d3e64a98cd9"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-budget-schema.sql",
+      "bytes": 1295,
+      "sha256": "ac07ea8a5534ddbad44d1a2273fce1b00484384db493181897ac945dea8cc7eb"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-budget-store.js",
+      "bytes": 3955,
+      "sha256": "5bf5e2ba6b6498a28f1c9714fd66148aae0bcec55fb31e08ced77e6145855f75"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-budget.js",
+      "bytes": 4562,
+      "sha256": "32b649d00b5478ee8322b062a6754f0b3001a79f887a1118d3ae06ebcc25afd2"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-commands.js",
+      "bytes": 1833,
+      "sha256": "9847b30aa7959f8f72a60c118b1a05aaad7ca3b89aa068dfd09aa02180306760"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-context.js",
+      "bytes": 8481,
+      "sha256": "d13b3c1a1b8f0c4191f5297216b366c3565c8a21bf3f9dc67835322556405c1a"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-handler.js",
+      "bytes": 15836,
+      "sha256": "37a7ef695a4002ec4f841bcb969b39bc61b6090226a66c1f5107c185a4fb2111"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-identity.js",
+      "bytes": 768,
+      "sha256": "ab0aa36c773e6fde52a90ebb051e2012b2ed358e97d8f863616cbf1edcf507ce"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-lookups.js",
+      "bytes": 8152,
+      "sha256": "1daad672d799dc5c6d22f891f0c0926b636400742d72de8bf28aef1785345d00"
+    },
+    {
+      "path": "apps/agent-smith/src/conversation-settings.js",
+      "bytes": 1284,
+      "sha256": "6f96dcab21fa851cb0e0828099e70ba1c54c781fb86c4eaf15ef1039f7cd8e24"
+    },
+    {
+      "path": "apps/agent-smith/src/db.js",
+      "bytes": 931,
+      "sha256": "1408a8c087203bd2a51e03586373bc03b624981a74b16bf6b00e2dc0d276739c"
+    },
+    {
+      "path": "apps/agent-smith/src/discord.js",
+      "bytes": 4064,
+      "sha256": "38a6d5599f8bfa7aee2542270d08f623088218ddeaf90322ae56da4ec56f0340"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-cli.js",
+      "bytes": 239,
+      "sha256": "f889c8d2fdd9ea171cef37005d4e9591791af3e0674876f16f9ec35e5b283578"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-http.js",
+      "bytes": 5850,
+      "sha256": "0c2bca1e06359abad0a83a69550c598577e2568c21e73822fb8f5389cb11c4dd"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-migrate.js",
+      "bytes": 407,
+      "sha256": "8d0a0bc1957ffc0f22fc846675cbc1eaba4cf70efeee08d006423ac7c3c66e82"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-schema-check.js",
+      "bytes": 1440,
+      "sha256": "58b5999fee226dd6f24b6340ec42ba9103b4cf9ec9bee0c5133cceff68b28502"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-schema-cli.js",
+      "bytes": 793,
+      "sha256": "e1b056e3249fa8b3c27ab377f9047216431b5249ad4fd8da96f69bb4c10d929e"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-schema.sql",
+      "bytes": 1637,
+      "sha256": "612f5e2f954f69c06377661fd64bfa53c85423302c3e836d7e0461d7e26eb7c8"
+    },
+    {
+      "path": "apps/agent-smith/src/feed-store.js",
+      "bytes": 7270,
+      "sha256": "8f7d312a28f2f5941ea05ceafefcf7faeb777bba5d1fa78cabbe4f98428cb2fe"
+    },
+    {
+      "path": "apps/agent-smith/src/feeds.js",
+      "bytes": 8798,
+      "sha256": "6ca9c306f526d47d44dc2302b5b7e95a9bc98e92964be6c0f4aa22115c6b76d1"
+    },
+    {
+      "path": "apps/agent-smith/src/gateway-startup.js",
+      "bytes": 2751,
+      "sha256": "dc73f5f1482fda8369a08e954ce3ffc6e5165c6652b32990c163a80a18200478"
+    },
+    {
+      "path": "apps/agent-smith/src/historical-review.js",
+      "bytes": 7525,
+      "sha256": "1893f85d34f2ebe70830651f6c654203c8ef21e7c42fab9c9b30cfd1f61cae14"
+    },
+    {
+      "path": "apps/agent-smith/src/lifecycle-policy.js",
+      "bytes": 1709,
+      "sha256": "8f5fc26a091b94d474e6335e1a7a1ab1ff8fb802c70c62dcf3fc55dc93d109c4"
+    },
+    {
+      "path": "apps/agent-smith/src/lookup-warning-policy.js",
+      "bytes": 1892,
+      "sha256": "5dc5dc545e7e105a77f2a01a2cbb85133e58b4cd73eb8cf8c3a45a9eb6d31f85"
+    },
+    {
+      "path": "apps/agent-smith/src/lookup-warning-store.js",
+      "bytes": 2109,
+      "sha256": "e6bea8fd76d429789e4fb28230c2eb7b3d25bb64d553b425271a2a9680eb08f8"
+    },
+    {
+      "path": "apps/agent-smith/src/lookup-warnings.js",
+      "bytes": 5676,
+      "sha256": "3804805882d4fa9f7a00bac4facf16d8a74e06f3ddf43d2b00892ff8a2f3f551"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-cases.js",
+      "bytes": 4194,
+      "sha256": "655da116a5faaf239e0b71e1230966906a1e4e345346f45e4ed608f563c62aed"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-commands.js",
+      "bytes": 3171,
+      "sha256": "9c65df2ab7c9c4de3f3efddc87f6aeb426afac45902468941ec7b43cb10d0aa2"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-members.js",
+      "bytes": 10417,
+      "sha256": "a89fe52f7a19aee39ae218a6fccebb954d4bc7e2bed75984cc8d1c9fe0221985"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-migrate.js",
+      "bytes": 550,
+      "sha256": "778790ad736ca36adb02cf1dd2cbdcebde70c1258d4bcc0bfb83afe79912fb9e"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-model.js",
+      "bytes": 541,
+      "sha256": "d1ce5b07ae246f38037c807be7ff2cb96eab9d5dbefae3946ccce06194d56130"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-reports.js",
+      "bytes": 4803,
+      "sha256": "8e38792a9af4427e6717d57e97b29e5fa690018df3c568e0c0093c5bb1600f76"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-schema.sql",
+      "bytes": 7747,
+      "sha256": "384248889e962c3128532f04442ebc3e5e4c3181ea6042f0734e59abce74ad31"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance-ui.js",
+      "bytes": 17070,
+      "sha256": "3f7986ad9723fb28714e0b8429df040fa4da6a34aa2f67963c307bd6d272725f"
+    },
+    {
+      "path": "apps/agent-smith/src/maintenance.js",
+      "bytes": 5592,
+      "sha256": "fb20544401f2285a41e9641018b0ead94489a79f7acaf9d4ddb5937817449ce9"
+    },
+    {
+      "path": "apps/agent-smith/src/manual-channels.js",
+      "bytes": 3812,
+      "sha256": "1194c3ac3cc9d5fac3ac435495a7176b78f8a90f77532cc5c7957fd845b8ae4e"
+    },
+    {
+      "path": "apps/agent-smith/src/migrate.js",
+      "bytes": 2576,
+      "sha256": "bfc90fd12650060672ab1d212c5b9bdbaa4c1bdc3fdc7ee6b5dcf74cd3db5427"
+    },
+    {
+      "path": "apps/agent-smith/src/moderation-commands.js",
+      "bytes": 2998,
+      "sha256": "c262cd783fd010713b901ef17644ec6a00977409b190921f9d885ca65ec407c2"
+    },
+    {
+      "path": "apps/agent-smith/src/moderation-policy.js",
+      "bytes": 3192,
+      "sha256": "e32aaf02be67d79f7b49318e56d889903c16a45e2142d8d147c5af707337cc5d"
+    },
+    {
+      "path": "apps/agent-smith/src/moderation.js",
+      "bytes": 19624,
+      "sha256": "d8121d2e94173fee3965c8076eb0aca4b413f0515df7905d1b16b31968f1df26"
+    },
+    {
+      "path": "apps/agent-smith/src/native-admin.js",
+      "bytes": 5059,
+      "sha256": "63b9ecf806a7a8d4a610e1c0f2a8afcd2de066da10d9e09ec280ebbb76bc0620"
+    },
+    {
+      "path": "apps/agent-smith/src/native-cutover.js",
+      "bytes": 6458,
+      "sha256": "f0cf9c440d739fc7928fea2f4eadab0c4fcc584157f36535b3b78d2008199092"
+    },
+    {
+      "path": "apps/agent-smith/src/native-diagnose.js",
+      "bytes": 10391,
+      "sha256": "210b86a3df90cc819eaf7444b293f6ec8115519c153de52aa628230474e80b77"
+    },
+    {
+      "path": "apps/agent-smith/src/native-policy.js",
+      "bytes": 5453,
+      "sha256": "8aa1b58c0b3935e29f9d3f5b5b43da45c1779b189f2626d756b79626aadc7961"
+    },
+    {
+      "path": "apps/agent-smith/src/native-reconcile.js",
+      "bytes": 8416,
+      "sha256": "2a7d4afd57694eb19eb2fd02409ed6d2b1ef68d39ce6a8c48b048c764e28c4d4"
+    },
+    {
+      "path": "apps/agent-smith/src/native-settings.js",
+      "bytes": 7442,
+      "sha256": "f6982e08b7de7ddc06420043b600aabb91159b1cc8daf25a37df67c6c9881b34"
+    },
+    {
+      "path": "apps/agent-smith/src/onboarding.js",
+      "bytes": 2319,
+      "sha256": "6a3cda043af8ce883399b43972fc7ee11165412df688d68055fc9532507c1d91"
+    },
+    {
+      "path": "apps/agent-smith/src/operational-health.js",
+      "bytes": 674,
+      "sha256": "2d1625f2cd173c4ca2d5272d59550357d79e3656d37d5dc14af0577a7124cf56"
+    },
+    {
+      "path": "apps/agent-smith/src/permission-capabilities.json",
+      "bytes": 1512,
+      "sha256": "b23d5eb807c5133c01b59661a490f9be703ac3a6fe671097355711dde5462251"
+    },
+    {
+      "path": "apps/agent-smith/src/permissions.js",
+      "bytes": 6229,
+      "sha256": "c2df1539ed6f2331565dac6de0567b626739156d1d9e31c6c5ee4008177392bc"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/acceptance-resources.js",
+      "bytes": 9267,
+      "sha256": "7c4f5b1a8b764d279c814a6df7c5a3b733c0c89dceb5edd94089a6a176ffa143"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/activation.js",
+      "bytes": 6278,
+      "sha256": "619acb0f95e3f53feccaaaaff0f9f543d4c9d59738abfef03b188aa4a03cdeff"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/activity.js",
+      "bytes": 3422,
+      "sha256": "a283737341ba0db19ad90c1e77f718768aef67fa72337b1596f4b9a115ef29d0"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/ai-usage.js",
+      "bytes": 1983,
+      "sha256": "a5ebcb64511f358b7d2f4ed4ec7a1d7c7cf93d5f3cd6841f726476ada3188581"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/catalog.js",
+      "bytes": 3695,
+      "sha256": "a01a67de2b95fe66716663e625de15aa833fc4526dcc31537f947b49291a419c"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/commands.js",
+      "bytes": 4176,
+      "sha256": "b9c76592a7a267ac5393f4dac2b2c7c17a7a709efb9a6ba7e6bc6b0240af2517"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/configuration.js",
+      "bytes": 4864,
+      "sha256": "136d480d016d3b52a8953001c62ecd8fd4c07e658e9ae8bd57ff41e70874d8c3"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/dev-adapter.js",
+      "bytes": 637,
+      "sha256": "0f9652736b29c28144f0080d05fd50643ae3d688b14e08f964bd5dc01f799188"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/diagnostics.js",
+      "bytes": 7458,
+      "sha256": "5c9aea3416d1d26eb87985c235f382d84c00d413fe6a50125fb05640961328a2"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/discord-access.js",
+      "bytes": 5839,
+      "sha256": "2c244f0802f1df23a64f331871fbfc753187d1a3efdb7f16a210c16327298b3c"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/economy.js",
+      "bytes": 5721,
+      "sha256": "97b95076d5d4e43857385fc4e298bd92a4aea7ed192e7ec959f6561ffd4faa6f"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/entitlement-policy.js",
+      "bytes": 4096,
+      "sha256": "bdc1866de9f1185dffdb22e147b4cfb7943937063dabe89210a97e63713c3351"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/entitlement-schema.sql",
+      "bytes": 1679,
+      "sha256": "59c398e2f05045b86c6642cf48a529aeaa918cb232cf419375b0528b94d8551e"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/entitlement-view.js",
+      "bytes": 5037,
+      "sha256": "f903b8b9ff2a3a0de7e2ced6da8c59d9a473bc9578f7c76f82b06a0632f1f299"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/entitlements.js",
+      "bytes": 9000,
+      "sha256": "75f57466967feebab0a3d86aaca897bd5c7963efde7e073cd898355739f38e04"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/feature-catalog.js",
+      "bytes": 4060,
+      "sha256": "7cd4ae1b97b297321a68d1e0ff43a12c3de78f9bcc5d7aa40c71c3b063e158c2"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/fields.js",
+      "bytes": 5908,
+      "sha256": "718237f7e7815891a9201e449723dbaaabd31d2275fb059fc06680c177dbc366"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/guild-lifecycle.js",
+      "bytes": 2094,
+      "sha256": "1e1cb6a496ce0e5491f95fbbec54606646f7f5196283303f68c9bc95dbecb9de"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/http.js",
+      "bytes": 12425,
+      "sha256": "59ba994a4fae8c90fabfad4072604ab2f82edcb2108a1632aaf9c8181299225a"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/oauth.js",
+      "bytes": 6502,
+      "sha256": "572d61df4f76aaf53efebd05f04db9e696511550437c3313803414435ca740e5"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/onboarding.js",
+      "bytes": 16565,
+      "sha256": "d5b4b7eaab98f8873c8099e86e2926aaeac61bb8de02b5f0475706811fd10e19"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/plan-administration.js",
+      "bytes": 3013,
+      "sha256": "7c7d4271359103daf0021b0ba1b3b4910097dd7523b40ad5f22ddec0f436d524"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/release-config.js",
+      "bytes": 4618,
+      "sha256": "66b1214c71d84ff2dc6c2fde076250e70a61b971c0a4a3e312a650bb719eb97b"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/role-write.js",
+      "bytes": 1891,
+      "sha256": "a89c15334ff4a70d52c21b3c5ea3408925a5461879e0d00e4fc7c10089f03aa3"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/roles.js",
+      "bytes": 3605,
+      "sha256": "34b117bfc198dd0bdc1624fab011167012d2db7db6b421ec850cbfbaf9f511f1"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/runtime.js",
+      "bytes": 20538,
+      "sha256": "454478d3d1fe5bd4af49b645edfcb0f825fa8efee17c21b5f242b173234d2e84"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/schema.sql",
+      "bytes": 6452,
+      "sha256": "833f69d23402316739dd148b963c2dc69289a895ea21de0c76ad399cbafa01d8"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/service.js",
+      "bytes": 36250,
+      "sha256": "ffab57cbcf9135a9a2b7fcab34aa68dc6f8f16d46c00e9d236bdb45eab20f451"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/setup.js",
+      "bytes": 14181,
+      "sha256": "19b5cecc60260315545cc7c62fdb09027a036249e862d83c9b884708b8a057f5"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/source-policy.js",
+      "bytes": 628,
+      "sha256": "ae3f52a212b7d1e5f9df2eebb2047162c6840d0658ea1727e225285e4747671a"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/system-status.js",
+      "bytes": 3378,
+      "sha256": "c4eb3438daae15bbfadabb419965a41e08a9987bd590083a48facf1eacbad392"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/ticket-write.js",
+      "bytes": 3522,
+      "sha256": "bfb5f43b66961992a8d25c7bf8b9b70633c140139fd6ae0f7a216bfdd3e22887"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/tickets.js",
+      "bytes": 21019,
+      "sha256": "e56f4158d33dba1dd862351917a06066f9acc1f8b96fa6a842ee6f5b2c2b98af"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/transport.js",
+      "bytes": 2254,
+      "sha256": "816f2f535aea20c81b12b0eebf6ebcf86088fdff0556220924785e005a6c014a"
+    },
+    {
+      "path": "apps/agent-smith/src/platform/welcome.js",
+      "bytes": 5185,
+      "sha256": "f4f2c1a0ed46e61364407a684383b850422ce78d54622d6923aabfd562af8307"
+    },
+    {
+      "path": "apps/agent-smith/src/policy.js",
+      "bytes": 844,
+      "sha256": "52b3335617c254d5081290d976860da8a05104aa9e00a49fde61015446bf50ce"
+    },
+    {
+      "path": "apps/agent-smith/src/preflight.js",
+      "bytes": 2790,
+      "sha256": "3daccd747dde7ecb807874124acd441f26ba2511bcae5d1950a93f6ba5089c0b"
+    },
+    {
+      "path": "apps/agent-smith/src/privileged-pipeline.js",
+      "bytes": 1306,
+      "sha256": "446cce4d554c0307e8fc6db3166ff95babf47daef4df51503b1cf6e57c10bf8c"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-commands.js",
+      "bytes": 2886,
+      "sha256": "d7bf71c385d8f2f9dbf4177bb3363a31c3a5a732d017bb5a078e26738dc00306"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-config.js",
+      "bytes": 1613,
+      "sha256": "bd84de369c09c86c0c9377d1dd7de3544362af8eb576012347df5e1b0a78f175"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-evidence.js",
+      "bytes": 1917,
+      "sha256": "f32b30d4e2ebe8f6676c8dd3bb60439d2f96e98bf3518b4c44f7101228cdaa8c"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-interactions.js",
+      "bytes": 7981,
+      "sha256": "c2723bd377964010267ee2650e949debff814736d721e2152f30f09a3e45ad01"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-legacy.js",
+      "bytes": 2127,
+      "sha256": "7c518271253c5c683f4da586425d3223d1b4a6e917f0fbd03c6666ad98d5185d"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-migrate.js",
+      "bytes": 1334,
+      "sha256": "4b190f341610572d379cddccaa447ceb54ce969c17c2663224abcbbf066114a2"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-policy.js",
+      "bytes": 2517,
+      "sha256": "d895eb6da52ecee3629f3ecfcb54dfef83f3f9ac1b4c7ab877a2c1fb49a62909"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-roles.js",
+      "bytes": 3349,
+      "sha256": "57bc07f635786bbfc13add65049472a1d13abf92fb2743a36238a045fe95f721"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-schema.sql",
+      "bytes": 2418,
+      "sha256": "0cc21415a5b5b241b54acf740c5cb381d82fa34778f487ddc3683300e9ca3aba"
+    },
+    {
+      "path": "apps/agent-smith/src/progression-worker.js",
+      "bytes": 13172,
+      "sha256": "3dc1c1a6f8cb4d91d53889c915c76f5a849253c1a1235a660019e51b5a3c3c9a"
+    },
+    {
+      "path": "apps/agent-smith/src/progression.js",
+      "bytes": 10218,
+      "sha256": "369b25ab73a03bfcf4050bd79912fa3d3b61efdde3029980bac2fed3f5eecd3d"
+    },
+    {
+      "path": "apps/agent-smith/src/protected-resources.js",
+      "bytes": 1492,
+      "sha256": "0c9ee0a44eeaa203187d111d64073631f1001d788f5f1fa5ced19ba534c1b594"
+    },
+    {
+      "path": "apps/agent-smith/src/provision.js",
+      "bytes": 12265,
+      "sha256": "ed481e73f92df665839e420141a74bf903e09b533b322d41e8c06b4db1bac6d7"
+    },
+    {
+      "path": "apps/agent-smith/src/refresh-access-requests.js",
+      "bytes": 1595,
+      "sha256": "14ecb703f807ee080c3b7af8f5816b0921e300abe9fddac5b6715ad60dfc8543"
+    },
+    {
+      "path": "apps/agent-smith/src/refresh-onboarding.js",
+      "bytes": 1574,
+      "sha256": "d4234307cb37b7960cf2f60c7bebc9ae3904f5b6c0f0e0521efefd5717e90b97"
+    },
+    {
+      "path": "apps/agent-smith/src/register.js",
+      "bytes": 1104,
+      "sha256": "f2f5d93d1010dc861314c7ba74dcf82993e05fb1bfac40d6cbad01d37dd34028"
+    },
+    {
+      "path": "apps/agent-smith/src/request-lifecycle.js",
+      "bytes": 5473,
+      "sha256": "4bd5897b5a2aa9110e293496de73c2df6f9a3513e79ca8142d0074ec45a1c955"
+    },
+    {
+      "path": "apps/agent-smith/src/review.js",
+      "bytes": 4279,
+      "sha256": "42a018270f1cac24cbe692ac64126cf6e7978815b2c12985ed5189686b1eff02"
+    },
+    {
+      "path": "apps/agent-smith/src/security-audit.js",
+      "bytes": 8644,
+      "sha256": "8c616cdb03c91d9dd4e4cc7b5d18cb11ae8db815eb180c32209faaea3e59f866"
+    },
+    {
+      "path": "apps/agent-smith/src/security-gate.js",
+      "bytes": 15977,
+      "sha256": "970450857e439b748a3422d1ef4208e6c9eb0db2884ad4ee4c9747a6937a4018"
+    },
+    {
+      "path": "apps/agent-smith/src/security-lock-audit.js",
+      "bytes": 2824,
+      "sha256": "255c0f486aba81ae908d918392568dccfc1aa9d78af8b076b0a912ee5e6d19dc"
+    },
+    {
+      "path": "apps/agent-smith/src/security-policy.js",
+      "bytes": 6045,
+      "sha256": "554f3b1a0d988595a0410991b72511a0d91ef610eb5f76f3474ff7ab768484cd"
+    },
+    {
+      "path": "apps/agent-smith/src/security-rate.js",
+      "bytes": 1380,
+      "sha256": "3364f1b0a888e980ab907a00f63d9d7aced88f898dc40a95eb1be82f27e98338"
+    },
+    {
+      "path": "apps/agent-smith/src/security-settings-schema.sql",
+      "bytes": 1034,
+      "sha256": "9fc2fd887039d1ecf783afd6258b07e3956ca6f29e237d563bd00ba03043e903"
+    },
+    {
+      "path": "apps/agent-smith/src/security-source-audit.js",
+      "bytes": 2834,
+      "sha256": "b6833ee0ae0b987d093e073ed6a346a14ab1c02c571bc6a4f61fcd530006baf8"
+    },
+    {
+      "path": "apps/agent-smith/src/security-source-check.js",
+      "bytes": 318,
+      "sha256": "e3fc8c3eff9fb38aa735aefcdd93bf34d85ff26399c77e12227e3d6431d1eeed"
+    },
+    {
+      "path": "apps/agent-smith/src/smith-control.js",
+      "bytes": 18375,
+      "sha256": "f023a2728a02995090cad7ae2163f3971a1bb005ddbf612d9b614d5c4393ef98"
+    },
+    {
+      "path": "apps/agent-smith/src/text-participation.js",
+      "bytes": 2327,
+      "sha256": "5d92f26a283c12b02502c4e6442d125585270bdd5ac3982c517ed3cb5a83894c"
+    },
+    {
+      "path": "apps/agent-smith/src/transaction.js",
+      "bytes": 1146,
+      "sha256": "91eaf5ebea101f538d5384cfef8322413f48ee2b31c083fb2c13d7e0ab7c8d93"
+    },
+    {
+      "path": "apps/agent-smith/src/worker-status.js",
+      "bytes": 3665,
+      "sha256": "6b4e52800305cb580698181676eec0b862186257c13cdedf9da69f41b97fe6fd"
+    },
+    {
+      "path": "apps/agent-smith/test/ACCESS-FAILURES.md",
+      "bytes": 5869,
+      "sha256": "dc8a600934c8f4a7e099c7992fea9cf7c0296295075854a65793eb28155d0bbf"
+    },
+    {
+      "path": "apps/agent-smith/test/access-failures.test.js",
+      "bytes": 12810,
+      "sha256": "7ac7046fea18f091651dc301350a85f765a1d70de79e655837df61e31a8d5f91"
+    },
+    {
+      "path": "apps/agent-smith/test/access-recovery.test.js",
+      "bytes": 7200,
+      "sha256": "4ca4bc090a832903e7f0180dc7da546fe64dc493af2eccbdb4c93d69e6abc849"
+    },
+    {
+      "path": "apps/agent-smith/test/access-request.test.js",
+      "bytes": 1825,
+      "sha256": "e378ad9960bbb4bb994dc8b149e1e68317490172c35908aad9d13a9ae677c825"
+    },
+    {
+      "path": "apps/agent-smith/test/blueprint-permission-audit.test.js",
+      "bytes": 5260,
+      "sha256": "90095d8c4441490ae2f2edc8b7b52a7ec82ed207d74fbe643a1133c65f46d961"
+    },
+    {
+      "path": "apps/agent-smith/test/community.test.js",
+      "bytes": 3435,
+      "sha256": "009fa681e78e99b6163db0d7af7cda33d7cc9a41dfa6013b5639c66f69dde45d"
+    },
+    {
+      "path": "apps/agent-smith/test/conversation-budget-postgres.test.js",
+      "bytes": 5270,
+      "sha256": "06513dfcf8b281a79ecd4a3dde3cf429d7cd0af498e6c9c1aaffaf468288e1be"
+    },
+    {
+      "path": "apps/agent-smith/test/conversation-budget.test.js",
+      "bytes": 11779,
+      "sha256": "7bddde8774b6b196e1125ebb385602d51ccf3c317791962513fa7e65531ead6f"
+    },
+    {
+      "path": "apps/agent-smith/test/conversation-context.test.js",
+      "bytes": 16791,
+      "sha256": "8f2ff4be5c716d8ab58b7dc56ad9fc6dce1a6d80c34dcecf842a34fbea2a3c3e"
+    },
+    {
+      "path": "apps/agent-smith/test/conversation-gate.test.js",
+      "bytes": 2086,
+      "sha256": "10f2cc4b57b873150a4b978cafece250de65ffbe35eeb4c3baa4d2f183a3ceca"
+    },
+    {
+      "path": "apps/agent-smith/test/conversation-lookups.test.js",
+      "bytes": 8944,
+      "sha256": "0338d6aaa7d1b35be03723ce86b904f41cb94af0f0744334d42eb288e031eb84"
+    },
+    {
+      "path": "apps/agent-smith/test/conversation.test.js",
+      "bytes": 17348,
+      "sha256": "5518264038d5baeb0f510f6bd330131a356166d11ed9f67253ed4c0defcf899d"
+    },
+    {
+      "path": "apps/agent-smith/test/entitlement-isolated.integration.js",
+      "bytes": 13486,
+      "sha256": "227854b3ba7c5f3c42910c395a7a83578e4cb93e508c0b42e132d74d8b0a14eb"
+    },
+    {
+      "path": "apps/agent-smith/test/entitlement-policy.test.js",
+      "bytes": 11244,
+      "sha256": "ed77c326aa1e183a7b3662b204521c9dd93cd6fa4e0b261bc0c6383d792c9941"
+    },
+    {
+      "path": "apps/agent-smith/test/feed-schema-check.test.js",
+      "bytes": 2751,
+      "sha256": "ca33d07e0b85495982c631768de772f56dfb3d6efeca5ff58a5c7dc3226b53df"
+    },
+    {
+      "path": "apps/agent-smith/test/feeds-postgres.test.js",
+      "bytes": 11369,
+      "sha256": "50ca22fc9d9730f992047408129203e0de182663be30fb3b544df267fd910627"
+    },
+    {
+      "path": "apps/agent-smith/test/feeds.test.js",
+      "bytes": 4955,
+      "sha256": "308bf600015555499618b046888ff304615dfd5977a2956a6f04164161f0fc20"
+    },
+    {
+      "path": "apps/agent-smith/test/gateway-startup.test.js",
+      "bytes": 4398,
+      "sha256": "df6431ba2b154d3022d7cad53315026781dd7949eb636d7f1a878bc1e740075e"
+    },
+    {
+      "path": "apps/agent-smith/test/guild-archive.integration.js",
+      "bytes": 5066,
+      "sha256": "9c27b9c3ca968ceacd43dcd3d5af33b145a7815bf4ddbff5ca799d086946b4cb"
+    },
+    {
+      "path": "apps/agent-smith/test/guild-lifecycle.test.js",
+      "bytes": 4990,
+      "sha256": "468b1b0c04ea1453b3e337e12360f51844bb739de5d975f1ee3516d189da6bab"
+    },
+    {
+      "path": "apps/agent-smith/test/helpers/bot-fixture.js",
+      "bytes": 10218,
+      "sha256": "35b9b857d1e360dbdc381ffa6ea875c099c8c8752e9cc619d74a51442a476191"
+    },
+    {
+      "path": "apps/agent-smith/test/helpers/conversation-budget-fixture.js",
+      "bytes": 3430,
+      "sha256": "f5a19943d6287a58b24777947cd85b4c25ad96f090b0e25d7b4d4a4588d44fe1"
+    },
+    {
+      "path": "apps/agent-smith/test/helpers/historical-fixture.js",
+      "bytes": 4803,
+      "sha256": "1016a594461ee4b40babe3005768e578eb65b5277fe55d208f74e5b2e52d5fdd"
+    },
+    {
+      "path": "apps/agent-smith/test/helpers/transaction-store.js",
+      "bytes": 10447,
+      "sha256": "a03a89ff1a5c9c5a090a55df6e3cd105d0341b731144bf7f220e743c162b31aa"
+    },
+    {
+      "path": "apps/agent-smith/test/historical-postgres.test.js",
+      "bytes": 8985,
+      "sha256": "6ce3cf7c2dc9b52e1e44332f587bc491948dc47aac2eaca4f153861d8e69655e"
+    },
+    {
+      "path": "apps/agent-smith/test/historical-review.test.js",
+      "bytes": 7977,
+      "sha256": "71fb07baa1b0d80038844b0cda5659f23414aff380aad019758ce7f9ed095609"
+    },
+    {
+      "path": "apps/agent-smith/test/lookup-warnings-postgres.test.js",
+      "bytes": 3735,
+      "sha256": "0793a0ce06dced68a0305064ae68c0d93a01bd8d516e8ce0da036fe6f3d77659"
+    },
+    {
+      "path": "apps/agent-smith/test/lookup-warnings.test.js",
+      "bytes": 19023,
+      "sha256": "9135df1ead01feb21286bd94cc3cff784c24b4a0e87f07608d41d5eba7b3333a"
+    },
+    {
+      "path": "apps/agent-smith/test/maintenance-postgres.test.js",
+      "bytes": 10726,
+      "sha256": "fc581b8ab1ccda9f4ad6877615e982e50908f29b3640192afa9ad2e3a0861811"
+    },
+    {
+      "path": "apps/agent-smith/test/maintenance.test.js",
+      "bytes": 5872,
+      "sha256": "3d5e234395dd1e97e04fc664c278313619a43477008570413d4c9e18450bf0c6"
+    },
+    {
+      "path": "apps/agent-smith/test/moderation.test.js",
+      "bytes": 12276,
+      "sha256": "e92578bd554b7ab9771ffc7d9c155359843433c98badcaf06ad69b1709cf8963"
+    },
+    {
+      "path": "apps/agent-smith/test/native-worker.test.js",
+      "bytes": 9739,
+      "sha256": "c38149475feddd7fa7b9a9bd5c67a6eff84d57efbbee51d45db8829e265a9e5e"
+    },
+    {
+      "path": "apps/agent-smith/test/native.test.js",
+      "bytes": 13966,
+      "sha256": "475de2cd719f045258de3931c2f1d08cb62a39fb749fe25e3c12235a2dd1ec76"
+    },
+    {
+      "path": "apps/agent-smith/test/onboarding.test.js",
+      "bytes": 2523,
+      "sha256": "f586ef2067a8733866234ad347e8959432336658cb67ed9733678b8059a57c9b"
+    },
+    {
+      "path": "apps/agent-smith/test/pending.test.js",
+      "bytes": 9052,
+      "sha256": "ff94af0bdb669ba46896cd98822718cd68f769b06c51a1bb6d323eccca9f2ec1"
+    },
+    {
+      "path": "apps/agent-smith/test/permissions-central.test.js",
+      "bytes": 2678,
+      "sha256": "51855f3dd44a5feb2b2fe0f0a1f59ac7056f9804e92aa994672add777f56eb8c"
+    },
+    {
+      "path": "apps/agent-smith/test/permissions.test.js",
+      "bytes": 3365,
+      "sha256": "7445298adc58ba71c75df7f047b3830bc2a5a8efc0e9b68cac9929181a2cd722"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-acceptance-resources.test.js",
+      "bytes": 5146,
+      "sha256": "658843dd91a14dcedde4e455aa004061a62ae41b9e76df701400810122d59745"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-activation.test.js",
+      "bytes": 5714,
+      "sha256": "e657961fa2faab2b621b14418d6d4c5a73825e85400ba2791db7094c02117d70"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-authority.test.js",
+      "bytes": 1628,
+      "sha256": "c88be93105e02bc670f98591dfa8ff41c974cd403e5bc105528a8725adc02d81"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-command-registration.test.js",
+      "bytes": 3580,
+      "sha256": "9cd808425472d2d25273ab79c19e956a788dc60a3f014329c04bf6b0d2484d9d"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-foundation.test.js",
+      "bytes": 6003,
+      "sha256": "7629b14c7db5c5b101d416b6075a0ea65f9f3396e72c6eb56ac628801dc97036"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-isolated.integration.js",
+      "bytes": 36292,
+      "sha256": "c4ef7c3a7e9de84a983d0bd321a3ecdc5aa2106e40e3d1fef22e68a4fcb38200"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-member-modules.test.js",
+      "bytes": 4110,
+      "sha256": "201e228b764be32d426d6d49d8e10c188870dd229d98a42a8e4dbba670aac715"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-oauth.test.js",
+      "bytes": 8836,
+      "sha256": "64c928780f6f307bfec421412cef77ca00650ce733652be6401edc5b3f7364a7"
+    },
+    {
+      "path": "apps/agent-smith/test/platform-ticket-write.test.js",
+      "bytes": 5562,
+      "sha256": "68b477f36f5eb76400fdcedbd085f77954cff7fe8bcdaaa555d42663bc95dd9d"
+    },
+    {
+      "path": "apps/agent-smith/test/policy.test.js",
+      "bytes": 3440,
+      "sha256": "20fcc63d880905f20a17b629d90594b164a06d19baa89e0d01c640d92e91ee3b"
+    },
+    {
+      "path": "apps/agent-smith/test/privileged-pipeline.test.js",
+      "bytes": 2912,
+      "sha256": "a7af6c6eff3361c8a476998ba26c7c0b2af762660daede7b235cce6e0f818d96"
+    },
+    {
+      "path": "apps/agent-smith/test/progression-db.test.js",
+      "bytes": 18845,
+      "sha256": "c5714046aa7a7348195ffc5c0da5044e48a9fcf3b8e31c41dd85ac3486ca8844"
+    },
+    {
+      "path": "apps/agent-smith/test/progression.test.js",
+      "bytes": 9808,
+      "sha256": "b73e202b949f1fb42797da8a04db12203f6ba77428e6ee617444e166c707bfaf"
+    },
+    {
+      "path": "apps/agent-smith/test/request-lifecycle.test.js",
+      "bytes": 5146,
+      "sha256": "7678ac4a584f663adfec30a372038327ea355ae5b6f764fa810a6df787f672a4"
+    },
+    {
+      "path": "apps/agent-smith/test/request-pipeline.test.js",
+      "bytes": 20710,
+      "sha256": "05a12f3281c0b514fc4eeffb99abd2592dd752d8388788067a943516cfbaa946"
+    },
+    {
+      "path": "apps/agent-smith/test/review.test.js",
+      "bytes": 3395,
+      "sha256": "d386121699efa513b0191ea2e9a031cbd50ba41d0ea64210bc529b75b1ee2da2"
+    },
+    {
+      "path": "apps/agent-smith/test/security-source.test.js",
+      "bytes": 10868,
+      "sha256": "046cf1bcff294b0256705d054347c49828c5d012be5fdcd86799f8334eb4b7d3"
+    },
+    {
+      "path": "apps/agent-smith/test/security.test.js",
+      "bytes": 15258,
+      "sha256": "e516cdcc38ad12c66e9f1db69565e298ebf222f5cb2a8b1e9711a465d8e9c488"
+    },
+    {
+      "path": "apps/agent-smith/test/stabilization.integration.js",
+      "bytes": 13944,
+      "sha256": "88652fbd357d3b9f7a7872aebbc40f49cd4ca6b7b2381d08cb14a853422ef791"
+    },
+    {
+      "path": "apps/agent-smith/test/stabilization.test.js",
+      "bytes": 5358,
+      "sha256": "6daa443751d040958a30eba2ae79931e4c41c82fd3597a727cdd3d2a916a5d2e"
+    },
+    {
+      "path": "apps/agent-smith/test/transaction.test.js",
+      "bytes": 2695,
+      "sha256": "2c7ea9f1b95ddb3ce80ad81e2e93138b844223b168ee936436609445fd079fbc"
+    },
+    {
+      "path": "apps/agent-smith/test/worker-status.test.js",
+      "bytes": 3857,
+      "sha256": "fb77d64cc638c568ca0d1088631e7778d1fe0e9a7af634bb2fce3a3f35f3bd7f"
+    },
+    {
+      "path": "artifacts/api-server/.replit-artifact/artifact.toml",
+      "bytes": 791,
+      "sha256": "bb51bff1ac23815ac55bc786c00156094317e7cf1510f9fec3c85a47aae2ceff"
+    },
+    {
+      "path": "artifacts/api-server/build.mjs",
+      "bytes": 3786,
+      "sha256": "06c3f41838eed9ddb89a86e52e202932a8c6aa594533c5808c0a085580293cd9"
+    },
+    {
+      "path": "artifacts/api-server/package.json",
+      "bytes": 880,
+      "sha256": "069d632c9b9affea6c9e0c58af56ccf6dbe716b7ed2f2554d0255654cef6981f"
+    },
+    {
+      "path": "artifacts/api-server/src/app.ts",
+      "bytes": 991,
+      "sha256": "3569192389e39a91a8311ea9c2340299441135ebd5592aafb1641d1dc7bc94ec"
+    },
+    {
+      "path": "artifacts/api-server/src/index.ts",
+      "bytes": 511,
+      "sha256": "9c1f296e0008006b40d766ee436697e43ef99cf907f2c7afe9a6cd2d6c118d3c"
+    },
+    {
+      "path": "artifacts/api-server/src/lib/.gitkeep",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/api-server/src/lib/logger.ts",
+      "bytes": 421,
+      "sha256": "29e1ca75036fe917595a3a74fd450857d845836fe0625c30b9caa02df4acba62"
+    },
+    {
+      "path": "artifacts/api-server/src/middlewares/.gitkeep",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/api-server/src/routes/health.ts",
+      "bytes": 288,
+      "sha256": "0386ceddb4ff4bff220af72ca38a62191ad95a2f41fd619df3bb9ceffce03db2"
+    },
+    {
+      "path": "artifacts/api-server/src/routes/index.ts",
+      "bytes": 171,
+      "sha256": "957c7d2e44a720dc48ffc511a738c57bb7659a3ab273c8b64b919a9d2a06b232"
+    },
+    {
+      "path": "artifacts/api-server/tsconfig.json",
+      "bytes": 335,
+      "sha256": "aa300909ccd1d4282761b5d6549a174717b663bb56cb0f59d107d4b3d96cb009"
+    },
+    {
+      "path": "artifacts/smith-platform/.replit-artifact/artifact.toml",
+      "bytes": 735,
+      "sha256": "98cbafc8cc33912d519cc40369c5688fee55f9caad162d64fe868109290ef402"
+    },
+    {
+      "path": "artifacts/smith-platform/index.html",
+      "bytes": 1334,
+      "sha256": "dd8b96cc4fbd2c90384d38c5233250e060115a4af6153d2450d6ad47cfb40d9a"
+    },
+    {
+      "path": "artifacts/smith-platform/package.json",
+      "bytes": 2738,
+      "sha256": "670e3d40b14b88b4aa0b29a1ca4d945c91f1ad96ea8bb5abab96979f6572e250"
+    },
+    {
+      "path": "artifacts/smith-platform/public/branding/README.md",
+      "bytes": 518,
+      "sha256": "4a358b596375bad59c669a040d21c83e65153864b8668b19e305fa8d2048d021"
+    },
+    {
+      "path": "artifacts/smith-platform/public/branding/agent-smith-avatar-placeholder.svg",
+      "bytes": 701,
+      "sha256": "5d9c0f1ccc3baf1b71e3981396e3c69537318eff0f6eacdb2592a10478281598"
+    },
+    {
+      "path": "artifacts/smith-platform/public/branding/agent-smith-banner-placeholder.svg",
+      "bytes": 1052,
+      "sha256": "ca7aabf71c7e54315e86716dfd817cc8fd99dec3f90d34f724517f6b246a2e59"
+    },
+    {
+      "path": "artifacts/smith-platform/public/favicon.svg",
+      "bytes": 163,
+      "sha256": "8ffbde9092b1fa4de97c9481b76f518b131268c82e7c555041925225b1dab6e0"
+    },
+    {
+      "path": "artifacts/smith-platform/public/robots.txt",
+      "bytes": 23,
+      "sha256": "16ceb5ee3e0dc13aa9adf31a3ebbe45a1d965b8c2b9f72eaf84e5911e140ed95"
+    },
+    {
+      "path": "artifacts/smith-platform/src/App.tsx",
+      "bytes": 4602,
+      "sha256": "4d09380b4f0a2574b534ef8e74fd7a472647c4531a86fa34cfc280ff1d4d0e35"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/branding.tsx",
+      "bytes": 1006,
+      "sha256": "419db1fc9c2d8bddbeedec2e6c1d4cb1c3308db4b793c8dc4c785124d94cde8a"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/error-boundary.tsx",
+      "bytes": 2735,
+      "sha256": "c1ea4d88be8cd206a46bd87f19edf025b2504a70a2b65cd9c438e4a0e62dafe0"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/fields.tsx",
+      "bytes": 10320,
+      "sha256": "605a512f926bcaacfbb09aa0700f86edbc8dad9ca64e267ad2057afc6470aa87"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/module-icons.ts",
+      "bytes": 657,
+      "sha256": "22032727974e6502a7bce2fa00bdceaae4e28da9ecdc1adfdcfe2fe5fa01f93f"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/panels.tsx",
+      "bytes": 17967,
+      "sha256": "10c65c6d1effc486be3844753674bb541e3dbdd7c5c4a79f49ff0282f0d7cda9"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/plans.tsx",
+      "bytes": 11397,
+      "sha256": "89510bb30bdeba103199a0058a887521a1ad8fbf3b4bda72bf68b84f6014a1c7"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/setup-flow.tsx",
+      "bytes": 13595,
+      "sha256": "826c9ebe4ff4406afa238804c2871a05501dca6881a5ea452f7d126c48cd92ed"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/shell.tsx",
+      "bytes": 13893,
+      "sha256": "6a4f447e5067e8aca816abe962a86557c80711396e84ed4fc1bdbe8879f916bd"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/smith-ui.tsx",
+      "bytes": 5656,
+      "sha256": "039b08a7c54f42b34a2e7fa95988f8c7cbc3500806d723bc080666645ddd5c1b"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/system-status.tsx",
+      "bytes": 4477,
+      "sha256": "582a5a36441549640dee22fc8547f77da4973d9686326f6ac5ca5e0d8acd7a58"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/accordion.tsx",
+      "bytes": 2013,
+      "sha256": "8e4230a3e6d38bfab7b02f00f9e948c8c4038432c5b1bf2d0ea44dc8b5ce09cc"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/alert-dialog.tsx",
+      "bytes": 4447,
+      "sha256": "d76901a06e6881e94aa3847fde2602ee6f6ddc9f4cace9fa238627a5572bd24e"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/alert.tsx",
+      "bytes": 1609,
+      "sha256": "695369ea4d1ba4438dcedacaa8059b08b6463ac93170360f3bd42b983b7608e9"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/aspect-ratio.tsx",
+      "bytes": 143,
+      "sha256": "2f5b0ed3cbcf84e526caad0c6b88d4457f8745a365c86cc74d924a1b6e013a36"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/avatar.tsx",
+      "bytes": 1431,
+      "sha256": "429f5e82fc3dcf265625650176f16ff9b35e55826183e1f1b2d4dc2a338f9b15"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/badge.tsx",
+      "bytes": 1528,
+      "sha256": "ba6f51e428a520f54e600fded4ea030a8099fa6a9a7b7110af8dca34795415d1"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/breadcrumb.tsx",
+      "bytes": 2735,
+      "sha256": "44b4de47f806eec0e3de5130f0399e83700eaf0bc8deb47af5ffda2bb11eb3f1"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/button-group.tsx",
+      "bytes": 2222,
+      "sha256": "b89025c11d08652597cb46b097d3e04658ad2c383bf81ed445c8182c0ed1b260"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/button.tsx",
+      "bytes": 2370,
+      "sha256": "9c20a340ca0c948d0164158eff44fca2e26343c8ee387ffc22f9cd677c59d27d"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/calendar.tsx",
+      "bytes": 7607,
+      "sha256": "1cdd1e62797356fe62f61f5521fcf0da8e3570b1120868ccca2b48370157fe46"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/card.tsx",
+      "bytes": 1856,
+      "sha256": "9fed39a53303c12fa6ac6f5f8813c1683e2198df9ee067cffbdfe69044cf3e4f"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/carousel.tsx",
+      "bytes": 6288,
+      "sha256": "4ae2f69bc2c1ce33c60b23ddc5382f4b93882dac07c2d18cce32fb148ff52c48"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/chart.tsx",
+      "bytes": 10846,
+      "sha256": "ac747c83483d742e207426a193ba5e2cf639fa18cd819c1f12d12329520c6c12"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/checkbox.tsx",
+      "bytes": 1038,
+      "sha256": "6b9e336fa42475bbb2ad4d76478afb8d2555e6e26bac245b9ccde62a9a033adc"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/collapsible.tsx",
+      "bytes": 335,
+      "sha256": "aedcd10b62404b39d8d5544c01fee90aa7b66e7280bb80a215601ad198a1b8fd"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/command.tsx",
+      "bytes": 4918,
+      "sha256": "d8fb66e44f9f8de558f6a94c781f3d890871d76dbabcda64e6fab3c917b3237d"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/context-menu.tsx",
+      "bytes": 7446,
+      "sha256": "bdff38b45a6010e3db808c099c799bd61e6aca619378074e7b14b63c1291e4c9"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/dialog.tsx",
+      "bytes": 3889,
+      "sha256": "e0d3fa53f4cb7d8011ab09f2d198c24234062d24638fabf5142f5fbce57d2ba5"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/drawer.tsx",
+      "bytes": 3029,
+      "sha256": "152bc340ad982e84f851e3bc1a6b8e7ffd0151a7445c6ecf1b1e3e13cbc19210"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/dropdown-menu.tsx",
+      "bytes": 7646,
+      "sha256": "a79d5419ee174de35880340aef44d67847cee54846c058e02ac4a846b603c60f"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/empty.tsx",
+      "bytes": 2410,
+      "sha256": "48824b1b37bd406fa74f48db726a4f1d70cf88db5b3432f7b1d59f584f1c5dad"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/field.tsx",
+      "bytes": 6079,
+      "sha256": "c3787ffb045354e9f18e70d94890627caea94939a226e49c1e6cedee84a1e9e1"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/form.tsx",
+      "bytes": 4232,
+      "sha256": "1960463b09152760fdd99ca3eb16187408d064c7599ed66384b42d1613d3a3a3"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/hover-card.tsx",
+      "bytes": 1245,
+      "sha256": "e0b4e3f0126757a8eb5c6e436c8c041c049430abe9a2eb84b10154144b31c29c"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/input-group.tsx",
+      "bytes": 4993,
+      "sha256": "f4befbf9bf8ebd755b267c4db2b396be296adb95acca5c3fba54f6495bdedebd"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/input-otp.tsx",
+      "bytes": 2160,
+      "sha256": "b4891335e70920518cfbdef2aeb399f61477fbc4b3ffe3b8a2938f19074164cc"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/input.tsx",
+      "bytes": 775,
+      "sha256": "03ac1648171bd5ad90dbc03e9ebff9a9cc77708bcc53bdac914b80eeebfe3032"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/item.tsx",
+      "bytes": 4519,
+      "sha256": "4a84cda22d692ee176f5128517a4003a63d11f907df445e7586ef034c88e8772"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/kbd.tsx",
+      "bytes": 867,
+      "sha256": "4348a7a06a715e9e9673602cbb9ed89a6a4c6cbdd457d4c03db0f23a139d19eb"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/label.tsx",
+      "bytes": 733,
+      "sha256": "fbc0c7db4221227941271a004bf71db5067aee9d8668f3351d91113cd5934c8c"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/menubar.tsx",
+      "bytes": 8655,
+      "sha256": "26dbbf36e4ffd87aab74e61dd1e3613f0c640988479679d53bacd8dbd15cc891"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/navigation-menu.tsx",
+      "bytes": 5150,
+      "sha256": "222020e1ac703ce01700d6e8822c6263932bc71c481d724b8ef53ccaae8ad63f"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/pagination.tsx",
+      "bytes": 2772,
+      "sha256": "dd65d2e59226a3f384014b596ae701aef50f130cb3061f4657e81c588587b8da"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/popover.tsx",
+      "bytes": 1351,
+      "sha256": "dc574442536873c8aa88733c348503c4599ad6ed0fc9898fd25406d94e095cca"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/progress.tsx",
+      "bytes": 799,
+      "sha256": "74223bcccf7ca2ed026d197476abbe3d48fbc531c40f4252445f56954a270c75"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/radio-group.tsx",
+      "bytes": 1421,
+      "sha256": "8155d32dea5d4ddea2048b6d12f83fe4805d9bc87c97b994dbb0d040981334f2"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/resizable.tsx",
+      "bytes": 1733,
+      "sha256": "8e73dfb8b582944364d73b64ed03378016f20f7251f15f880dcf0fb140e1ad41"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/scroll-area.tsx",
+      "bytes": 1650,
+      "sha256": "73f5dedda781e5285092ea269f747378dbad8d95631eab638e15b3c31595dc59"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/select.tsx",
+      "bytes": 5773,
+      "sha256": "c64c9c1574c91f1eff922f3557e7609ba6c1d5e39959dbdecf8d386d7ae41990"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/separator.tsx",
+      "bytes": 764,
+      "sha256": "2b129347f918742bf006099f7f56a9be373250de2ecc3ad201297563e3d1f807"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/sheet.tsx",
+      "bytes": 4307,
+      "sha256": "ef2ae35ccab1252c4eee56e67e9f1b2499b5bbfb3ae39037d8d4be39915c272f"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/sidebar.tsx",
+      "bytes": 21969,
+      "sha256": "de7566e708ba8bf34cb4a78fc018c784315c9d7a16d70e66255f8c72caf9d1db"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/skeleton.tsx",
+      "bytes": 269,
+      "sha256": "d78130b2e311a750e7bb524e66e3af4c04e2ab02b04fd68539c1afd0bbb47152"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/slider.tsx",
+      "bytes": 1043,
+      "sha256": "ecac74b8f3a044ba7a9e4eb0bdbfdf48be92483a32d2c414c5078c9f38e1f369"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/sonner.tsx",
+      "bytes": 902,
+      "sha256": "de5a5d9ae404545fcb0f21123530ffcf89d24a47812c70b3ca1376591e28dbdd"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/spinner.tsx",
+      "bytes": 334,
+      "sha256": "4458ea392b32f439cd4c64b9593846f339370fa1295c04f9003f05c1f3386689"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/switch.tsx",
+      "bytes": 1155,
+      "sha256": "f81bc9b5ce2d6a92b6b2f1f3376c0489f30f7073081a1d9d6c56553880f44c58"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/table.tsx",
+      "bytes": 2881,
+      "sha256": "dd29f5ef260af67ed09c84505495e3fddbad14009e3b3ce689d0c354ffaf55d3"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/tabs.tsx",
+      "bytes": 1890,
+      "sha256": "320609101fbaa6cccda0b899154cb510fa322926cfdbaf07e33b79c00c83fcd6"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/textarea.tsx",
+      "bytes": 655,
+      "sha256": "63fb699771afe60c5073ed50e1a042d7d7f21eefd12d15bcb750cf3230985011"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/toast.tsx",
+      "bytes": 4871,
+      "sha256": "04d4ef720079342e2f4380c22683f1544bd8e93a581fb55e447458f04a6127d5"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/toaster.tsx",
+      "bytes": 777,
+      "sha256": "d34c7cd51482ddd5703a13378d9ac69b3459a304581e42f56ac2c696e53163ac"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/toggle-group.tsx",
+      "bytes": 1767,
+      "sha256": "6d7aca86245edf5d0a8f6f3ed73bd19316f4865425891eabccd6f3e37e59519e"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/toggle.tsx",
+      "bytes": 1494,
+      "sha256": "5800d2099224ef90892e8c1d972d2a0964391c33cd43d7f5c6abf5cd42e023e1"
+    },
+    {
+      "path": "artifacts/smith-platform/src/components/ui/tooltip.tsx",
+      "bytes": 1277,
+      "sha256": "e3c6ea9d4ecd62881af33564e25be013d35a8a7fa78475a6dcc98a06c7f894eb"
+    },
+    {
+      "path": "artifacts/smith-platform/src/hooks/use-mobile.tsx",
+      "bytes": 585,
+      "sha256": "82bff42ff087bd5dc90a5d17609cc428b8688de92d1333073a839af5ad3c9cbd"
+    },
+    {
+      "path": "artifacts/smith-platform/src/hooks/use-toast.ts",
+      "bytes": 3952,
+      "sha256": "12cce940e597e1d597f7063131acd19658d25e924904308bf719bde17b67e351"
+    },
+    {
+      "path": "artifacts/smith-platform/src/index.css",
+      "bytes": 13867,
+      "sha256": "cc1207b40c99cee319753e346c4ea359dab92e1a8077db8b107a858bf4b4a315"
+    },
+    {
+      "path": "artifacts/smith-platform/src/lib/platform.ts",
+      "bytes": 7407,
+      "sha256": "5fb9afd91a9c9899e0d7a2127135e8955c46b5b1131aa3d732814b95d3625805"
+    },
+    {
+      "path": "artifacts/smith-platform/src/lib/utils.ts",
+      "bytes": 170,
+      "sha256": "afc0e1dc0e142d6b81f688d91087f81a4b2db4240cf70f55b6e5e4dcc199ebf1"
+    },
+    {
+      "path": "artifacts/smith-platform/src/main.tsx",
+      "bytes": 446,
+      "sha256": "e7e03b61f962dc1787ea029d4941424475455366b5a4f079c8fcb4f5df4d076c"
+    },
+    {
+      "path": "artifacts/smith-platform/src/pages/dashboard.tsx",
+      "bytes": 13033,
+      "sha256": "13412b4f430dc310375ee00eb655012b7e454d93c595b0cf3cf66603a954d533"
+    },
+    {
+      "path": "artifacts/smith-platform/src/pages/not-found.tsx",
+      "bytes": 739,
+      "sha256": "6aaea7a7125024440020566f3a14fde4f65149b1fd21f68c6a437b193e88c642"
+    },
+    {
+      "path": "artifacts/smith-platform/src/pages/public.tsx",
+      "bytes": 10751,
+      "sha256": "5e73244af20cdb16341a391ce9a7beea85545b213aca870a385513506e1655a8"
+    },
+    {
+      "path": "artifacts/smith-platform/src/styles/smith.css",
+      "bytes": 7851,
+      "sha256": "c7f174ae4c001653a3f80496c4cd608b3c69a2bd7b204c1e37afb97e647c1859"
+    },
+    {
+      "path": "artifacts/smith-platform/tsconfig.json",
+      "bytes": 520,
+      "sha256": "e0a2fd8a7f3bfc860ccab5623b1881e754eb02336612708ff8b59215e8c256c9"
+    },
+    {
+      "path": "artifacts/smith-platform/vite.config.ts",
+      "bytes": 1950,
+      "sha256": "58d64e525df21db90edfad37fed316e1b67bff3b86fb50f7cc8ff40b208d2b67"
+    },
+    {
+      "path": "lib/api-client-react/package.json",
+      "bytes": 265,
+      "sha256": "ae70f97a12d1f7e7cbb291b5ffd1d6893f0d7a0ff7721a21e615d47bccfad789"
+    },
+    {
+      "path": "lib/api-client-react/src/custom-fetch.ts",
+      "bytes": 11377,
+      "sha256": "3a5605ea89571cca7ea9412a230a40954e3a3f1d94d7a566271480165bf5e03c"
+    },
+    {
+      "path": "lib/api-client-react/src/generated/api.schemas.ts",
+      "bytes": 8242,
+      "sha256": "8fa7b99b7f6065a524fb706448706eec1bf8f4e392d8dfb0a3b31d42e3ff9dab"
+    },
+    {
+      "path": "lib/api-client-react/src/generated/api.ts",
+      "bytes": 51336,
+      "sha256": "6b98f67191f19b96be777efe934813cbb4a5bb0cad4597cd6553aac8b7886eac"
+    },
+    {
+      "path": "lib/api-client-react/src/index.ts",
+      "bytes": 194,
+      "sha256": "7974b36e3973a8d0c403589bcf8d8aca7547c5c42c4b73924d05f49de18809e5"
+    },
+    {
+      "path": "lib/api-client-react/tsconfig.json",
+      "bytes": 267,
+      "sha256": "a00fda842228e3478705abcf2c76d9641f5d6263cd5d2df0b613d5379088ad73"
+    },
+    {
+      "path": "lib/api-spec/openapi.yaml",
+      "bytes": 19280,
+      "sha256": "fa99db8093956ce3398f87e24b00d02ad09fc4d64a0e1b31b2dc644c92d4601d"
+    },
+    {
+      "path": "lib/api-spec/orval.config.ts",
+      "bytes": 2051,
+      "sha256": "17bbe15ed439c69c5a900398b2a146e4c8d8c79365479cb0ca9adc4dd4058776"
+    },
+    {
+      "path": "lib/api-spec/package.json",
+      "bytes": 228,
+      "sha256": "2c0f6e86a51350d26ad83e057f0ae4a886b1d8fd484965b34a6a762c0495f088"
+    },
+    {
+      "path": "lib/api-zod/package.json",
+      "bytes": 189,
+      "sha256": "07009861b2ba8decccb4e9d78d743cb7273bd91915231b5eb1463b296efca13e"
+    },
+    {
+      "path": "lib/api-zod/src/generated/api.ts",
+      "bytes": 15354,
+      "sha256": "e2608c0773fb14113071b1d423399ec056992bf96d20509c887170fb07d5bb0d"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/healthStatus.ts",
+      "bytes": 172,
+      "sha256": "cbf343355d947ee2a2fc7c6ff659866f5620a9fd2f1c84de981041f5b4aefc87"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/index.ts",
+      "bytes": 1862,
+      "sha256": "f03ba7395cbac5e6ae25a152d50cfaabfd10797ce04d08dec312f53eebba1efd"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformActionInput.ts",
+      "bytes": 237,
+      "sha256": "908c48dd19e4ee26e6f51ed765e58cf70e85876dbd603115b1f2e49841a63c6a"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformChoice.ts",
+      "bytes": 233,
+      "sha256": "d82b34c4ab24d251a6ede7e4221d1e54ec14e54c4a244985d58c4699bb2b78a9"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformCollection.ts",
+      "bytes": 370,
+      "sha256": "e8ddef5f819212b763317f2cb97bb7d892c1c501d2466eabfff66c74341271ec"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformEntitlementAssignment.ts",
+      "bytes": 278,
+      "sha256": "cd91a1bfbcf23f05e351f8ae9b9c7c649595b3febd6c38e3d9ec24767ff88c8d"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformEntitlementLimit.ts",
+      "bytes": 380,
+      "sha256": "c37d67d7a88ef72490f63b1624ea2977230fc57c86cac28d64ab14732a9ddbb3"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformEntitlementView.ts",
+      "bytes": 676,
+      "sha256": "88942d36c3325115b476b5bb95138f707e4bf3ed62f7b35315c1754f6a7fcb56"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformEntitlementViewPolicyMode.ts",
+      "bytes": 397,
+      "sha256": "ffdcdd26fe720e691190be730877702301b66ecf4493e87fd533d913397918d3"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformFeatureEntitlement.ts",
+      "bytes": 716,
+      "sha256": "67411a07c86ef2cc67f23ada49bf5837ea4c0fada03bed0d19877da159ec092b"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformFeatureEntitlementState.ts",
+      "bytes": 487,
+      "sha256": "1546d8129afedfa29d2d652174f84283a9303449efae9cc979335b894deaef82"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformField.ts",
+      "bytes": 354,
+      "sha256": "3e8d046e8c3e8a212e25d117e07bcb4e2ae4cb4ae84a75eee4c61d9e491c81e5"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformFieldType.ts",
+      "bytes": 451,
+      "sha256": "d73149885fb3467ee79a79ac116ec325a5b99d7f12f8d2e2eec7ea8dc2cae28f"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformGuild.ts",
+      "bytes": 288,
+      "sha256": "a5665ef7fb2d44fb8df7a7e43d92d4a679c31127162a7675a893b5a3a96ef2a7"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformMetric.ts",
+      "bytes": 250,
+      "sha256": "a3c6e992d573d228c3bd7f0270ec26c064f98fec37e5d5174ca4bd80144abb5c"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformModule.ts",
+      "bytes": 596,
+      "sha256": "172262475c272220bcbbc2b7d572302d6c966f443f74d974812e8b79495675c2"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformModuleConfiguration.ts",
+      "bytes": 190,
+      "sha256": "9623589bdc47891edae4bd6cb41936d9a0f3a09b85f5111e926146a88876dd3a"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformModuleInput.ts",
+      "bytes": 364,
+      "sha256": "446223f57a929685d2081ea55fd708b9094c7600ffab3ac51d4c8c195f2060a5"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformModuleInputConfiguration.ts",
+      "bytes": 195,
+      "sha256": "ca80c2da97ad78db960209de6bfdfb304087373ba108b218478f9b9e68137936"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformOverview.ts",
+      "bytes": 583,
+      "sha256": "71805b6297ead1047a6aa40073e14e6af559fcfea3dabaddeabf4775acff9ee8"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformPlanAssignmentInput.ts",
+      "bytes": 599,
+      "sha256": "9f86b7a1713fe158caee4b3f76d1a65f87d94bc17e9270a93439fbb89b040161"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformPlanAssignmentInputPlan.ts",
+      "bytes": 369,
+      "sha256": "b26d5b150d9b26e84213b7212525a779d803463d33cc5652913227899345d409"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformPlanAssignmentInputStatus.ts",
+      "bytes": 429,
+      "sha256": "d970dce98c07fe5ee6e277bd4c9a027a1258d0a52091217853a4d0635027d97d"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformRecord.ts",
+      "bytes": 347,
+      "sha256": "c5ebf16d4db499718f3204f496a906d26d8dff0d364e09dd8edd232750957fb8"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformRecordData.ts",
+      "bytes": 181,
+      "sha256": "83bbbeef9574e66f4241fa2100602ab7b5eb60ae08cdc50d55d94cf85043a54d"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformRecordInput.ts",
+      "bytes": 382,
+      "sha256": "81ae8124017d163d135ab53040fc70c48e0af0c5df2ddc8e5ae4b6b9f1e8c0ae"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformRecordInputData.ts",
+      "bytes": 186,
+      "sha256": "2c686a6a5acbd63210c36e99c4cdf277cedbf44d34912b2678885e90d93379c1"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformResources.ts",
+      "bytes": 272,
+      "sha256": "fd63a0362dfc4200a46491bbed75a310eea6bcea6d85c06dfb828b24fdf1a86e"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformResult.ts",
+      "bytes": 190,
+      "sha256": "085dd23dd124f34ecc7fda06e0aef09aae3b6e749644e20a57a2420ec4e4eddf"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformRuntimeStatus.ts",
+      "bytes": 569,
+      "sha256": "db65fc1f669b5bf1c8cb1edfbbe45b246fbcf7fb8726860234eb8999980b425a"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformRuntimeStatusModuleStates.ts",
+      "bytes": 194,
+      "sha256": "19ebeb2b636b6579c82e3e1754c8deb9a29687dc967b3a3219d744f903d7eb38"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSession.ts",
+      "bytes": 632,
+      "sha256": "2a61815fd79548ede6b9548fdcee06b5ca07dcfc6b769c955935b1b2e9cbcd5b"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSessionRuntimeMode.ts",
+      "bytes": 345,
+      "sha256": "3ab814be44a2666f63c4f89017eb27250625438479cf94959a5f74cfcce714d1"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSessionUser.ts",
+      "bytes": 238,
+      "sha256": "5aa30272d474742478dbc0c1f1b31ef4649917cfefba124cf11697218fa8860b"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSetupInput.ts",
+      "bytes": 361,
+      "sha256": "15322e677465e6f05227d3c7980594c6cd1bcc114c0af4e9375db26d7f509d42"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSetupState.ts",
+      "bytes": 579,
+      "sha256": "a3391cbf43f666b12a8a0158cc40f8a4c163ed32923f675b6c6d9b92cb27d50c"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSetupStatePreview.ts",
+      "bytes": 239,
+      "sha256": "d86c98a5a542fad30e9262e28a1136b2edd17c337345b7e3d523de3456b472c1"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSetupStateStepsItem.ts",
+      "bytes": 237,
+      "sha256": "989e120d6df034f7f28ae99a01e94f849d82813ddc4cc4aac2985e0da830b843"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSystemStatus.ts",
+      "bytes": 539,
+      "sha256": "56c4fd2ac32a536caae60ce329ad663fc31dc732ec31524e3937158fd674ddb5"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSystemStatusComponentsItem.ts",
+      "bytes": 407,
+      "sha256": "47de0d5e5e81d5c434b03e443b5e01cd2dfb2ed5927323a250ccaa1ddca0e971"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSystemStatusComponentsItemStatus.ts",
+      "bytes": 461,
+      "sha256": "85f36f25901989835fde4864bcd794038daefc7ad21fc6aba87517c0e4e51bc6"
+    },
+    {
+      "path": "lib/api-zod/src/generated/types/platformSystemStatusRecentErrorsItem.ts",
+      "bytes": 251,
+      "sha256": "d04e40f83c509a7c679f512a6697684eaea8fe44c37142354c33583ab449bc86"
+    },
+    {
+      "path": "lib/api-zod/src/index.ts",
+      "bytes": 68,
+      "sha256": "effb7d33b5df99004c9b1a840944516ca3ad65cbcd3ae2fcc717c505814ce039"
+    },
+    {
+      "path": "lib/api-zod/tsconfig.json",
+      "bytes": 221,
+      "sha256": "bb52c0e8b13e658570a208d946cb874fdf2b8d990f7c228f96fb24254c9c5a95"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1090,
+      "sha256": "aac843a8a8e2b3c61fdf47644665ae9ee4d0fd44f94af980f3807bb50f029a47"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 240491,
+      "sha256": "c1965c320cff30f335f07180717761e2e0dfc86ee6ffe88c9344de652ae21caa"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6881,
+      "sha256": "a43a5c2979c1f7371268ee674d45be2866a98b102cd5f5eadb278b3c5f35d80a"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "bytes": 692,
+      "sha256": "2dfaa6f6168f618e0e6deff048c17e4f5f73d59325bd935d471905ae6773585c"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 236,
+      "sha256": "8883c5dbf9e073ef0c7e91769b3e4abccca022df69b62fa7518d73e1512b37ef"
+    }
+  ]
+}

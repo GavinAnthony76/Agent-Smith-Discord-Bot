@@ -15,6 +15,8 @@ import { calculateLevel } from './activity.js';
 import { safetyReply } from '../ai-safety.js';
 import { platformAllowlist } from './activation.js';
 import { assertProductionGuildWritable, historicalGuild } from './guild-lifecycle.js';
+import { createSetupService } from './setup.js';
+import { createSystemStatus } from './system-status.js';
 
 const record = row => ({
   id: String(row.record_id ?? row.id), title: row.title ?? row.action ?? 'Record',
@@ -81,6 +83,8 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     }
   } });
   const entitlements = createEntitlementService(pool, { env });
+  const setupWorkflow=createSetupService({pool,discord,env,entitlements,defaultModule,runtimeStatus});
+  const systemStatus=createSystemStatus({pool,discord,env,setupState:setupWorkflow.state,legacyActions});
   async function getEntitlements(authority) {
     permitScope(authority.permit, 'settings');
     return entitlements.getGuildEntitlements(authority.guild.id, canAssignPlan(authority, env));
@@ -108,7 +112,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     let authority;
     const permit = await authorizeTenant({ userId, guildId, capability, write,
       resolve: async () => {
-        authority = await discord.authority({ guildId, userId, pool });
+        authority = await discord.authority({ guildId, userId, pool, write });
         return authority;
       } });
     // Authenticated installed guilds are adopted without touching legacy records.
@@ -120,7 +124,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
       lifecycle: historicalGuild(authority.guild.id) ? 'historical-reference-only' :
         authority.guild.id === TARGET_GUILD_ID ? 'active' : 'inactive-not-authorized',
       icon: authority.guild.icon ?? null, role: authority.role,
-      setupComplete: row?.setup_complete ?? authority.guild.id === TARGET_GUILD_ID,
+      setupComplete: row?.setup_complete ?? false,
       policy: row?.policy_key ?? (authority.guild.id === TARGET_GUILD_ID ? 'hallowed-core' : 'standard') };
   }
   async function listGuilds(session) {
@@ -136,6 +140,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     const result = [];
     // Avoid a burst of parallel fresh guild permission requests.
     for (const guild of guilds) {
+      if(guild.id!==TARGET_GUILD_ID && !platformAllowlist(env).has(guild.id)) continue;
       const manageable = guild.owner || (BigInt(guild.permissions ?? '0') & (P.ManageGuild | P.Administrator)) !== 0n;
       const manager = manageable ? true : (await pool.query(
         'SELECT 1 FROM platform_managers WHERE guild_id=$1 AND user_id=$2', [guild.id, session.userId])).rows.length;
@@ -264,6 +269,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     return presentModule({ module_key: key, ...saved }, authority);
   }
   async function resources(authority) {
+    await discord.readChannels?.(authority.guild);
     return {
       channels: [...authority.guild.channels.cache.values()].filter(c => !c.isThread?.() &&
         hasPermission(authority.actor, P.ViewChannel, c) && hasPermission(authority.guild.members.me, P.ViewChannel, c))
@@ -479,40 +485,7 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     botOnline: status.botConnected === true, runtimeStatus: status, plan: effectivePlan };
   }
   async function setup(authority, input) {
-    if (authority.role !== 'OWNER') throw new PlatformError('owner_required', 403);
-    if (!Array.isArray(input.modules) || input.modules.some(key => !MODULE_KEYS.includes(key))) throw new PlatformError('unknown_module');
-    for (const key of input.modules) await entitlements.requireModule(authority.guild.id, key);
-    for (const id of [input.logChannelId, input.welcomeChannelId].filter(Boolean)) {
-      const channel = authority.guild.channels.cache.get(snowflake(id));
-      if (!channel || !hasPermission(authority.actor, P.ViewChannel, channel)) throw new PlatformError('channel_not_authorized');
-    }
-    const db = await pool.connect();
-    try {
-      await db.query('BEGIN');
-      await db.query('SELECT guild_id FROM platform_guilds WHERE guild_id=$1 FOR UPDATE', [authority.guild.id]);
-      if (entitlements.enforced(authority.guild.id)) {
-        // Setup may enable several modules at once; its aggregate capacity must
-        // be checked inside the same lock as their insertion.
-        const existing = (await db.query('SELECT module_key,enabled FROM platform_modules WHERE guild_id=$1',
-          [authority.guild.id])).rows;
-        const additions = [...new Set(input.modules)].filter(key => !existing.some(row => row.module_key === key)).length;
-        if (additions) await entitlements.requireCapacity(authority.guild.id, 'configuration', 'module_configuration_count',
-          existing.filter(row => row.enabled).length, additions, db);
-      }
-      await db.query('UPDATE platform_guilds SET setup_complete=true,settings=settings||$2::jsonb,updated_at=now() WHERE guild_id=$1',
-        [authority.guild.id, { logChannelId: input.logChannelId, welcomeChannelId: input.welcomeChannelId }]);
-      for (const key of MODULE_KEYS) {
-        const defaults = defaultModule(key, authority.guild.id === TARGET_GUILD_ID, env);
-        await db.query(
-          `INSERT INTO platform_modules(guild_id,module_key,enabled,configuration_json,updated_by)
-           VALUES($1,$2,$3,$4,$5) ON CONFLICT(guild_id,module_key) DO NOTHING`,
-          [authority.guild.id, key, input.modules.includes(key), defaults.configuration, authority.actor.id]);
-      }
-      await audit(db, authority, 'setup_completed', 'settings', {}, input);
-      await db.query('COMMIT');
-      return { ok: true, message: 'Setup saved. No bulk channels, roles or permissions were created.' };
-    } catch (error) { await db.query('ROLLBACK'); throw error; }
-    finally { db.release(); }
+    return setupWorkflow.run(authority,input);
   }
   async function action(authority, input) {
     if (input.action === 'onboarding-publish') await entitlements.requireFeature(authority.guild.id, 'onboarding');
@@ -546,5 +519,6 @@ export function createPlatformService({ pool, discord, env = process.env, legacy
     return { ok: true, message: 'Guarded action completed. Existing restrictions are unchanged.' };
   }
   return { authorize, adopt, listGuilds, modules, updateModule, resources, collection,
-    saveRecord, deleteRecord, overview, setup, action, entitlements, getEntitlements, assignEntitlements };
+    saveRecord, deleteRecord, overview, setup, action, entitlements, getEntitlements, assignEntitlements,
+    setupState:setupWorkflow.state,previewSetup:setupWorkflow.preflight,systemStatus };
 }

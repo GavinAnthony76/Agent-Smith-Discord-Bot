@@ -423,6 +423,32 @@ export const PerformPlatformActionResponse = zod.object({
 })
 
 
+export const GetPlatformSetupStateParams = zod.object({
+  "guildId": zod.coerce.string()
+})
+
+export const GetPlatformSetupStateResponse = zod.object({
+  "state": zod.string(),
+  "classification": zod.string(),
+  "revision": zod.number().int(),
+  "retrySafe": zod.boolean(),
+  "previewHash": zod.string().optional(),
+  "referenceId": zod.string().optional(),
+  "updatedAt": zod.string().nullish(),
+  "steps": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "status": zod.string(),
+  "message": zod.string().optional()
+})),
+  "preview": zod.object({
+  "willCreate": zod.array(zod.string()),
+  "willReuse": zod.array(zod.string()),
+  "willNotChange": zod.array(zod.string())
+})
+})
+
+
 export const SavePlatformSetupParams = zod.object({
   "guildId": zod.coerce.string()
 })
@@ -430,12 +456,73 @@ export const SavePlatformSetupParams = zod.object({
 export const SavePlatformSetupBody = zod.object({
   "modules": zod.array(zod.string()),
   "logChannelId": zod.string().nullable(),
-  "welcomeChannelId": zod.string().nullable()
+  "welcomeChannelId": zod.string().nullable(),
+  "confirmed": zod.boolean().optional(),
+  "expectedRevision": zod.number().int().optional(),
+  "previewHash": zod.string().optional()
 })
 
 export const SavePlatformSetupResponse = zod.object({
   "ok": zod.boolean(),
   "message": zod.string()
+})
+
+
+export const PreviewPlatformSetupParams = zod.object({
+  "guildId": zod.coerce.string()
+})
+
+export const PreviewPlatformSetupBody = zod.object({
+  "modules": zod.array(zod.string()),
+  "logChannelId": zod.string().nullable(),
+  "welcomeChannelId": zod.string().nullable(),
+  "confirmed": zod.boolean().optional(),
+  "expectedRevision": zod.number().int().optional(),
+  "previewHash": zod.string().optional()
+})
+
+export const PreviewPlatformSetupResponse = zod.object({
+  "state": zod.string(),
+  "classification": zod.string(),
+  "revision": zod.number().int(),
+  "retrySafe": zod.boolean(),
+  "previewHash": zod.string().optional(),
+  "referenceId": zod.string().optional(),
+  "updatedAt": zod.string().nullish(),
+  "steps": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "status": zod.string(),
+  "message": zod.string().optional()
+})),
+  "preview": zod.object({
+  "willCreate": zod.array(zod.string()),
+  "willReuse": zod.array(zod.string()),
+  "willNotChange": zod.array(zod.string())
+})
+})
+
+
+export const GetPlatformSystemStatusParams = zod.object({
+  "guildId": zod.coerce.string()
+})
+
+export const GetPlatformSystemStatusResponse = zod.object({
+  "checkedAt": zod.string(),
+  "lastHeartbeat": zod.string().nullish(),
+  "components": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "status": zod.enum(['HEALTHY', 'DEGRADED', 'ERROR', 'DISABLED', 'UNKNOWN']),
+  "detail": zod.string(),
+  "durationMs": zod.number().optional()
+})),
+  "recentErrors": zod.array(zod.object({
+  "referenceId": zod.string(),
+  "operation": zod.string(),
+  "stage": zod.string(),
+  "at": zod.string()
+}))
 })
 
 

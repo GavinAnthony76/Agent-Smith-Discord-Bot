@@ -141,7 +141,7 @@ function AssignForm({ guildId, view }: { guildId: string; view: PlatformEntitlem
 }
 
 export function EntitlementsPanel({ guildId }: { guildId: string }) {
-  const q = useGetPlatformEntitlements(guildId, { query: { queryKey: getGetPlatformEntitlementsQueryKey(guildId), refetchInterval: 20000 } });
+  const q = useGetPlatformEntitlements(guildId, { query: { queryKey: getGetPlatformEntitlementsQueryKey(guildId) } });
   const v = q.data;
   return (
     <section className="panel" data-testid="panel-entitlements">

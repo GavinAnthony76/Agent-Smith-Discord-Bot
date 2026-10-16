@@ -201,6 +201,14 @@ paths:
   /platform/guilds/{guildId}/setup:
     parameters:
       - { name: guildId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPlatformSetupState
+      responses:
+        "200":
+          description: Observed setup state, saved progress and safe recovery
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSetupState" }
     put:
       operationId: savePlatformSetup
       requestBody:
@@ -214,8 +222,90 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformResult" }
+  /platform/guilds/{guildId}/setup/preview:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: previewPlatformSetup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformSetupInput" }
+      responses:
+        "200":
+          description: Read-only preflight and resource-change preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSetupState" }
+  /platform/guilds/{guildId}/system-status:
+    parameters:
+      - { name: guildId, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getPlatformSystemStatus
+      responses:
+        "200":
+          description: Observed subsystem health, never inferred solely from configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSystemStatus" }
 components:
   schemas:
+    PlatformSetupState:
+      type: object
+      required: [state, classification, revision, steps, retrySafe, preview]
+      properties:
+        state: { type: string }
+        classification: { type: string }
+        revision: { type: integer }
+        retrySafe: { type: boolean }
+        previewHash: { type: string }
+        referenceId: { type: string }
+        updatedAt: { type: ["string", "null"] }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [key, label, status]
+            properties:
+              key: { type: string }
+              label: { type: string }
+              status: { type: string }
+              message: { type: string }
+        preview:
+          type: object
+          required: [willCreate, willReuse, willNotChange]
+          properties:
+            willCreate: { type: array, items: { type: string } }
+            willReuse: { type: array, items: { type: string } }
+            willNotChange: { type: array, items: { type: string } }
+    PlatformSystemStatus:
+      type: object
+      required: [checkedAt, components, recentErrors]
+      properties:
+        checkedAt: { type: string }
+        lastHeartbeat: { type: ["string", "null"] }
+        components:
+          type: array
+          items:
+            type: object
+            required: [key, label, status, detail]
+            properties:
+              key: { type: string }
+              label: { type: string }
+              status: { type: string, enum: [HEALTHY, DEGRADED, ERROR, DISABLED, UNKNOWN] }
+              detail: { type: string }
+              durationMs: { type: number }
+        recentErrors:
+          type: array
+          items:
+            type: object
+            required: [referenceId, operation, stage, at]
+            properties:
+              referenceId: { type: string }
+              operation: { type: string }
+              stage: { type: string }
+              at: { type: string }
     PlatformPlanAssignmentInput:
       type: object
       required: [plan, status, reason, revision]
@@ -436,4 +526,7 @@ components:
         modules: { type: array, items: { type: string } }
         logChannelId: { type: ["string", "null"] }
         welcomeChannelId: { type: ["string", "null"] }
+        confirmed: { type: boolean }
+        expectedRevision: { type: integer }
+        previewHash: { type: string }
 

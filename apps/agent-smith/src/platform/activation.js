@@ -51,6 +51,10 @@ export function createActivation({ pool, client, env = process.env }) {
     const platformEnabled = allowed.has(guildId);
     const base = { botConnected: client.isReady(), platformEnabled,
       guildConfigured: false, runtimeActive: false, lastSeenAt: null, activatedAt: null, moduleStates: {} };
+    if(guildId===TARGET_GUILD_ID) {
+      const present=client.guilds.cache.has(guildId);
+      return {...base,guildConfigured:present,runtimeActive:present&&client.isReady(),adapter:'hallowed-core-native'};
+    }
     if (historicalGuild(guildId)) return { ...base, botConnected: false,
       lifecycle: 'historical-reference-only' };
     if (!platformEnabled) return base;

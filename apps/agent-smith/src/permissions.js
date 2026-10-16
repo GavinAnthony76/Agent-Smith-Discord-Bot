@@ -64,6 +64,19 @@ export function assertStaffChannel(channel, guild, cfg, extraRoleId = null) {
     throw new Error('Escalation/audit channel exposes alerts beyond designated staff.');
   }
 }
+export function permissionChannelFor(cachedChannel,guild) {
+  const threadTypes=[ChannelType.AnnouncementThread,ChannelType.PublicThread,ChannelType.PrivateThread];
+  let channel=cachedChannel;
+  if(cachedChannel.isThread?.() || threadTypes.includes(cachedChannel.type)) {
+    channel=guild.channels?.cache?.get(cachedChannel.parentId);
+    if(!channel || channel.isThread?.() || threadTypes.includes(channel.type))
+      throw new Error('Thread parent permissions could not be verified; access change refused.');
+  }
+  if(!channel.permissionOverwrites?.cache ||
+      typeof channel.permissionOverwrites.cache.get!=='function')
+    throw new Error('Channel permissions could not be verified; access change refused.');
+  return channel;
+}
 export function assertRoleChannelGrants(role, guild) {
   const category=categories.find(c=>c.gate===role.name);
   const permitted=new Set(category?[category.name,...category.channels.map(([name])=>name)]:[]);
@@ -71,19 +84,10 @@ export function assertRoleChannelGrants(role, guild) {
     P.SendMessages,P.SendMessagesInThreads,P.CreatePublicThreads,P.AddReactions,P.Connect,P.Speak]).bitfield;
   const deny=new PermissionsBitField([P.ViewChannel,P.SendMessages,P.SendMessagesInThreads,
     P.CreatePublicThreads,P.CreatePrivateThreads]).bitfield;
-  const threadTypes=[ChannelType.AnnouncementThread,ChannelType.PublicThread,ChannelType.PrivateThread];
   for(const cachedChannel of guild.channels?.cache?.values()??[]) {
     // Threads have no permissionOverwrites manager: they inherit their parent's
     // overwrites. Audit that parent, never silently skip an unverifiable channel.
-    let channel=cachedChannel;
-    if(cachedChannel.isThread?.() || threadTypes.includes(cachedChannel.type)) {
-      channel=guild.channels.cache.get(cachedChannel.parentId);
-      if(!channel || channel.isThread?.() || threadTypes.includes(channel.type))
-        throw new Error('Thread parent permissions could not be verified; access change refused.');
-    }
-    if(!channel.permissionOverwrites?.cache ||
-        typeof channel.permissionOverwrites.cache.get!=='function')
-      throw new Error('Channel permissions could not be verified; access change refused.');
+    const channel=permissionChannelFor(cachedChannel,guild);
     const overwrite=channel.permissionOverwrites.cache.get(role.id);
     if(!overwrite || (overwrite.allow.bitfield===0n && overwrite.deny.bitfield===0n))continue;
     const manual = manualChannelPolicy(guild, channel);

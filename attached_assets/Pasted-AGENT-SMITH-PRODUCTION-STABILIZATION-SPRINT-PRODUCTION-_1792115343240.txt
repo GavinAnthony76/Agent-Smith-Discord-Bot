@@ -1,0 +1,722 @@
+AGENT SMITH PRODUCTION STABILIZATION SPRINT
+
+PRODUCTION MANAGEMENT SITE
+
+The production Agent Smith management/admin site is:
+
+https://agent-smith-discord-bot.replit.app
+
+Example Hallowed Core onboarding route:
+
+/dashboard/1556423230590423042/onboarding
+
+Treat this management site, its API routes, database access, and the Agent Smith
+runtime as one operational product.
+
+The reported production problems include:
+
+- slow page loading in this management site
+- server/bot setup flow returning HTTP 500
+- onboarding/admin pages needing reliable live state
+- previously observed progression-rank defects
+
+Audit and optimize the ACTUAL deployed management application and its backend
+paths, not a separate local-only dashboard implementation.
+
+At minimum inspect and test:
+
+- /dashboard
+- guild/server selector
+- /dashboard/1556423230590423042
+- /dashboard/1556423230590423042/onboarding
+- server setup/configuration flow
+- progression
+- moderation
+- logs/system health
+- all APIs used by those pages
+
+Measure separately:
+
+- frontend render/load
+- API response time
+- database latency
+- Discord REST latency
+- background/runtime dependencies
+
+so the source of slowness is identifiable.
+
+==================================================
+PRIMARY GOAL
+==================================================
+
+Make Agent Smith and its management/admin experience reliably usable in
+production.
+
+This is a stabilization and performance sprint.
+
+Do NOT add major new features until the production setup flow, admin interface,
+onboarding and core runtime are reliable.
+
+Known production issues:
+
+1. A user attempted bot/server setup through the management experience and
+   received an HTTP 500 error.
+
+2. The Agent Smith admin/backend site is loading slowly.
+
+3. Production logs also show missing tracked progression ranks.
+
+4. The rules-acceptance thread-permission hotfix has already been published and
+   must remain intact.
+
+5. LMOC is no longer an authorized Agent Smith guild and must remain excluded.
+
+Work through this entire sprint autonomously.
+
+Do not stop for ordinary implementation bugs.
+
+Only request Owner input for:
+- destructive production operations
+- new credentials/secrets
+- material Discord permission changes
+- irreversible data changes
+- unclear policy decisions
+- production publication
+
+==================================================
+1. VERIFY THE HOTFIX FIRST
+==================================================
+
+Confirm the recently published onboarding hotfix is running.
+
+Verify:
+
+- Gateway connected
+- Hallowed Core authorized
+- LMOC excluded
+- rules acceptance no longer fails because of thread.cache
+- parent-channel permission validation is active
+- no unsafe access changes occurred
+
+Do not spend the entire sprint re-testing this if it is healthy.
+
+==================================================
+2. REPRODUCE THE SETUP 500
+==================================================
+
+Reproduce the exact setup path that produced the HTTP 500.
+
+Trace:
+
+browser/admin UI
+→ frontend request
+→ API endpoint
+→ authorization
+→ validation
+→ database
+→ Discord operations
+→ response
+
+Identify:
+
+- route
+- request
+- authenticated actor
+- guild
+- failing function
+- exception
+- database operation
+- Discord operation
+- response handling
+
+Do NOT expose secrets or private credentials in the report.
+
+==================================================
+3. FIX THE ROOT CAUSE
+==================================================
+
+Do not mask the 500 with a generic catch.
+
+Fix the actual underlying defect.
+
+Potential areas to inspect:
+
+- missing guild configuration
+- absent module configuration
+- stale configuration revision
+- undefined Discord cache/member/channel data
+- database row assumptions
+- null settings
+- command-registration assumptions
+- Discord permissions
+- bot hierarchy
+- guild install/setup state
+- cross-guild state leakage
+- missing progression configuration
+- transaction failures
+- timeout/retry behavior
+- duplicate setup execution
+- stale admin frontend contract
+
+The setup flow must fail safely and clearly when prerequisites are not satisfied.
+
+==================================================
+4. SETUP MUST BE IDEMPOTENT
+==================================================
+
+A member/admin clicking Setup twice must not:
+
+- duplicate channels
+- duplicate roles
+- duplicate database records
+- duplicate command registration
+- duplicate scheduled jobs
+- corrupt configuration
+
+Setup should safely determine:
+
+ALREADY CONFIGURED
+PARTIALLY CONFIGURED
+READY TO CONFIGURE
+BLOCKED
+
+and proceed accordingly.
+
+==================================================
+5. SETUP STATE MACHINE
+==================================================
+
+Make the server setup process explicit.
+
+Suggested states:
+
+NOT_INSTALLED
+AUTHORIZING
+PREFLIGHT
+CONFIGURING
+VERIFYING
+READY
+DEGRADED
+FAILED
+
+Persist enough state to recover safely.
+
+The admin site should display the actual state rather than returning a blank
+screen or generic 500.
+
+==================================================
+6. PREFLIGHT
+==================================================
+
+Before any setup mutation verify:
+
+- guild exists
+- bot is present
+- actor is authorized
+- bot permissions are adequate
+- role hierarchy is valid
+- protected resources are recognized
+- database reachable
+- required configuration is available
+- required channels/roles can be safely created or reused
+
+If preflight fails:
+
+make zero destructive changes.
+
+Return a clear actionable error.
+
+==================================================
+7. PARTIAL FAILURE RECOVERY
+==================================================
+
+If setup performs several operations and operation N fails:
+
+- preserve already-successful safe work
+- record what completed
+- record what failed
+- allow safe resume
+- do not recreate completed resources
+- do not require full server reset
+
+Provide a Resume Setup action where appropriate.
+
+==================================================
+8. MEMBER-FACING ERRORS
+==================================================
+
+Remove raw/internal errors from user-facing responses.
+
+Never show:
+
+cache
+stack traces
+SQL errors
+environment variables
+internal file names
+token information
+database internals
+
+Instead provide messages such as:
+
+"Agent Smith couldn't verify that server configuration safely."
+
+or:
+
+"Setup stopped before making additional changes. Review the failed check and
+resume when ready."
+
+Include an error/reference ID for staff diagnostics.
+
+==================================================
+9. ADMIN-SITE 500 HANDLING
+==================================================
+
+The admin interface must distinguish:
+
+400 — invalid request
+401 — not signed in
+403 — not authorized
+404 — resource not found
+409 — stale/configuration conflict
+422 — safe validation failure
+429 — rate limited
+503 — dependent service unavailable
+500 — truly unexpected server failure
+
+Do not turn expected operational conditions into 500s.
+
+==================================================
+10. PERFORMANCE BASELINE
+==================================================
+
+Measure the production management application before optimizing.
+
+Measure:
+
+- initial page response
+- dashboard load
+- guild/server selector
+- Hallowed Core overview
+- onboarding page
+- setup screen
+- members
+- moderation
+- progression
+- configuration
+- logs/system health
+- API latency
+- database latency
+- Discord REST latency
+- number of requests
+- bundle size
+- hydration time
+- polling frequency
+
+At minimum test:
+
+/dashboard
+/dashboard/1556423230590423042
+/dashboard/1556423230590423042/onboarding
+
+and the actual setup path that returned 500.
+
+Identify the slowest routes and requests.
+
+==================================================
+11. ADMIN PAGE PERFORMANCE
+==================================================
+
+Optimize the management experience.
+
+Look for:
+
+- loading every guild dataset on initial render
+- loading every module simultaneously
+- oversized API responses
+- sequential API requests
+- duplicate requests
+- unnecessary Discord REST calls
+- repeated guild/member fetches
+- repeated authorization queries
+- unbounded logs/history
+- expensive joins
+- N+1 database queries
+- excessive client hydration
+- global imports of heavy admin components
+
+Use:
+
+- route-level loading
+- lazy module loading
+- server-side pagination
+- bounded queries
+- request deduplication
+- safe caching
+- skeleton/loading states
+- code splitting
+
+Do not sacrifice authorization correctness for speed.
+
+==================================================
+12. DISCORD DATA CACHING
+==================================================
+
+Review how the management site obtains Discord state.
+
+Do not synchronously perform large Discord REST scans on every page request.
+
+Where safe:
+
+Agent Smith runtime
+→ maintain authoritative operational state
+→ admin site reads bounded projections
+
+Use live Discord verification only when actual authority/current state is required.
+
+Do not trust stale cache for privileged mutations.
+
+==================================================
+13. DATABASE PERFORMANCE
+==================================================
+
+Profile important admin queries.
+
+Check:
+
+- guild configuration
+- member lists
+- moderation cases
+- progression
+- audits/logs
+- setup state
+
+Look for:
+
+- missing indexes
+- unnecessary JSON scans
+- unbounded SELECT
+- repeated joins
+- N+1 access
+- redundant guild lookups
+
+Any schema/index change must be documented before production migration.
+
+==================================================
+14. POLLING
+==================================================
+
+Audit client polling.
+
+Do not poll every backend module unnecessarily.
+
+Use reasonable intervals.
+
+Pause polling when:
+- browser tab hidden
+- page/module inactive
+
+Deduplicate status requests.
+
+==================================================
+15. SERVER SELECTOR / MULTI-SERVER PERFORMANCE
+==================================================
+
+Agent Smith remains multi-server capable.
+
+Do not load detailed state for every guild when opening the dashboard.
+
+Load:
+
+authorized guild summary first
+
+then:
+
+selected guild details
+
+Each guild must remain isolated.
+
+Future invited guilds must not inherit Hallowed Core-specific policy unless
+explicitly configured.
+
+==================================================
+16. HALLOWED CORE POLICY
+==================================================
+
+Preserve the native Hallowed Core model:
+
+FAITH
+GAMING
+TECH
+
+Framework protections and human-approved crossover remain Hallowed-Core-specific.
+
+Do not make generic multi-server setup automatically copy that policy into
+future guilds.
+
+==================================================
+17. LMOC EXCLUSION
+==================================================
+
+LMOC is no longer an Agent Smith tenant.
+
+Verify throughout this work:
+
+- LMOC not allowlisted
+- no LMOC heartbeat
+- no LMOC analytics
+- no LMOC commands
+- no LMOC Discord writes
+- no LMOC setup actions
+
+Historical records/handoffs remain preserved.
+
+==================================================
+18. PROGRESSION RANK DEFECT
+==================================================
+
+Investigate the previously observed missing tracked progression ranks.
+
+Keep this logically separate from the onboarding hotfix.
+
+Determine:
+
+- which configured ranks are missing
+- whether database configuration is absent/stale
+- whether Discord roles are missing
+- whether mapping is incorrect
+- whether members are affected
+- whether reward assignment/reconciliation is affected
+
+Do not fabricate rank history.
+
+==================================================
+19. PROGRESSION REPAIR
+==================================================
+
+If the defect can be safely repaired:
+
+- restore valid configuration
+- preserve existing XP
+- preserve member level history
+- preserve achievements
+- do not demote members unnecessarily
+- audit configuration repairs
+- reconcile only safe reward roles
+
+Do not automatically grant privileged roles.
+
+==================================================
+20. DASHBOARD SYSTEM STATUS
+==================================================
+
+The management UI should clearly display:
+
+Agent Smith Worker
+Discord Gateway
+Database
+Selected Guild
+Setup State
+Moderation
+Onboarding
+Progression
+Feeds
+AI
+Background Workers
+Last Heartbeat
+Recent Errors
+
+Use:
+
+HEALTHY
+DEGRADED
+ERROR
+DISABLED
+UNKNOWN
+
+Never show healthy based only on configuration flags.
+
+==================================================
+21. SETUP UI
+==================================================
+
+Improve the setup experience.
+
+Show a clear progression:
+
+1. Bot Connected
+2. Permission Check
+3. Guild Preflight
+4. Database Setup
+5. Role/Channel Configuration
+6. Command Verification
+7. Runtime Verification
+8. Ready
+
+If something fails:
+
+highlight the failed step.
+
+Do not require the user to guess what a 500 means.
+
+==================================================
+22. SETUP PREVIEW
+==================================================
+
+Before creating or changing Discord resources, show:
+
+Will create:
+- roles
+- channels
+- categories
+- forums
+
+Will reuse:
+- detected existing compatible resources
+
+Will NOT change:
+- Owner
+- protected roles
+- unrelated channels
+
+Require confirmation for significant resource creation.
+
+==================================================
+23. SECURITY
+==================================================
+
+Agent Smith remains below Owner.
+
+Never:
+
+- grant itself Administrator
+- modify guild ownership
+- alter roles above itself
+- bypass protected resources
+- mass-delete server resources
+- perform arbitrary AI-directed mutations
+
+Preserve centralized authorization.
+
+==================================================
+24. TESTING
+==================================================
+
+Add tests covering:
+
+setup success
+setup repeat/idempotency
+setup partial failure
+setup resume
+unauthorized setup
+missing bot permissions
+role hierarchy failure
+missing configuration
+database unavailable
+Discord unavailable
+multi-guild isolation
+LMOC exclusion
+onboarding rule acceptance
+thread-parent permissions
+progression-rank recovery
+admin API error mapping
+slow/degraded dependencies
+pagination
+request deduplication
+
+==================================================
+25. PERFORMANCE TARGETS
+==================================================
+
+For the management site, target:
+
+initial usable dashboard:
+< 2.5 seconds under normal production conditions where infrastructure permits
+
+common admin navigation:
+near-instant after initial load where cached/stateful data permits
+
+API endpoints:
+avoid multi-second responses unless performing an explicit Discord operation
+
+Do not fake performance by returning incomplete state.
+
+==================================================
+26. OBSERVABILITY
+==================================================
+
+Add enough structured telemetry to diagnose future failures quickly.
+
+Record:
+
+request ID
+guild
+operation
+stage
+duration
+success/failure class
+
+Do not record secrets.
+
+For setup failure, we should be able to answer:
+
+WHAT FAILED
+WHERE
+WHY
+WHAT WAS ALREADY COMPLETED
+WHETHER RETRY IS SAFE
+
+without reproducing it manually.
+
+==================================================
+27. NO FEATURE EXPANSION
+==================================================
+
+Do not add unrelated feature work during this sprint.
+
+Focus on:
+
+- working setup
+- onboarding reliability
+- progression integrity
+- admin-site reliability
+- admin-site performance
+- multi-server operational health
+
+==================================================
+28. PRODUCTION CANDIDATE
+==================================================
+
+At completion provide ONE consolidated release candidate.
+
+Return:
+
+1. 500 root cause
+2. setup fix
+3. setup state machine
+4. resume behavior
+5. error-message improvements
+6. admin performance baseline
+7. performance improvements
+8. API/query improvements
+9. progression-rank diagnosis/fix
+10. Hallowed Core regression
+11. LMOC exclusion verification
+12. files changed
+13. schema/index changes
+14. tests
+15. candidate fingerprint
+16. required production actions
+
+Final verdict:
+
+READY FOR AGENT SMITH STABILIZATION RELEASE REVIEW
+
+or
+
+NOT READY — OWNER DECISION REQUIRED
+
+Consolidate Owner decisions into one package.
+
+Do not publish automatically.
+Do not change production Discord permissions automatically.

@@ -5,6 +5,66 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type PlatformSetupStateStepsItem = {
+  key: string;
+  label: string;
+  status: string;
+  message?: string;
+};
+
+export type PlatformSetupStatePreview = {
+  willCreate: string[];
+  willReuse: string[];
+  willNotChange: string[];
+};
+
+export interface PlatformSetupState {
+  state: string;
+  classification: string;
+  revision: number;
+  retrySafe: boolean;
+  previewHash?: string;
+  referenceId?: string;
+  /** @nullable */
+  updatedAt?: string | null;
+  steps: PlatformSetupStateStepsItem[];
+  preview: PlatformSetupStatePreview;
+}
+
+export type PlatformSystemStatusComponentsItemStatus = typeof PlatformSystemStatusComponentsItemStatus[keyof typeof PlatformSystemStatusComponentsItemStatus];
+
+
+export const PlatformSystemStatusComponentsItemStatus = {
+  HEALTHY: 'HEALTHY',
+  DEGRADED: 'DEGRADED',
+  ERROR: 'ERROR',
+  DISABLED: 'DISABLED',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export type PlatformSystemStatusComponentsItem = {
+  key: string;
+  label: string;
+  status: PlatformSystemStatusComponentsItemStatus;
+  detail: string;
+  durationMs?: number;
+};
+
+export type PlatformSystemStatusRecentErrorsItem = {
+  referenceId: string;
+  operation: string;
+  stage: string;
+  at: string;
+};
+
+export interface PlatformSystemStatus {
+  checkedAt: string;
+  /** @nullable */
+  lastHeartbeat?: string | null;
+  components: PlatformSystemStatusComponentsItem[];
+  recentErrors: PlatformSystemStatusRecentErrorsItem[];
+}
+
 export type PlatformPlanAssignmentInputPlan = typeof PlatformPlanAssignmentInputPlan[keyof typeof PlatformPlanAssignmentInputPlan];
 
 
@@ -296,5 +356,8 @@ export interface PlatformSetupInput {
   logChannelId: string | null;
   /** @nullable */
   welcomeChannelId: string | null;
+  confirmed?: boolean;
+  expectedRevision?: number;
+  previewHash?: string;
 }
 

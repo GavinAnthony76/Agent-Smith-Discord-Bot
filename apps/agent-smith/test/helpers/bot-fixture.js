@@ -12,6 +12,7 @@ import * as securityPolicy from '../../src/security-policy.js';
 import * as requestLifecycle from '../../src/request-lifecycle.js';
 import { runLocked } from '../../src/transaction.js';
 import { transactionStore } from './transaction-store.js';
+import { safeMemberFailure, operationalFailure } from '../../src/platform/diagnostics.js';
 
 // Evaluate the actual bot entry point in a closed module graph. Never import
 // discord.js's connection wrapper, config.js, or any live worker. The real
@@ -100,6 +101,7 @@ export async function botFixture() {
   await dbModule.evaluate();
   const inert = async () => {};
   const dependencies = {
+    './platform/diagnostics.js': {safeMemberFailure,operationalFailure},
     './discord.js': { connect: async () => ({ client, guild, cfg }) },
     './db.js': { pool: database.pool, locked: dbModule.namespace.locked,
       audit: dbModule.namespace.audit, resource },

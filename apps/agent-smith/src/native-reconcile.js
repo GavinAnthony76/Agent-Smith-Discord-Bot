@@ -1,3 +1,5 @@
+import { permissionChannelFor } from './permissions.js';
+import { observeSubsystem } from './operational-health.js';
 import { createHash } from 'node:crypto';
 import { frameworks } from './blueprint.js';
 import { TARGET_GUILD_ID } from './config.js';
@@ -32,7 +34,7 @@ export async function createNativeReconciler({ guild, client, restrictionActive 
     for (const f of frameworks) {
       const role = assertAssignableRole(guild.roles.cache.get(ids[`Selection: ${f}`]));
       if (role.managed || role.name !== `Selection: ${f}` || role.permissions.bitfield !== 0n
-        || guild.channels.cache.some(c => c.permissionOverwrites.cache.get(role.id)?.allow.bitfield > 0n)) {
+        || guild.channels.cache.some(c => permissionChannelFor(c,guild).permissionOverwrites.cache.get(role.id)?.allow.bitfield > 0n)) {
         throw new Error('Selection role safety drift; no automatic access granted.');
       }
     }
@@ -74,6 +76,7 @@ export async function createNativeReconciler({ guild, client, restrictionActive 
   async function drain() {
     if (running || stopped) return;
     running = true;
+    let failures=0;
     try {
       const jobs = (await pool.query('SELECT * FROM native_jobs WHERE guild_id=$1 AND next_try<=now() ORDER BY next_try LIMIT 25', [guild.id])).rows;
       for (const job of jobs) {
@@ -86,6 +89,7 @@ export async function createNativeReconciler({ guild, client, restrictionActive 
           if (error.code === 10007) {
             await pool.query('DELETE FROM native_jobs WHERE guild_id=$1 AND user_id=$2 AND revision=$3', [guild.id, job.user_id, job.revision]);
           } else {
+            failures++;
             await pool.query("UPDATE native_jobs SET attempts=attempts+1,next_try=now()+($4 * interval '1 second') WHERE guild_id=$1 AND user_id=$2 AND revision=$3",
               [guild.id, job.user_id, job.revision, Math.min(300, 15 * 2 ** Math.min(job.attempts, 5))]);
             console.error('Native reconciliation deferred; durable retry queued.');
@@ -101,8 +105,15 @@ export async function createNativeReconciler({ guild, client, restrictionActive 
           await pool.query('UPDATE native_alerts SET delivered_at=now() WHERE guild_id=$1 AND id=$2', [guild.id, entry.id]);
         } catch { console.error('Native staff alert delivery deferred; durable alert retained.'); }
       }
-    } catch { console.error('Native queue unavailable; next recovery pass will retry.'); }
-    finally { running = false; }
+    } catch {failures++;console.error('Native queue unavailable; next recovery pass will retry.'); }
+    finally {
+      observeSubsystem(guild.id,'onboarding',failures?'DEGRADED':'HEALTHY',
+        failures?'Native reconciliation deferred; existing access retained and durable retries queued.':
+          'Native queue scan completed; member access decisions remain individually guarded.');
+      observeSubsystem(guild.id,'background',failures?'DEGRADED':'HEALTHY',
+        failures?'Latest native worker pass encountered a dependency or validation failure.':'Native background worker completed its latest queue scan.');
+      running=false;
+    }
   }
   async function scan() {
     const members = await guild.members.fetch();

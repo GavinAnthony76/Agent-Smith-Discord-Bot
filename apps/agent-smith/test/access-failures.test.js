@@ -1,3 +1,4 @@
+import { recentFailures } from '../src/platform/diagnostics.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { botFixture, replyText, assertPrivate } from './helpers/bot-fixture.js';
@@ -21,7 +22,13 @@ function persisted(state) {
 
 function assertFailure(i, message) {
   assertPrivate(i);
-  assert.equal(replyText(i), `Unable to complete: ${message}`);
+  if(message.startsWith('Injected ')) {
+    assert.match(replyText(i),/^Unable to complete: Agent Smith couldn't verify that server configuration safely\./);
+    assert.match(replyText(i),/Reference: [a-f0-9-]{36}$/);
+    assert.doesNotMatch(replyText(i),/Injected|audit failure|commit failure/);
+  } else {
+    assert.match(replyText(i),new RegExp(`^Unable to complete: ${message.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}`));
+  }
   assert.deepEqual(Array.from(i.replies[0].allowedMentions.parse), []);
 }
 
@@ -46,7 +53,8 @@ test('role-add rejection leaves review pending with no grant; a later retry can 
       assert.deepEqual(state.roleRemoves, []);
       assert.equal(state.members.get('member').held.has('role:Tech'), false);
       assert.deepEqual(structuredClone(state.messages), messages);
-      assert.deepEqual(state.errors.at(-1), ['Command failed:', fault.message]);
+      assert.doesNotMatch(JSON.stringify(state.errors),/Discord role add unavailable/);
+      assert.equal(recentFailures('test-guild')[0].stage,'approval-recovery');
       assert.equal(state.queries.some(q => q.sql.startsWith('INSERT INTO grants')), false);
       assert.equal(state.queries.some(q => q.sql.startsWith('UPDATE requests SET status')), false);
 
@@ -86,7 +94,10 @@ test('known database rollback removes only newly acknowledged access and leaves 
         assert.equal(state.members.get('member').held.has('role:Tech'), false);
         assert.deepEqual(state.roleRemoves, [roleChange]);
         assert.deepEqual(structuredClone(state.messages), messages);
-        assert.deepEqual(state.errors.at(-1), ['Command failed:', fault.message]);
+        assert.doesNotMatch(JSON.stringify(state.errors),/Database unavailable at/);
+        const diagnostic=recentFailures('test-guild')[0];
+        assert.equal(diagnostic.stage,'approval-recovery');
+        assert.match(diagnostic.referenceId,/^[a-f0-9-]{36}$/);
         const pending = await dispatch({ kind: 'command', command: 'pending', user: 'reviewer' });
         assertPrivate(pending);
         assert.match(replyText(pending), /Request #1/);

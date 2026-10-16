@@ -2,23 +2,27 @@ import { PermissionFlagsBits as P } from 'discord.js';
 import { rankDefinitions, rankName, titles } from './progression-config.js';
 import { currentLevel } from './progression-policy.js';
 import { assertNotOwner, isProtectedOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
+import { permissionChannelFor } from './permissions.js';
+import { observeSubsystem } from './operational-health.js';
 
 export async function auditProgressionRoles({ guild, resource, config, readOnboarding = () => guild.fetchOnboarding() }) {
   await guild.roles.fetch();
   await guild.channels.fetch();
   const errors = [], ids = new Set();
   for (const definition of rankDefinitions) {
+    let found=false;
     try {
       if(definition.botRewardable!==true)throw new Error('Rank must be explicitly bot-rewardable.');
       const id = await resource('role', definition.name);
       ids.add(id);
       const role = guild.roles.cache.get(id);
+      found=!!role;
       if (!role || role.name !== definition.name || role.managed || !role.editable || role.permissions.bitfield !== 0n) errors.push(`Unsafe rank: ${definition.name}`);
       if (guild.channels.cache.some(c => {
-        const overwrite = c.permissionOverwrites.cache.get(id);
+        const overwrite = permissionChannelFor(c,guild).permissionOverwrites.cache.get(id);
         return overwrite?.allow.bitfield > 0n || overwrite?.deny.bitfield > 0n;
       })) errors.push(`Rank changes channel permissions: ${definition.name}`);
-    } catch { errors.push(`Missing tracked rank: ${definition.name}`); }
+    } catch { errors.push(`${found?'Cannot verify rank permissions':'Missing tracked rank'}: ${definition.name}`); }
   }
   // Rank roles may never be offered as self-assignable onboarding answers.
   try {
@@ -33,7 +37,8 @@ export async function auditProgressionRoles({ guild, resource, config, readOnboa
       if (!role || role.managed || !role.editable || role.permissions.bitfield !== 0n) throw new Error('Unsafe unlock role');
       const parent = await resource('channel', unlock.framework.toUpperCase());
       const intended = new Set(await Promise.all(unlock.channels.map(name => resource('channel', name))));
-      for (const channel of guild.channels.cache.values()) {
+      for (const cachedChannel of guild.channels.cache.values()) {
+        const channel=permissionChannelFor(cachedChannel,guild);
         const grants = channel.permissionOverwrites.cache.get(role.id)?.allow.bitfield > 0n;
         if (grants && (channel.parentId !== parent || !intended.has(channel.id))) throw new Error('Cross-framework unlock');
       }
@@ -51,6 +56,9 @@ export async function auditProgressionRoles({ guild, resource, config, readOnboa
       }
     } catch { errors.push(`Unsafe or missing unlock: ${unlock.roleName}`); }
   }
+  observeSubsystem(guild.id,'progression',errors.length?'DEGRADED':'HEALTHY',
+    errors.length?`Rank audit blocked reconciliation (${errors.length} checks); no repair or history reset performed.`:
+      'Live rank identities, permission-free roles, native onboarding and configured unlock gates verified.');
   return errors;
 }
 

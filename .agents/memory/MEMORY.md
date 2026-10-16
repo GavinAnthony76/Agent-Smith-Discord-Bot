@@ -22,3 +22,4 @@
 - [Acceptance fingerprint evidence](acceptance-fingerprint-evidence.md) — keep failed full hashes visible; later normalization cannot replace a missing historical semantic baseline.
 - [Permission validation timing](permission-validation-timing.md) — separate slow fresh-authority reads from the short authorized-write window; never relax safeguards to fix timing.
 - [Agent Smith visual intent](agent-smith-visual-intent.md) — premium control room, selective glass and restrained lighting; preserve supplied branding and verify portable asset paths.
+- [Channel policy drift](channel-policy-drift.md) — verify renamed resource identity and bounds; Owner approval is still required before accepting policy aliases.

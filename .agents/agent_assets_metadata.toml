@@ -246,3 +246,17 @@ mtime_ms = 1792101608907
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/edb51753-e05b-47ef-b830-0f9d4150c744/d6613c63-d707-4831-bda4-5b6d5938c0a9"
 storage_version_token = "1792101650510844"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "IAz1YCSEQpeKlnbmG2x_W"
+uri = "file://docs/releases/agent-smith-stabilization-report.html"
+type = "html"
+title = "Agent Smith — Stabilization Release Report"
+description = "All 16 requested outputs, measured production evidence, test results, embedded source fingerprint and consolidated Owner actions. Verdict: NOT READY — OWNER DECISION REQUIRED. Nothing published."
+logical_id = "14f64e9e-d158-4345-8a36-2039c920a7de"
+content_hash = "sha256:174e081fadef4d4c2d38dc4268531908a8be8d0ca2e6253ebc2f81969116ea4e"
+size = 103993
+mtime_ms = 1792116987990
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:9e65072f-477e-417e-b5eb-4e5378400616/14f64e9e-d158-4345-8a36-2039c920a7de/419e584d-a2a5-4af9-aa84-7bdd9380ade2"
+storage_version_token = "1792117032058804"
+content_type = "text/html"

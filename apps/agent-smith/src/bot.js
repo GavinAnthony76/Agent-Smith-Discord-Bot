@@ -13,6 +13,7 @@ import { recoverApproval } from './access-recovery.js';
 import { createProgression } from './progression.js';
 import { createProgressionInteractions } from './progression-interactions.js';
 import { assertNotOwner, refreshOwnerProtection, withRoleWorkflow } from './security-policy.js';
+import { safeMemberFailure, operationalFailure } from './platform/diagnostics.js';
 import { createRequestLifecycle, withdrawalAction, myRequestsMessage, assignRequestExpiry, requestExpired, transitionRequest } from './request-lifecycle.js';
 import { createSmithControl } from './smith-control.js';
 import { createCases } from './maintenance-cases.js';
@@ -284,10 +285,10 @@ client.on('interactionCreate', async i => {
     progression.enqueue(subject).catch(() => console.error('Rank enqueue deferred; periodic recovery remains active.'));
     await i.editReply(result); await log(uid,name,{subject,framework:target,request:request?.id});
   } catch (e) {
-    console.error('Command failed:',e.message);
+    if(approvalAttempt) operationalFailure(e,{guildId:guild.id,operation:i.commandName??'member-action',stage:'approval-recovery'});
     const content = approvalAttempt
       ? await recoverApproval({ attempt: approvalAttempt, error: e, locked, guild })
-      : `Unable to complete: ${e.message}`;
+      : safeMemberFailure(e,{guildId:guild.id,operation:i.commandName??'member-action',stage:'member-action'});
     await i.editReply({content:content.slice(0,1900),allowedMentions:{parse:[]}}).catch(()=>{});
   }
 });

@@ -55,7 +55,10 @@ export async function authorizeTenant({ userId, guildId, capability, write = fal
   snowflake(guildId);
   let authority;
   try { authority = await resolve({ userId, guildId }); }
-  catch { throw new PlatformError('guild_access_denied', 403); }
+  catch(error) {
+    if(error instanceof PlatformError && [429,503].includes(error.status)) throw error;
+    throw new PlatformError('guild_access_denied', 403);
+  }
   if (!authority?.installed || !authority.member ||
       !dashboardCan(authority.role, capability, write)) {
     // Uniform refusal does not disclose whether another tenant exists.

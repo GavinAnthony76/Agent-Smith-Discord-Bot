@@ -3,6 +3,11 @@ import { createPlatformService } from './service.js';
 import { COLLECTIONS } from './fields.js';
 import { PlatformError } from './catalog.js';
 import { platformAllowlist } from './activation.js';
+import { TARGET_GUILD_ID } from '../config.js';
+import { assertProductionGuildWritable } from './guild-lifecycle.js';
+import { randomUUID } from 'node:crypto';
+import { performance } from 'node:perf_hooks';
+import { timedPool, diagnosticScope, diagnosticContext, atStage, operationalFailure } from './diagnostics.js';
 
 async function jsonBody(request) {
   if (!String(request.headers['content-type'] ?? '').startsWith('application/json')) {
@@ -24,6 +29,7 @@ async function jsonBody(request) {
   catch { throw new PlatformError('invalid_json'); }
 }
 export function createPlatformHttp({ pool, discord, env = process.env, origin, legacyActions, oauthTransport, ticketActions, onboardingActions, runtimeStatus, acceptanceActions }) {
+  pool=timedPool(pool);
   const oauth = createOAuth({ pool, env, ...(oauthTransport ? { transport: oauthTransport } : {}) });
   const service = createPlatformService({ pool, discord, env, legacyActions, ticketActions, onboardingActions, runtimeStatus, acceptanceActions });
   const secure = origin.startsWith('https://');
@@ -106,7 +112,7 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       const session = await oauth.session(cookieValues.smith_session);
       if (session) rateLimit(`user:${session.userId}`);
       if (url.pathname === '/api/platform/session' && request.method === 'GET') {
-        const operational = runtimeStatus ? await runtimeStatus('1555330318569971743') : null;
+        const operational = runtimeStatus ? await runtimeStatus(TARGET_GUILD_ID) : null;
         send(response, 200, {
           authenticated: !!session, loginUrl: '/api/platform/oauth/login', installUrl,
           oauthConfigured: oauth.configured, botOnline: discord.client.isReady(),
@@ -135,6 +141,7 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       if (['overview', 'resources', 'modules'].includes(area)) capability = key ?? 'overview';
       else if (area === 'entitlements') capability = 'settings';
       else if (area === 'setup') capability = 'settings';
+      else if (area === 'system-status') capability = 'overview';
       else if (area === 'collections') capability = COLLECTIONS[key]?.module;
       else if (area === 'actions') {
         const input = await jsonBody(request);
@@ -145,9 +152,10 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
         request.platformInput = input;
       }
       if (!capability) throw new PlatformError('route_not_found', 404);
-      if (write && env.NODE_ENV === 'production' && !platformAllowlist(env).has(guildId))
-        throw new PlatformError('outside_standard_platform_activation_boundary', 403);
-      const authority = await service.authorize(session.userId, guildId, capability, write);
+      if (write) assertProductionGuildWritable(guildId);
+      Object.assign(diagnosticContext()??{},{guildId,operation:area});
+      const authority = await atStage('authorization',()=>service.authorize(session.userId,guildId,capability,write));
+      if(diagnosticContext()) diagnosticContext().stage='operation';
       let data;
       if (area === 'entitlements' && request.method === 'GET') data = await service.getEntitlements(authority);
       else if (area === 'entitlements' && request.method === 'PUT') data = await service.assignEntitlements(authority, await jsonBody(request));
@@ -160,15 +168,38 @@ export function createPlatformHttp({ pool, discord, env = process.env, origin, l
       else if (area === 'collections' && request.method === 'PUT' && recordId) data = await service.saveRecord(authority, key, await jsonBody(request), recordId);
       else if (area === 'collections' && request.method === 'DELETE' && recordId) data = await service.deleteRecord(authority, key, recordId);
       else if (area === 'setup' && request.method === 'PUT') data = await service.setup(authority, await jsonBody(request));
+      else if (area === 'setup' && request.method === 'GET') data = await service.setupState(authority);
+      else if (area === 'setup' && key === 'preview' && request.method === 'POST')
+        data = await service.previewSetup(authority,await jsonBody(request));
+      else if (area === 'system-status' && request.method === 'GET') data = await service.systemStatus(authority);
       else if (area === 'actions' && request.method === 'POST') data = await service.action(authority, request.platformInput);
       else throw new PlatformError('method_not_allowed', 405);
       send(response, 200, data);
     } catch (error) {
-      const status = error instanceof PlatformError ? error.status : 503;
-      if (!(error instanceof PlatformError)) console.error('Platform request unavailable; sensitive request details omitted.');
-      send(response, status, { error: error instanceof PlatformError ? error.code : 'platform_temporarily_unavailable' });
+      const failure=operationalFailure(error);
+      send(response,failure.status,failure.body);
     }
     return true;
   }
-  return { handler, service, oauth };
+  const observedHandler=(request,response)=>diagnosticScope({
+    requestId:randomUUID(),operation:'platform-request',stage:'session',timings:{},calls:{},
+  },async()=>{
+    const context=diagnosticContext(),started=performance.now();
+    const originalWriteHead=response.writeHead;
+    response.writeHead=function(...args) {
+      if(!this.headersSent) {
+        this.setHeader('X-Request-ID',context.requestId);
+        this.setHeader('Server-Timing',Object.entries(context.timings).map(([key,value])=>
+          `${key};dur=${value.toFixed(1)}`).join(', ')||'application;dur=0');
+      }
+      return originalWriteHead.apply(this,args);
+    };
+    try {return await handler(request,response);}
+    finally {
+      console.info(JSON.stringify({event:'smith.request',requestId:context.requestId,guildId:context.guildId??null,
+        operation:context.operation,stage:context.stage,status:response.statusCode,
+        durationMs:Math.round(performance.now()-started),timings:context.timings,calls:context.calls}));
+    }
+  });
+  return { handler:observedHandler, service, oauth };
 }

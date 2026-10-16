@@ -12,9 +12,50 @@ export function useCsrf() {
   return { q, session: q.data, request };
 }
 
+const STATUS_MESSAGES: Record<number, string> = {
+  400: 'The request was not valid.',
+  401: 'You are not signed in. Sign in with Discord and try again.',
+  403: 'You are not authorized for this server or action.',
+  404: 'That resource was not found.',
+  409: 'The configuration changed since you loaded it. Review the latest state and try again.',
+  422: 'Agent Smith could not verify that change safely.',
+  429: 'Too many requests. Wait a moment and try again.',
+  503: 'A dependent service is unavailable right now.',
+  500: 'An unexpected server error occurred.',
+};
+
+/** Extracts a staff-facing reference ID from an API error payload, if present. */
+export function errRef(e: unknown): string | undefined {
+  if (!e || typeof e !== 'object') return undefined;
+  const data = (e as { data?: unknown }).data;
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>;
+    const ref = d.referenceId ?? d.reference ?? d.requestId;
+    if (typeof ref === 'string' && ref) return ref;
+  }
+  return undefined;
+}
+
+export function errStatus(e: unknown): number | undefined {
+  const s = e && typeof e === 'object' ? (e as { status?: unknown }).status : undefined;
+  return typeof s === 'number' ? s : undefined;
+}
+
+/** Member-safe message: server-provided message for expected statuses, never raw exceptions. */
 export function errMsg(e: unknown): string {
-  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
-  return 'Request failed';
+  const status = errStatus(e);
+  const ref = errRef(e);
+  let msg: string | undefined;
+  if (e && typeof e === 'object') {
+    const data = (e as { data?: unknown }).data;
+    if (data && typeof data === 'object') {
+      const m = (data as Record<string, unknown>).message ?? (data as Record<string, unknown>).error;
+      if (typeof m === 'string' && m.length < 300 && !/\bat\s.+\(|stack|SQL|ECONN|TypeError|undefined/i.test(m)) msg = m;
+    }
+  }
+  if (!msg) msg = status ? STATUS_MESSAGES[status] ?? (status >= 500 ? STATUS_MESSAGES[500] : 'The request was rejected.') :
+    'Agent Smith could not reach the dashboard API.';
+  return ref ? `${msg} Reference: ${ref}` : msg;
 }
 
 export const MODULE_LABELS: Record<string, string> = {

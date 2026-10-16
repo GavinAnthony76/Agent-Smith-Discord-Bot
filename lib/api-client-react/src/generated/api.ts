@@ -34,7 +34,9 @@ import type {
   PlatformResources,
   PlatformResult,
   PlatformSession,
-  PlatformSetupInput
+  PlatformSetupInput,
+  PlatformSetupState,
+  PlatformSystemStatus
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1207,6 +1209,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getPerformPlatformActionMutationOptions(options));
     }
 
+export const getGetPlatformSetupStateUrl = (guildId: string,) => {
+
+
+
+
+  return `/api/platform/guilds/${guildId}/setup`
+}
+
+export const getPlatformSetupState = async (guildId: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformSetupState> => {
+
+  return customFetch<PlatformSetupState>(getGetPlatformSetupStateUrl(guildId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformSetupStateQueryKey = (guildId: string,) => {
+    return [
+    `/api/platform/guilds/${guildId}/setup`
+    ] as const;
+    }
+
+
+export const getGetPlatformSetupStateQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformSetupState>>, TError = ErrorType<unknown>>(guildId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformSetupState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformSetupStateQueryKey(guildId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformSetupState>>> = ({ signal }) => getPlatformSetupState(guildId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: guildId !== null && guildId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformSetupState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformSetupStateQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformSetupState>>>
+export type GetPlatformSetupStateQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformSetupState<TData = Awaited<ReturnType<typeof getPlatformSetupState>>, TError = ErrorType<unknown>>(
+ guildId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformSetupState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformSetupStateQueryOptions(guildId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getSavePlatformSetupUrl = (guildId: string,) => {
 
 
@@ -1289,4 +1362,158 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getSavePlatformSetupMutationOptions(options));
     }
+
+export const getPreviewPlatformSetupUrl = (guildId: string,) => {
+
+
+
+
+  return `/api/platform/guilds/${guildId}/setup/preview`
+}
+
+export const previewPlatformSetup = async (guildId: string,
+    platformSetupInput: PlatformSetupInput, options?: Parameters<typeof customFetch>[1]): Promise<PlatformSetupState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlatformSetupState>(getPreviewPlatformSetupUrl(guildId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformSetupInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewPlatformSetupMutationKey = () => ['previewPlatformSetup'] as const;
+
+export const getPreviewPlatformSetupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPlatformSetup>>, TError,PreviewPlatformSetupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewPlatformSetup>>, TError,PreviewPlatformSetupMutationVariables, TContext> => {
+
+const mutationKey = getPreviewPlatformSetupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewPlatformSetup>>, PreviewPlatformSetupMutationVariables> = (props) => {
+          const {guildId,data} = props ?? {};
+
+          return  previewPlatformSetup(guildId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewPlatformSetupMutationResult = NonNullable<Awaited<ReturnType<typeof previewPlatformSetup>>>
+    export type PreviewPlatformSetupMutationBody = BodyType<PlatformSetupInput>
+    export type PreviewPlatformSetupMutationError = ErrorType<unknown>
+    export type PreviewPlatformSetupMutationVariables = {guildId: string;data: BodyType<PlatformSetupInput>}
+
+    export const usePreviewPlatformSetup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewPlatformSetup>>, TError,PreviewPlatformSetupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewPlatformSetup>>,
+        TError,
+        PreviewPlatformSetupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewPlatformSetupMutationOptions(options));
+    }
+
+export const getGetPlatformSystemStatusUrl = (guildId: string,) => {
+
+
+
+
+  return `/api/platform/guilds/${guildId}/system-status`
+}
+
+export const getPlatformSystemStatus = async (guildId: string, options?: Parameters<typeof customFetch>[1]): Promise<PlatformSystemStatus> => {
+
+  return customFetch<PlatformSystemStatus>(getGetPlatformSystemStatusUrl(guildId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformSystemStatusQueryKey = (guildId: string,) => {
+    return [
+    `/api/platform/guilds/${guildId}/system-status`
+    ] as const;
+    }
+
+
+export const getGetPlatformSystemStatusQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformSystemStatus>>, TError = ErrorType<unknown>>(guildId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformSystemStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformSystemStatusQueryKey(guildId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformSystemStatus>>> = ({ signal }) => getPlatformSystemStatus(guildId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: guildId !== null && guildId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformSystemStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlatformSystemStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformSystemStatus>>>
+export type GetPlatformSystemStatusQueryError = ErrorType<unknown>
+
+
+
+export function useGetPlatformSystemStatus<TData = Awaited<ReturnType<typeof getPlatformSystemStatus>>, TError = ErrorType<unknown>>(
+ guildId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlatformSystemStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlatformSystemStatusQueryOptions(guildId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

@@ -3,6 +3,9 @@ import { hasPermission, assertHigherRole } from '../permissions.js';
 import { PROTECTED_ROLE_NAMES, assertNotOwner } from '../security-policy.js';
 import { PlatformError } from './catalog.js';
 import { installSecurityGateForRestOnly } from './transport.js';
+import { measureDependency } from './diagnostics.js';
+
+const instrumented=new WeakSet();
 
 /**
  * Development uses REST and SDK permission objects, never a Gateway session.
@@ -17,23 +20,45 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
     client.rest.setToken(env.DISCORD_TOKEN);
     installSecurityGateForRestOnly(client);
   }
+  if(typeof client.rest.request==='function' && !instrumented.has(client)) {
+    const original=client.rest.request.bind(client.rest);
+    client.rest.request=request=>measureDependency('discord',()=>original(request));
+    instrumented.add(client);
+  }
+  const authorityReads=new Map(),guildReads=new Map();
+  function coalesce(map,key,fn) {
+    if(map.has(key)) return map.get(key);
+    const pending=Promise.resolve().then(fn).finally(()=>map.delete(key));
+    map.set(key,pending);
+    return pending;
+  }
   async function initialize() {
     if (ownsClient && !client.user) {
       initializing ??= client.rest.get(Routes.user('@me')).then(data => { client.user = new ClientUser(client, data); });
       await initializing;
     }
   }
-  async function freshGuild(guildId) {
+  async function readGuild(guildId,channels) {
     await initialize();
     const raw = await client.rest.get(Routes.guild(guildId));
     const guild = client.guilds._add(raw);
-    const [roles] = await Promise.all([guild.roles.fetch(), guild.channels.fetch(), guild.members.fetchMe({ force: true })]);
+    // GET guild already contains the current role definitions. The SDK patches
+    // those objects but can retain removed entries in its cache, so bind role
+    // identity verification to the response itself, not to that cache.
+    const returnedRoles=Array.isArray(raw.roles)?
+      new Map(raw.roles.map(role=>[role.id,guild.roles.cache.get(role.id)])):null;
+    const [roles] = await Promise.all([returnedRoles??guild.roles.fetch(), channels?guild.channels.fetch():undefined,
+      guild.members.fetchMe({ force: true })]);
     roleSnapshots.set(guild, roles);
     return guild;
   }
-  async function authority({ guildId, userId, pool }) {
+  const freshGuild=guildId=>readGuild(guildId,true);
+  async function resolveAuthority({ guildId, userId, pool, write=false }) {
     try {
-      const guild = await freshGuild(guildId);
+      // Share only concurrent reads, not time-based authorization snapshots.
+      // Mutations always perform their own fresh authority/channel checks.
+      const guild = write?await freshGuild(guildId):
+        await coalesce(guildReads,guildId,()=>readGuild(guildId,false));
       const member = await guild.members.fetch({ user: userId, force: true });
       if (member.user.bot || member.pending !== false ||
           !memberRolesVerified(guild, member) || !memberRolesVerified(guild, guild.members.me)) return null;
@@ -44,8 +69,13 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
         'SELECT dashboard_role FROM platform_managers WHERE guild_id=$1 AND user_id=$2',
         [guildId, userId])).rows[0]?.dashboard_role;
       return role ? { installed: true, member: true, role, guild, actor: member } : null;
-    } catch { return null; }
+    } catch(error) {
+      if([10004,10007,50001].includes(error?.code)) return null;
+      throw new PlatformError('discord_authority_unavailable',error?.status===429?429:503);
+    }
   }
+  const authority=options=>options.write?resolveAuthority(options):
+    coalesce(authorityReads,`${options.guildId}:${options.userId}`,()=>resolveAuthority(options));
   function memberRolesVerified(guild, actor) {
     const roles = roleSnapshots.get(guild);
     return !!roles && !!actor && [...actor.roles.cache.keys()].every(id => roles.has(id));
@@ -71,5 +101,11 @@ export function createDiscordAccess({ client, env = process.env } = {}) {
     return target;
   }
   return { client, freshGuild, authority, memberRolesVerified, protectedRole, assertRewardRole, assertTarget,
+    // A connected production Gateway maintains channel create/update/delete
+    // events. Resource pickers may read that projection; actual writes still
+    // take the freshGuild path above and refresh all channel permissions.
+    readChannels:guild=>!ownsClient && client.isReady?.()?
+      Promise.resolve(guild.channels.cache):
+      coalesce(guildReads,`channels:${guild.id}`,()=>guild.channels.fetch()),
     close() { if (ownsClient) client.destroy(); } };
 }

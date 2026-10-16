@@ -12,4 +12,7 @@ export interface PlatformSetupInput {
   logChannelId: string | null;
   /** @nullable */
   welcomeChannelId: string | null;
+  confirmed?: boolean;
+  expectedRevision?: number;
+  previewHash?: string;
 }
